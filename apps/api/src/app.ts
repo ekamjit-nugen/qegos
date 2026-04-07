@@ -146,6 +146,10 @@ export function finalizeApp(
     broadcastRouter?: express.Router;
     // Phase 6: Client Portal & Vault
     portalRouter?: express.Router;
+    // Phase 7: Communication Suite
+    chatRouter?: express.Router;
+    ticketRouter?: express.Router;
+    whatsappRouter?: express.Router;
   },
   deepHealthCheck: (req: Request, res: Response) => Promise<void>,
 ): void {
@@ -202,6 +206,17 @@ export function finalizeApp(
   // Phase 6: Client Portal & Vault
   if (routes.portalRouter) {
     app.use(`${prefix}/portal`, routes.portalRouter);
+  }
+
+  // Phase 7: Communication Suite
+  if (routes.chatRouter) {
+    app.use(`${prefix}/chat`, routes.chatRouter);
+  }
+  if (routes.ticketRouter) {
+    app.use(`${prefix}/tickets`, routes.ticketRouter);
+  }
+  if (routes.whatsappRouter) {
+    app.use(`${prefix}/whatsapp`, routes.whatsappRouter);
   }
 
   // 404 handler

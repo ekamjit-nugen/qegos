@@ -14,6 +14,9 @@ const config: Config = {
     '@nugen/audit-log': '<rootDir>/packages/audit-log/src',
     '@nugen/broadcast-engine': '<rootDir>/packages/broadcast-engine/src',
     '@nugen/file-storage': '<rootDir>/packages/file-storage/src',
+    '@nugen/chat-engine': '<rootDir>/packages/chat-engine/src',
+    '@nugen/support-tickets': '<rootDir>/packages/support-tickets/src',
+    '@nugen/whatsapp-connector': '<rootDir>/packages/whatsapp-connector/src',
   },
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',

@@ -1,0 +1,20 @@
+{
+  "name": "@nugen/chat-engine",
+  "version": "1.0.0",
+  "description": "Tier 1 — Real-time chat with Socket.io, TFN redaction, canned responses, file sharing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc"
+  },
+  "peerDependencies": {
+    "express": "^4.19.0",
+    "express-validator": "^7.0.0",
+    "mongoose": "^8.0.0",
+    "socket.io": "^4.7.0"
+  },
+  "keywords": ["nugen", "chat", "socket.io", "real-time", "messaging"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

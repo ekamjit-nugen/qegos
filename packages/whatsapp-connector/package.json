@@ -1,0 +1,19 @@
+{
+  "name": "@nugen/whatsapp-connector",
+  "version": "1.0.0",
+  "description": "Tier 1 — Meta Cloud API WhatsApp connector with template messaging, media handling, window tracking",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc"
+  },
+  "peerDependencies": {
+    "express": "^4.19.0",
+    "express-validator": "^7.0.0",
+    "mongoose": "^8.0.0"
+  },
+  "keywords": ["nugen", "whatsapp", "meta-cloud-api", "messaging"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

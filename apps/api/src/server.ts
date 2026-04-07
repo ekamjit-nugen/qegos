@@ -48,6 +48,11 @@ import { createPortalRoutes } from './modules/client-portal/portal.routes';
 import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
 import { reconcileStorageUsage } from '@nugen/file-storage';
 
+// Phase 7: Communication Suite
+import * as chatEngine from '@nugen/chat-engine';
+import * as supportTickets from '@nugen/support-tickets';
+import * as whatsappConnector from '@nugen/whatsapp-connector';
+
 async function bootstrap(): Promise<void> {
   // 1. Load and validate environment
   const config = loadConfig();
@@ -177,6 +182,30 @@ async function bootstrap(): Promise<void> {
     clamavPort: config.CLAMAV_PORT,
   }, {
     UserModel: UserModel as never,
+  });
+
+  // Phase 7: Communication Suite
+  const {
+    ConversationModel: ChatConversationModel,
+    MessageModel: ChatMessageModel,
+    CannedResponseModel,
+  } = chatEngine.init(connection, {
+    encryptionKey: config.ENCRYPTION_KEY,
+  });
+
+  const {
+    TicketModel: SupportTicketModel,
+  } = supportTickets.init(connection, {}, {
+    CounterModel: CounterModel as never,
+  });
+
+  const {
+    ConfigModel: WhatsAppConfigModel,
+    MessageModel: WhatsAppMessageModel,
+  } = whatsappConnector.init(connection, {
+    accessToken: config.WHATSAPP_API_TOKEN,
+    phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
+    webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
   });
 
   // 5. Seed data
@@ -355,6 +384,47 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // Phase 7: Communication Suite routes
+  const chatRouter = chatEngine.createChatRoutes({
+    ConversationModel: ChatConversationModel,
+    MessageModel: ChatMessageModel,
+    CannedResponseModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    config: { encryptionKey: config.ENCRYPTION_KEY },
+  });
+
+  const ticketRouter = supportTickets.createTicketRoutes({
+    TicketModel: SupportTicketModel,
+    CounterModel: CounterModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+  });
+
+  const whatsappRouter = whatsappConnector.createWhatsAppRoutes({
+    ConfigModel: WhatsAppConfigModel,
+    MessageModel: WhatsAppMessageModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    config: {
+      accessToken: config.WHATSAPP_API_TOKEN,
+      phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
+      webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+    },
+  });
+
   // Deep health check
   async function deepHealthCheck(_req: Request, res: Response): Promise<void> {
     const checks: Record<string, string> = {};
@@ -402,6 +472,9 @@ async function bootstrap(): Promise<void> {
     taxEngineRouter,
     broadcastRouter,
     portalRouter,
+    chatRouter,
+    ticketRouter,
+    whatsappRouter,
   }, deepHealthCheck);
 
   // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs
@@ -572,6 +645,49 @@ async function bootstrap(): Promise<void> {
     console.warn(`[VAULT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
   });
 
+  // Phase 7: Support ticket SLA cron jobs (TKT-INV-04: every 5 min)
+  const ticketQueue = new Queue('support-tickets', { connection: redisConnectionOpts });
+
+  const ticketJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'checkSlaBreaches', pattern: '*/5 * * * *' },      // every 5 minutes
+    { name: 'autoCloseStale', pattern: '0 */6 * * *' },        // every 6 hours
+    { name: 'autoCloseResolved', pattern: '0 6 * * *' },       // daily at 6am
+    { name: 'archiveOldChats', pattern: '0 3 1 * *' },         // 1st of month at 3am
+  ];
+
+  for (const job of ticketJobs) {
+    await ticketQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const ticketWorker = new Worker(
+    'support-tickets',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'checkSlaBreaches':
+          await supportTickets.checkSlaBreaches();
+          break;
+        case 'autoCloseStale':
+          await supportTickets.autoCloseStaleTickets();
+          break;
+        case 'autoCloseResolved':
+          await supportTickets.autoCloseResolvedTickets();
+          break;
+        case 'archiveOldChats':
+          await chatEngine.archiveOldConversations();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  ticketWorker.on('failed', (job, err) => {
+    console.warn(`[TICKETS] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
   // 8. Start server
   const port = config.PORT;
   const server = app.listen(port, () => {
@@ -588,6 +704,8 @@ async function bootstrap(): Promise<void> {
       await broadcastQueue.close();
       await vaultWorker.close();
       await vaultQueue.close();
+      await ticketWorker.close();
+      await ticketQueue.close();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

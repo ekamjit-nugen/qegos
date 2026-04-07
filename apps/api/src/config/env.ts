@@ -82,6 +82,9 @@ const envSchema = z.object({
   // ClamAV Virus Scanning
   CLAMAV_HOST: z.string().optional(),
   CLAMAV_PORT: z.coerce.number().optional(),
+
+  // WhatsApp Webhook (Phase 7)
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
 }).refine(
   // Fix for S-3.18: Ensure at least one payment gateway is configured
   (data) => {

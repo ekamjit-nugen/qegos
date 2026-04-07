@@ -1,0 +1,19 @@
+{
+  "name": "@nugen/support-tickets",
+  "version": "1.0.0",
+  "description": "Tier 1 — Support ticket lifecycle, SLA engine, auto-escalation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc"
+  },
+  "peerDependencies": {
+    "express": "^4.19.0",
+    "express-validator": "^7.0.0",
+    "mongoose": "^8.0.0"
+  },
+  "keywords": ["nugen", "support-tickets", "sla", "helpdesk"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}
