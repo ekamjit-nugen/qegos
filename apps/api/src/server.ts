@@ -39,6 +39,9 @@ import { createCounterModel } from './database/counter.model';
 import { createAutomationHandlers } from './modules/lead-management/lead.automation';
 import { Queue, Worker, type Job } from 'bullmq';
 
+// Phase 5: Broadcast Engine
+import * as broadcastEngine from '@nugen/broadcast-engine';
+
 async function bootstrap(): Promise<void> {
   // 1. Load and validate environment
   const config = loadConfig();
@@ -127,6 +130,32 @@ async function bootstrap(): Promise<void> {
   const OrderModel = createOrderModel(connection);
   const SalesModel = createSalesModel(connection);
   const ReviewAssignmentModel = createReviewAssignmentModel(connection);
+
+  // Phase 5: Broadcast Engine
+  const {
+    CampaignModel: BroadcastCampaignModel,
+    TemplateModel: BroadcastTemplateModel,
+    MessageModel: BroadcastMessageModel,
+    OptOutModel: BroadcastOptOutModel,
+    ConsentModel: BroadcastConsentModel,
+    providers: broadcastProviders,
+  } = broadcastEngine.init(connection, redisClient, {
+    twilioAccountSid: config.TWILIO_ACCOUNT_SID,
+    twilioAuthToken: config.TWILIO_AUTH_TOKEN,
+    twilioPhoneNumber: config.TWILIO_PHONE_NUMBER,
+    sesRegion: config.AWS_SES_REGION,
+    sesAccessKeyId: config.AWS_SES_ACCESS_KEY_ID,
+    sesSecretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
+    sesFromEmail: config.AWS_SES_FROM_EMAIL,
+    whatsappApiToken: config.WHATSAPP_API_TOKEN,
+    whatsappPhoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
+    businessName: config.BUSINESS_NAME,
+    businessAbn: config.BUSINESS_ABN,
+    unsubscribeBaseUrl: config.UNSUBSCRIBE_BASE_URL,
+  }, {
+    LeadModel: LeadModel as never,
+    UserModel: UserModel as never,
+  });
 
   // 5. Seed data
   await rbac.seedRoles(RoleModel);
@@ -243,6 +272,30 @@ async function bootstrap(): Promise<void> {
     checkPermission: rbac.check,
   });
 
+  // Phase 5: Broadcast routes
+  const broadcastRouter = broadcastEngine.createBroadcastRoutes({
+    CampaignModel: BroadcastCampaignModel,
+    TemplateModel: BroadcastTemplateModel,
+    MessageModel: BroadcastMessageModel,
+    OptOutModel: BroadcastOptOutModel,
+    ConsentModel: BroadcastConsentModel,
+    LeadModel: LeadModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    providers: broadcastProviders,
+    redisClient,
+    config: {
+      businessName: config.BUSINESS_NAME,
+      businessAbn: config.BUSINESS_ABN,
+      unsubscribeBaseUrl: config.UNSUBSCRIBE_BASE_URL,
+    },
+  });
+
   // Deep health check
   async function deepHealthCheck(_req: Request, res: Response): Promise<void> {
     const checks: Record<string, string> = {};
@@ -288,6 +341,7 @@ async function bootstrap(): Promise<void> {
     salesRouter,
     reviewRouter,
     taxEngineRouter,
+    broadcastRouter,
   }, deepHealthCheck);
 
   // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs
@@ -364,6 +418,65 @@ async function bootstrap(): Promise<void> {
     console.warn(`[AUTOMATION] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
   });
 
+  // Phase 5: Broadcast queue jobs
+  const broadcastQueue = new Queue('broadcast-engine', { connection: redisConnectionOpts });
+
+  const broadcastJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'triggerScheduled', pattern: '*/1 * * * *' },      // every 1 minute
+    { name: 'processSmsQueue', pattern: '*/5 * * * *' },       // every 5 minutes
+    { name: 'processEmailQueue', pattern: '*/5 * * * *' },     // every 5 minutes
+    { name: 'processWhatsappQueue', pattern: '*/5 * * * *' },  // every 5 minutes
+    { name: 'checkCompletion', pattern: '*/10 * * * *' },      // every 10 minutes
+  ];
+
+  for (const job of broadcastJobs) {
+    await broadcastQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const broadcastWorker = new Worker(
+    'broadcast-engine',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'triggerScheduled':
+          await broadcastEngine.triggerScheduledCampaigns();
+          break;
+        case 'processSmsQueue': {
+          const sending = await BroadcastCampaignModel.find({ status: 'sending' });
+          for (const c of sending) {
+            await broadcastEngine.processChannelQueue(c._id, 'sms');
+          }
+          break;
+        }
+        case 'processEmailQueue': {
+          const sending = await BroadcastCampaignModel.find({ status: 'sending' });
+          for (const c of sending) {
+            await broadcastEngine.processChannelQueue(c._id, 'email');
+          }
+          break;
+        }
+        case 'processWhatsappQueue': {
+          const sending = await BroadcastCampaignModel.find({ status: 'sending' });
+          for (const c of sending) {
+            await broadcastEngine.processChannelQueue(c._id, 'whatsapp');
+          }
+          break;
+        }
+        case 'checkCompletion':
+          await broadcastEngine.checkCampaignCompletion();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  broadcastWorker.on('failed', (job, err) => {
+    console.warn(`[BROADCAST] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
   // 8. Start server
   const port = config.PORT;
   const server = app.listen(port, () => {
@@ -376,6 +489,8 @@ async function bootstrap(): Promise<void> {
     server.close(async () => {
       await automationWorker.close();
       await automationQueue.close();
+      await broadcastWorker.close();
+      await broadcastQueue.close();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

@@ -1,0 +1,51 @@
+import { Schema, type Connection, type Model } from 'mongoose';
+import type { IBroadcastMessageDocument } from '../types';
+
+const broadcastMessageSchema = new Schema<IBroadcastMessageDocument>(
+  {
+    campaignId: { type: Schema.Types.ObjectId, ref: 'BroadcastCampaign', required: true },
+    recipientId: { type: Schema.Types.ObjectId },
+    recipientType: {
+      type: String,
+      required: true,
+      enum: ['lead', 'user', 'custom'],
+    },
+    recipientMobile: { type: String },
+    recipientEmail: { type: String },
+    channel: {
+      type: String,
+      required: true,
+      enum: ['sms', 'email', 'whatsapp'],
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: ['queued', 'sending', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked', 'opted_out'],
+      default: 'queued',
+    },
+    gatewayId: { type: String },
+    error: { type: String },
+    sentAt: { type: Date },
+    deliveredAt: { type: Date },
+    openedAt: { type: Date },
+    clickedAt: { type: Date },
+    abVariant: { type: String },
+  },
+  {
+    timestamps: { createdAt: true, updatedAt: false },
+    collection: 'broadcast_messages',
+  },
+);
+
+// Indexes
+broadcastMessageSchema.index({ campaignId: 1, status: 1 });
+broadcastMessageSchema.index({ recipientId: 1, channel: 1 });
+broadcastMessageSchema.index({ gatewayId: 1 }, { unique: true, sparse: true });
+broadcastMessageSchema.index({ status: 1, createdAt: 1 }); // for queue processing
+
+export function createMessageModel(connection: Connection): Model<IBroadcastMessageDocument> {
+  if (connection.models.BroadcastMessage) {
+    return connection.models.BroadcastMessage as Model<IBroadcastMessageDocument>;
+  }
+  return connection.model<IBroadcastMessageDocument>('BroadcastMessage', broadcastMessageSchema);
+}

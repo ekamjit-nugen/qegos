@@ -1,0 +1,28 @@
+{
+  "name": "@nugen/broadcast-engine",
+  "version": "1.0.0",
+  "description": "Multi-channel broadcast campaigns (SMS, Email, WhatsApp) with templates, audience segmentation, DND/opt-out, Spam Act 2003 compliance",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.600.0"
+  },
+  "peerDependencies": {
+    "@nugen/error-handler": "^1.0.0",
+    "@nugen/validator": "^1.0.0",
+    "bullmq": "^5.0.0",
+    "express": "^4.19.0",
+    "express-validator": "^7.0.0",
+    "ioredis": "^5.4.0",
+    "mongoose": "^8.0.0",
+    "twilio": "^4.0.0"
+  },
+  "keywords": ["broadcast", "campaign", "sms", "email", "whatsapp", "twilio", "ses", "dnd", "spam-act"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

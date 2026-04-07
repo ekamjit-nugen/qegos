@@ -12,6 +12,7 @@ const config: Config = {
     '@nugen/auth': '<rootDir>/packages/auth/src',
     '@nugen/rbac': '<rootDir>/packages/rbac/src',
     '@nugen/audit-log': '<rootDir>/packages/audit-log/src',
+    '@nugen/broadcast-engine': '<rootDir>/packages/broadcast-engine/src',
   },
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',

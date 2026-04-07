@@ -56,6 +56,21 @@ const envSchema = z.object({
   PAYZOO_BASE_URL: z.string().optional(),
   PAYZOO_PUBLIC_KEY: z.string().optional(),
   PAYZOO_WEBHOOK_SECRET: z.string().optional(),
+
+  // Amazon SES (Phase 5 — Broadcast Engine)
+  AWS_SES_REGION: z.string().optional(),
+  AWS_SES_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SES_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_SES_FROM_EMAIL: z.string().email().optional(),
+
+  // WhatsApp (Meta Cloud API)
+  WHATSAPP_API_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+
+  // Business Identity (Spam Act compliance)
+  BUSINESS_NAME: z.string().default('QEGOS'),
+  BUSINESS_ABN: z.string().optional(),
+  UNSUBSCRIBE_BASE_URL: z.string().optional(),
 }).refine(
   // Fix for S-3.18: Ensure at least one payment gateway is configured
   (data) => {

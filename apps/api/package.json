@@ -19,6 +19,7 @@
     "@nugen/rbac": "*",
     "@nugen/audit-log": "*",
     "@nugen/payment-gateway": "*",
+    "@nugen/broadcast-engine": "*",
     "stripe": "^14.21.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
