@@ -42,6 +42,12 @@ import { Queue, Worker, type Job } from 'bullmq';
 // Phase 5: Broadcast Engine
 import * as broadcastEngine from '@nugen/broadcast-engine';
 
+// Phase 6: Client Portal & Vault
+import * as fileStorage from '@nugen/file-storage';
+import { createPortalRoutes } from './modules/client-portal/portal.routes';
+import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
+import { reconcileStorageUsage } from '@nugen/file-storage';
+
 async function bootstrap(): Promise<void> {
   // 1. Load and validate environment
   const config = loadConfig();
@@ -154,6 +160,22 @@ async function bootstrap(): Promise<void> {
     unsubscribeBaseUrl: config.UNSUBSCRIBE_BASE_URL,
   }, {
     LeadModel: LeadModel as never,
+    UserModel: UserModel as never,
+  });
+
+  // Phase 6: File Storage & Client Portal
+  const {
+    VaultDocumentModel,
+    TaxYearSummaryModel,
+  } = fileStorage.init(connection, {
+    s3Bucket: config.S3_BUCKET ?? 'qegos-vault-dev',
+    s3QuarantineBucket: config.S3_QUARANTINE_BUCKET ?? 'qegos-quarantine-dev',
+    s3Region: config.S3_REGION ?? config.AWS_SES_REGION ?? 'ap-southeast-2',
+    s3AccessKeyId: config.S3_ACCESS_KEY_ID ?? config.AWS_SES_ACCESS_KEY_ID ?? '',
+    s3SecretAccessKey: config.S3_SECRET_ACCESS_KEY ?? config.AWS_SES_SECRET_ACCESS_KEY ?? '',
+    clamavHost: config.CLAMAV_HOST,
+    clamavPort: config.CLAMAV_PORT,
+  }, {
     UserModel: UserModel as never,
   });
 
@@ -296,6 +318,43 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // Phase 6: Client Portal routes
+  const portalRouter = createPortalRoutes({
+    VaultDocumentModel,
+    TaxYearSummaryModel,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    s3Service: {
+      upload: fileStorage.uploadToS3,
+      delete: fileStorage.deleteFromS3,
+      getPresignedUrl: fileStorage.getPresignedUrl,
+    },
+    virusScanService: {
+      scan: fileStorage.scanBuffer,
+    },
+    storageQuotaService: {
+      checkQuota: fileStorage.checkQuota,
+      incrementUsage: fileStorage.incrementUsage,
+      decrementUsage: fileStorage.decrementUsage,
+      getUsage: fileStorage.getUsage,
+    },
+    dedupService: {
+      check: fileStorage.checkDuplicate,
+    },
+    config: {
+      s3Bucket: config.S3_BUCKET ?? 'qegos-vault-dev',
+      s3QuarantineBucket: config.S3_QUARANTINE_BUCKET ?? 'qegos-quarantine-dev',
+      s3Region: config.S3_REGION ?? config.AWS_SES_REGION ?? 'ap-southeast-2',
+      s3AccessKeyId: config.S3_ACCESS_KEY_ID ?? '',
+      s3SecretAccessKey: config.S3_SECRET_ACCESS_KEY ?? '',
+    },
+  });
+
   // Deep health check
   async function deepHealthCheck(_req: Request, res: Response): Promise<void> {
     const checks: Record<string, string> = {};
@@ -342,6 +401,7 @@ async function bootstrap(): Promise<void> {
     reviewRouter,
     taxEngineRouter,
     broadcastRouter,
+    portalRouter,
   }, deepHealthCheck);
 
   // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs
@@ -477,6 +537,41 @@ async function bootstrap(): Promise<void> {
     console.warn(`[BROADCAST] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
   });
 
+  // Phase 6: Vault maintenance cron jobs
+  const vaultQueue = new Queue('vault-maintenance', { connection: redisConnectionOpts });
+
+  const vaultJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'hardDeleteExpired', pattern: '0 4 * * *' },       // daily at 4am
+    { name: 'reconcileStorage', pattern: '0 5 1 * *' },        // 1st of month at 5am
+  ];
+
+  for (const job of vaultJobs) {
+    await vaultQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const vaultWorker = new Worker(
+    'vault-maintenance',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'hardDeleteExpired':
+          await hardDeleteExpiredDocuments();
+          break;
+        case 'reconcileStorage':
+          await reconcileStorageUsage();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  vaultWorker.on('failed', (job, err) => {
+    console.warn(`[VAULT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
   // 8. Start server
   const port = config.PORT;
   const server = app.listen(port, () => {
@@ -491,6 +586,8 @@ async function bootstrap(): Promise<void> {
       await automationQueue.close();
       await broadcastWorker.close();
       await broadcastQueue.close();
+      await vaultWorker.close();
+      await vaultQueue.close();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

@@ -1,0 +1,23 @@
+{
+  "name": "@nugen/file-storage",
+  "version": "1.0.0",
+  "description": "Tier 1 — S3 file storage, virus scanning, presigned URLs, quota, dedup",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0"
+  },
+  "peerDependencies": {
+    "express": "^4.19.0",
+    "express-validator": "^7.0.0",
+    "mongoose": "^8.0.0"
+  },
+  "keywords": ["nugen", "file-storage", "s3", "vault", "virus-scan"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

@@ -144,6 +144,8 @@ export function finalizeApp(
     taxEngineRouter?: express.Router;
     // Phase 5: Broadcast Engine
     broadcastRouter?: express.Router;
+    // Phase 6: Client Portal & Vault
+    portalRouter?: express.Router;
   },
   deepHealthCheck: (req: Request, res: Response) => Promise<void>,
 ): void {
@@ -195,6 +197,11 @@ export function finalizeApp(
   // Phase 5: Broadcast Engine
   if (routes.broadcastRouter) {
     app.use(`${prefix}/broadcasts`, routes.broadcastRouter);
+  }
+
+  // Phase 6: Client Portal & Vault
+  if (routes.portalRouter) {
+    app.use(`${prefix}/portal`, routes.portalRouter);
   }
 
   // 404 handler

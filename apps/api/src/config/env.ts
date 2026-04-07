@@ -71,6 +71,17 @@ const envSchema = z.object({
   BUSINESS_NAME: z.string().default('QEGOS'),
   BUSINESS_ABN: z.string().optional(),
   UNSUBSCRIBE_BASE_URL: z.string().optional(),
+
+  // S3 File Storage (Phase 6 — Client Portal & Vault)
+  S3_BUCKET: z.string().optional(),
+  S3_QUARANTINE_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+
+  // ClamAV Virus Scanning
+  CLAMAV_HOST: z.string().optional(),
+  CLAMAV_PORT: z.coerce.number().optional(),
 }).refine(
   // Fix for S-3.18: Ensure at least one payment gateway is configured
   (data) => {
