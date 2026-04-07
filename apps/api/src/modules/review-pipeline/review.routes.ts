@@ -1,8 +1,18 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
+import { param } from 'express-validator';
 import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
-import * as auditLog from '@nugen/audit-log';
+import * as _auditLog from '@nugen/audit-log';
+
+// Fix for B-3.45: Wrap audit log to catch failures instead of silent void
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
+    });
+  },
+};
 import type { IReviewAssignmentDocument, IChangeRequest } from './review.types';
 import { createReviewService } from './review.service';
 import {
@@ -12,6 +22,7 @@ import {
   requestChangesValidation,
   rejectReviewValidation,
   resolveChangeValidation,
+  updateChecklistValidation,
 } from './review.validators';
 
 interface AuthenticatedRequest extends Request {
@@ -51,7 +62,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
       const { orderId } = req.body as { orderId: string };
       const review = await service.submitForReview(orderId, authReq.user.userId);
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'create',
@@ -89,10 +100,12 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   );
 
   // 3. GET /order-reviews/:orderId — Review detail
+  // Fix for B-3.43: Validate :orderId is a valid MongoId
   router.get(
     '/:orderId',
     auth() as never,
     check('order-reviews', 'read') as never,
+    ...validate([param('orderId').isMongoId().withMessage('Invalid order ID')]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const review = await service.getReviewDetail(req.params.orderId);
       res.status(200).json({ status: 200, data: review });
@@ -123,7 +136,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
       const review = await service.approveReview(req.params.orderId, authReq.user.userId);
 
       // RVW-INV-04: Audit log for approval
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'senior_staff',
         action: 'status_change',
@@ -156,7 +169,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
         reviewNotes,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'senior_staff',
         action: 'status_change',
@@ -185,7 +198,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
         rejectedReason,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'senior_staff',
         action: 'status_change',
@@ -195,6 +208,26 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
         severity: 'critical',
       });
 
+      res.status(200).json({ status: 200, data: review });
+    }),
+  );
+
+  // Fix for B-3.14, G-3.4: PATCH /order-reviews/:orderId/checklist — Update checklist item
+  router.patch(
+    '/:orderId/checklist',
+    auth() as never,
+    check('order-reviews', 'update') as never,
+    ...validate(updateChecklistValidation()),
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
+      const { index, checked, note } = req.body as { index: number; checked: boolean; note?: string };
+      const review = await service.updateChecklist(
+        req.params.orderId,
+        index,
+        checked,
+        authReq.user.userId,
+        note,
+      );
       res.status(200).json({ status: 200, data: review });
     }),
   );

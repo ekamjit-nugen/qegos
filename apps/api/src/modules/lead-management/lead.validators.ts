@@ -112,8 +112,9 @@ export function assignLeadValidation(): ValidationChain[] {
 
 export function bulkAssignValidation(): ValidationChain[] {
   return [
+    // Fix for B-3.12: Add max size limit
     body('leadIds')
-      .isArray({ min: 1 }).withMessage('At least one lead ID is required'),
+      .isArray({ min: 1, max: 100 }).withMessage('Lead IDs must be 1-100 items'),
     body('leadIds.*')
       .isMongoId().withMessage('Each lead ID must be a valid ID'),
     body('assignedTo')
@@ -124,8 +125,9 @@ export function bulkAssignValidation(): ValidationChain[] {
 
 export function bulkStatusValidation(): ValidationChain[] {
   return [
+    // Fix for B-3.12: Add max size limit
     body('leadIds')
-      .isArray({ min: 1 }).withMessage('At least one lead ID is required'),
+      .isArray({ min: 1, max: 100 }).withMessage('Lead IDs must be 1-100 items'),
     body('leadIds.*')
       .isMongoId().withMessage('Each lead ID must be a valid ID'),
     body('status')

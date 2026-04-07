@@ -1,8 +1,18 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
+import { param } from 'express-validator';
 import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
-import * as auditLog from '@nugen/audit-log';
+import * as _auditLog from '@nugen/audit-log';
+
+// Fix for B-3.45: Wrap audit log to catch failures instead of silent void
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
+    });
+  },
+};
 import type { IOrderDocument2, ISalesDocument } from './order.types';
 import { createOrderService } from './order.service';
 import {
@@ -30,6 +40,9 @@ interface AuthenticatedRequest extends Request {
 export interface OrderRouteDeps {
   OrderModel: Model<IOrderDocument2>;
   SalesModel: Model<ISalesDocument>;
+  ReviewAssignmentModel?: Model<Record<string, unknown>>;
+  CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
+  UserModel?: Model<Record<string, unknown>>;
   authenticate: () => RequestHandler;
   checkPermission: (resource: string, action: string) => RequestHandler;
 }
@@ -37,7 +50,13 @@ export interface OrderRouteDeps {
 export function createOrderRoutes(deps: OrderRouteDeps): Router {
   const router = Router();
   const { OrderModel, SalesModel, authenticate: auth, checkPermission: check } = deps;
-  const service = createOrderService({ OrderModel, SalesModel });
+  const service = createOrderService({
+    OrderModel,
+    SalesModel,
+    ReviewAssignmentModel: deps.ReviewAssignmentModel as never,
+    CounterModel: deps.CounterModel,
+    UserModel: deps.UserModel,
+  });
 
   // ──────────────────────────────────────────────────────────────────────
   // STATS (before :id routes)
@@ -67,6 +86,35 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
   );
 
   // ──────────────────────────────────────────────────────────────────────
+  // BULK OPS (Fix for B-3.7: Must be BEFORE parameterized /:id routes)
+  // ──────────────────────────────────────────────────────────────────────
+
+  // 7. PUT /orders/bulk-assign
+  router.put(
+    '/bulk-assign',
+    auth() as never,
+    check('orders', 'update') as never,
+    ...validate(bulkAssignValidation()),
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
+      const { orderIds, processingBy } = req.body as { orderIds: string[]; processingBy: string };
+      const result = await service.bulkAssign(orderIds, processingBy);
+
+      auditLog.log({
+        actor: authReq.user.userId,
+        actorType: 'admin',
+        action: 'bulk_action',
+        resource: 'order',
+        resourceId: processingBy,
+        description: `Bulk assigned ${orderIds.length} orders`,
+        severity: 'info',
+      });
+
+      res.status(200).json({ status: 200, data: result });
+    }),
+  );
+
+  // ──────────────────────────────────────────────────────────────────────
   // ORDER CRUD
   // ──────────────────────────────────────────────────────────────────────
 
@@ -83,7 +131,7 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
         authReq.user.userId,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'create',
@@ -123,10 +171,12 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
   );
 
   // 3. GET /orders/:id — Full detail
+  // Fix for B-3.43: Validate :id is a valid MongoId
   router.get(
     '/:id',
     auth() as never,
     check('orders', 'read') as never,
+    ...validate([param('id').isMongoId().withMessage('Invalid order ID')]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const order = await service.getOrder(req.params.id, authReq.scopeFilter);
@@ -148,7 +198,7 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
         authReq.scopeFilter,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'update',
@@ -184,7 +234,7 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
         authReq.scopeFilter,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'status_change',
@@ -207,9 +257,10 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const { processingBy } = req.body as { processingBy: string };
-      const order = await service.assignOrder(req.params.id, processingBy);
+      // Fix for S-3.5, B-3.11: Pass scopeFilter to prevent IDOR
+      const order = await service.assignOrder(req.params.id, processingBy, authReq.scopeFilter);
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'admin',
         action: 'assign',
@@ -220,31 +271,6 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
       });
 
       res.status(200).json({ status: 200, data: order });
-    }),
-  );
-
-  // 7. PUT /orders/:id/bulk-assign
-  router.put(
-    '/:id/bulk-assign',
-    auth() as never,
-    check('orders', 'update') as never,
-    ...validate(bulkAssignValidation()),
-    asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const authReq = req as AuthenticatedRequest;
-      const { orderIds, processingBy } = req.body as { orderIds: string[]; processingBy: string };
-      const result = await service.bulkAssign(orderIds, processingBy);
-
-      void auditLog.log({
-        actor: authReq.user.userId,
-        actorType: 'admin',
-        action: 'bulk_action',
-        resource: 'order',
-        resourceId: processingBy,
-        description: `Bulk assigned ${orderIds.length} orders`,
-        severity: 'info',
-      });
-
-      res.status(200).json({ status: 200, data: result });
     }),
   );
 
@@ -262,7 +288,8 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
         staffId: string;
         meetingLink?: string;
       };
-      const order = await service.scheduleAppointment(req.params.id, data);
+      const authReq2 = req as AuthenticatedRequest;
+      const order = await service.scheduleAppointment(req.params.id, data, authReq2.scopeFilter);
       res.status(200).json({ status: 200, data: order });
     }),
   );
@@ -289,6 +316,29 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const totals = await service.calculateTotals(req.params.id);
       res.status(200).json({ status: 200, data: totals });
+    }),
+  );
+
+  // Fix for B-3.32: DELETE /orders/:id — Soft delete
+  router.delete(
+    '/:id',
+    auth() as never,
+    check('orders', 'delete') as never,
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
+      const order = await service.softDelete(req.params.id, authReq.scopeFilter);
+
+      auditLog.log({
+        actor: authReq.user.userId,
+        actorType: 'admin',
+        action: 'delete',
+        resource: 'order',
+        resourceId: req.params.id,
+        description: `Order ${order.orderNumber} soft-deleted`,
+        severity: 'warning',
+      });
+
+      res.status(200).json({ status: 200, data: { message: 'Order deleted' } });
     }),
   );
 
@@ -338,9 +388,18 @@ export function createSalesRoutes(deps: SalesRouteDeps): Router {
     check('sales', 'update') as never,
     ...validate(updateSalesValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      // Fix for B-3.33: Use allowlist instead of raw req.body
+      const ALLOWED_SALES_FIELDS = ['title', 'description', 'price', 'gstInclusive', 'category', 'inputBased', 'isActive', 'sortOrder', 'xeroAccountCode'] as const;
+      const rawBody = req.body as Record<string, unknown>;
+      const safeUpdate: Record<string, unknown> = {};
+      for (const field of ALLOWED_SALES_FIELDS) {
+        if (rawBody[field] !== undefined) {
+          safeUpdate[field] = rawBody[field];
+        }
+      }
       const service = await SalesModel.findByIdAndUpdate(
         req.params.id,
-        req.body as Record<string, unknown>,
+        safeUpdate,
         { new: true, runValidators: true },
       );
       if (!service) {

@@ -1,5 +1,6 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
@@ -89,7 +90,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         return;
       }
 
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = 'default' } = req.body as { deviceId?: string };
       const tokens = await jwtService.issueTokenPair(
         user,
         deviceId,
@@ -135,7 +137,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         status: true,
       }) as IAuthDocument;
 
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = 'default' } = req.body as { deviceId?: string };
       const freshUser = await UserModel.findById(user._id).select('+refreshTokens') as IAuthDocument;
       const tokens = await jwtService.issueTokenPair(
         freshUser,
@@ -189,7 +192,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         return;
       }
 
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = 'default' } = req.body as { deviceId?: string };
       const tokens = await jwtService.issueTokenPair(
         user,
         deviceId,
@@ -239,7 +243,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.invalidCredentials('Invalid MFA token');
       }
 
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = 'default' } = req.body as { deviceId?: string };
       const tokens = await jwtService.issueTokenPair(
         user,
         deviceId,
@@ -283,7 +288,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.invalidCredentials('Invalid backup code');
       }
 
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = 'default' } = req.body as { deviceId?: string };
       const tokens = await jwtService.issueTokenPair(
         user,
         deviceId,
@@ -322,7 +328,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.unauthorized('User not found or inactive');
       }
 
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || decoded.deviceId;
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = decoded.deviceId } = req.body as { deviceId?: string };
       const tokens = await jwtService.rotateRefreshToken(
         user,
         refreshToken,
@@ -346,7 +353,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
     authenticate() as RequestHandler,
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { userId } = (req as AuthenticatedRequest).user;
-      const deviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId = 'default' } = req.body as { deviceId?: string };
 
       const user = await UserModel.findById(userId).select('+refreshTokens');
       if (user) {
@@ -394,7 +402,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
 
       if (user) {
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        // Fix for S-3.16: Use bcrypt instead of SHA-256 for password reset tokens
+        const hashedToken = await bcrypt.hash(resetToken, 10);
 
         user.set('passwordResetToken', hashedToken);
         user.set('passwordResetExpires', new Date(Date.now() + 60 * 60 * 1000)); // 1 hour
@@ -428,12 +437,21 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         })));
       }
 
-      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-      const user = await UserModel.findOne({
-        passwordResetToken: hashedToken,
+      // Fix for S-3.16: Find users with unexpired reset tokens, then bcrypt compare
+      const candidateUsers = await UserModel.find({
+        passwordResetToken: { $ne: null },
         passwordResetExpires: { $gt: new Date() },
         isDeleted: { $ne: true },
-      }).select('+password +refreshTokens');
+      }).select('+password +refreshTokens +passwordResetToken');
+
+      let user: typeof candidateUsers[0] | null = null;
+      for (const candidate of candidateUsers) {
+        const storedToken = candidate.get('passwordResetToken') as string | null;
+        if (storedToken && await bcrypt.compare(token, storedToken)) {
+          user = candidate;
+          break;
+        }
+      }
 
       if (!user) {
         throw AppError.badRequest('Invalid or expired reset token');
@@ -483,7 +501,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
 
       user.set('password', newPassword);
       // Keep only the current session, revoke others
-      const currentDeviceId = (req.body as Record<string, unknown>).deviceId as string || 'default';
+      // Fix for S-3.17: Read validated deviceId from body
+      const { deviceId: currentDeviceId = 'default' } = req.body as { deviceId?: string };
       user.refreshTokens = user.refreshTokens.filter((t) => t.deviceId === currentDeviceId);
       await user.save();
 

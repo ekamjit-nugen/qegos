@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type RequestHandler } from 'expres
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
-import * as auditLog from '@nugen/audit-log';
+// Fix for S-3.19: Removed @nugen/audit-log import — audit logging injected via deps
 import type {
   IPaymentDocument,
   IWebhookEventDocument,
@@ -36,6 +36,12 @@ import {
 
 import type Stripe from 'stripe';
 
+/** Fix for S-3.19: Audit log interface injected from consuming app */
+export interface AuditLogDeps {
+  log: (params: Record<string, unknown>) => Promise<void>;
+  logFromRequest: (req: Request, params: Record<string, unknown>) => Promise<void>;
+}
+
 export interface PaymentRouteDeps {
   PaymentModel: Model<IPaymentDocument>;
   WebhookEventModel: Model<IWebhookEventDocument>;
@@ -43,6 +49,8 @@ export interface PaymentRouteDeps {
   providers: Map<PaymentGateway, IPaymentProvider>;
   authenticate: () => RequestHandler;
   checkPermission: (resource: string, action: string) => RequestHandler;
+  /** Fix for S-3.19: Injected audit logger instead of direct @nugen/audit-log import */
+  auditLog?: AuditLogDeps;
 }
 
 /**
@@ -59,6 +67,9 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
     authenticate,
     checkPermission,
   } = deps;
+
+  // Fix for S-3.19: Use injected audit log
+  const auditLog = deps.auditLog;
 
   // Apply maintenance mode check to all routes
   router.use(maintenanceMode());
@@ -111,7 +122,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
 
       if (recentPayment) {
         // Flag for review, do NOT auto-block — per BIL-INV-06
-        await auditLog.log({
+        await auditLog?.log({
           actor: authReq.user.userId,
           actorType: 'system',
           action: 'create',
@@ -196,7 +207,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       });
 
       // PAY-INV-11: Audit log
-      await auditLog.logFromRequest(req, {
+      await auditLog?.logFromRequest(req, {
         action: 'create',
         resource: 'payment',
         resourceId: payment._id.toString(),
@@ -273,7 +284,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       });
 
       // PAY-INV-11: Audit log
-      await auditLog.logFromRequest(req, {
+      await auditLog?.logFromRequest(req, {
         action: 'payment_capture',
         resource: 'payment',
         resourceId: payment._id.toString(),
@@ -341,7 +352,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       });
 
       // PAY-INV-11: Audit log with severity=critical
-      await auditLog.logFromRequest(req, {
+      await auditLog?.logFromRequest(req, {
         action: 'refund',
         resource: 'payment',
         resourceId: result.payment._id.toString(),
@@ -633,7 +644,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       await config.save();
 
       // PAY-INV-11: Critical audit log for config changes
-      await auditLog.logFromRequest(req, {
+      await auditLog?.logFromRequest(req, {
         action: 'config_change',
         resource: 'payment_gateway_config',
         resourceId: config._id.toString(),
@@ -885,7 +896,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       await payment.save();
 
       // PAY-INV-11: Critical audit log
-      await auditLog.logFromRequest(req, {
+      await auditLog?.logFromRequest(req, {
         action: 'void',
         resource: 'payment',
         resourceId: payment._id.toString(),

@@ -56,7 +56,18 @@ const envSchema = z.object({
   PAYZOO_BASE_URL: z.string().optional(),
   PAYZOO_PUBLIC_KEY: z.string().optional(),
   PAYZOO_WEBHOOK_SECRET: z.string().optional(),
-});
+}).refine(
+  // Fix for S-3.18: Ensure at least one payment gateway is configured
+  (data) => {
+    if (data.NODE_ENV === 'test') return true; // Skip in test
+    const hasStripe = Boolean(data.STRIPE_SECRET_KEY);
+    const hasPayzoo = Boolean(data.PAYZOO_API_KEY && data.PAYZOO_API_SECRET);
+    return hasStripe || hasPayzoo;
+  },
+  {
+    message: 'At least one payment gateway must be configured (STRIPE_SECRET_KEY or PAYZOO_API_KEY+PAYZOO_API_SECRET)',
+  },
+);
 
 export type EnvConfig = z.infer<typeof envSchema>;
 

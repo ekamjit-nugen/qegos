@@ -7,6 +7,12 @@ export interface ReviewServiceDeps {
   ReviewAssignmentModel: Model<IReviewAssignmentDocument>;
   OrderModel: Model<Record<string, unknown>>;
   UserModel: Model<Record<string, unknown>>;
+  /**
+   * Fix for B-3.8, T-3.12: Optional callback to transition order status
+   * through the order service's validated transitionStatus path.
+   * If not provided, falls back to direct model update.
+   */
+  transitionOrderStatus?: (orderId: string, newStatus: number) => Promise<void>;
 }
 
 export interface ReviewServiceResult {
@@ -18,6 +24,7 @@ export interface ReviewServiceResult {
   requestChanges: (orderId: string, reviewerId: string, changes: IChangeRequest[], notes?: string) => Promise<IReviewAssignmentDocument>;
   rejectReview: (orderId: string, reviewerId: string, reason: string) => Promise<IReviewAssignmentDocument>;
   resolveChange: (orderId: string, changeIndex: number, preparerId: string) => Promise<IReviewAssignmentDocument>;
+  updateChecklist: (orderId: string, index: number, checked: boolean, reviewerId: string, note?: string) => Promise<IReviewAssignmentDocument>;
   getStats: () => Promise<Record<string, unknown>>;
 }
 
@@ -27,7 +34,17 @@ const ADMIN_USER_TYPES = [0, 1]; // super_admin, admin
 const MANAGER_USER_TYPES = [0, 1, 5]; // super_admin, admin, office_manager
 
 export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResult {
-  const { ReviewAssignmentModel, OrderModel, UserModel } = deps;
+  const { ReviewAssignmentModel, OrderModel, UserModel, transitionOrderStatus } = deps;
+
+  // Fix for B-3.8, T-3.12: Helper to update order status through proper channel
+  async function setOrderStatus(orderId: string, status: number): Promise<void> {
+    if (transitionOrderStatus) {
+      await transitionOrderStatus(orderId, status);
+    } else {
+      // Fallback to direct update if no callback provided
+      await OrderModel.findByIdAndUpdate(orderId, { status });
+    }
+  }
 
   /**
    * Assign a reviewer based on PRD rules:
@@ -108,6 +125,15 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     orderId: string,
     preparerId: string,
   ): Promise<IReviewAssignmentDocument> {
+    // Fix for B-3.22: Verify order is in InProgress status (4) before submitting for review
+    const order = await OrderModel.findById(orderId).lean() as Record<string, unknown> | null;
+    if (!order) throw AppError.notFound('Order');
+    if (order.status !== 4) {
+      throw AppError.badRequest(
+        `Order must be in InProgress status (4) to submit for review. Current status: ${String(order.status)}`,
+      );
+    }
+
     // Check if review already exists for this order
     const existing = await ReviewAssignmentModel.findOne({ orderId });
     if (existing && (existing.status === 'pending_review' || existing.status === 'in_review')) {
@@ -139,8 +165,8 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
 
       await existing.save();
 
-      // Update order status to Review (5)
-      await OrderModel.findByIdAndUpdate(orderId, { status: 5 });
+      // Fix for B-3.8, T-3.12: Use proper status transition
+      await setOrderStatus(orderId, 5);
 
       return existing;
     }
@@ -278,8 +304,8 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
 
     await review.save();
 
-    // Order status back to InProgress (4)
-    await OrderModel.findByIdAndUpdate(orderId, { status: 4 });
+    // Fix for B-3.8, T-3.12: Use proper status transition
+    await setOrderStatus(orderId, 4);
 
     return review;
   }
@@ -341,6 +367,42 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     change.resolvedAt = new Date();
     review.changesResolvedCount += 1;
     review.markModified('changesRequested');
+    await review.save();
+
+    return review;
+  }
+
+  // ─── Update Checklist (Fix for B-3.14, G-3.4) ───────────────────────
+
+  async function updateChecklist(
+    orderId: string,
+    index: number,
+    checked: boolean,
+    reviewerId: string,
+    note?: string,
+  ): Promise<IReviewAssignmentDocument> {
+    const review = await ReviewAssignmentModel.findOne({ orderId });
+    if (!review) throw AppError.notFound('Review assignment');
+
+    // Only the assigned reviewer can update checklist
+    if (review.reviewerId.toString() !== reviewerId) {
+      throw AppError.forbidden('Only the assigned reviewer can update the checklist');
+    }
+
+    if (review.status !== 'in_review' && review.status !== 'pending_review') {
+      throw AppError.badRequest(`Cannot update checklist in status: ${review.status}`);
+    }
+
+    // Validate index is within bounds
+    if (index < 0 || index >= review.checklist.length) {
+      throw AppError.badRequest(`Invalid checklist index: ${index}. Must be 0-${review.checklist.length - 1}`);
+    }
+
+    review.checklist[index].checked = checked;
+    if (note !== undefined) {
+      review.checklist[index].note = note;
+    }
+    review.markModified('checklist');
     await review.save();
 
     return review;
@@ -416,6 +478,7 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     requestChanges,
     rejectReview,
     resolveChange,
+    updateChecklist,
     getStats,
   };
 }

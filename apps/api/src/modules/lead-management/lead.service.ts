@@ -12,12 +12,17 @@ import type {
 } from './lead.types';
 import { LeadStatus, LEAD_STATUS_TRANSITIONS, LOST_REASONS } from './lead.types';
 import { generateLeadNumber } from './lead.model';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 
 export interface LeadServiceDeps {
   LeadModel: Model<ILeadDocument>;
   LeadActivityModel: Model<ILeadActivityDocument>;
   LeadReminderModel: Model<ILeadReminderDocument>;
   connection: Connection;
+  CounterModel?: Model<ICounterDocument>;
+  UserModel?: Model<Record<string, unknown>>;
+  OrderModel?: Model<Record<string, unknown>>;
 }
 
 export interface LeadServiceResult {
@@ -26,7 +31,7 @@ export interface LeadServiceResult {
   getLead: (id: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
   listLeads: (query: LeadListQuery) => Promise<LeadListResult>;
   transitionStatus: (id: string, newStatus: number, data: { lostReason?: string; lostReasonNote?: string; note?: string }, performedBy: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
-  assignLead: (id: string, staffId: string, performedBy: string) => Promise<ILeadDocument>;
+  assignLead: (id: string, staffId: string, performedBy: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
   bulkAssign: (leadIds: string[], staffId: string, performedBy: string) => Promise<{ updated: number }>;
   bulkStatusChange: (leadIds: string[], status: number, data: { lostReason?: string; lostReasonNote?: string }, performedBy: string) => Promise<{ updated: number; errors: Array<{ leadId: string; error: string }> }>;
   convertLead: (leadId: string, performedBy: string) => Promise<{ lead: ILeadDocument; orderId: string; userId: string }>;
@@ -44,7 +49,7 @@ export interface LeadServiceResult {
 }
 
 export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
-  const { LeadModel, LeadActivityModel, LeadReminderModel, connection } = deps;
+  const { LeadModel, LeadActivityModel, LeadReminderModel, connection, CounterModel } = deps;
 
   // ─── Duplicate Check (LM-INV-01) ───────────────────────────────────────
 
@@ -183,7 +188,7 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     const duplicateMatches = await checkDuplicate(data.mobile, data.email);
 
     // Generate lead number
-    const leadNumber = await generateLeadNumber(LeadModel);
+    const leadNumber = await generateLeadNumber(LeadModel, CounterModel);
 
     const lead = await LeadModel.create({
       ...data,
@@ -307,6 +312,8 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     }
 
     // Prevent overwriting protected fields
+    // Fix for S-3.3, B-3.15: Strip status to prevent state machine bypass
+    delete (data as Record<string, unknown>).status;
     delete (data as Record<string, unknown>).leadNumber;
     delete (data as Record<string, unknown>).isConverted;
     delete (data as Record<string, unknown>).convertedOrderId;
@@ -386,12 +393,18 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
   // ─── Assign Lead ──────────────────────────────────────────────────────
 
+  // Fix for S-3.4, B-3.10: Add scopeFilter to prevent IDOR
   async function assignLead(
     id: string,
     staffId: string,
     performedBy: string,
+    scopeFilter?: Record<string, unknown>,
   ): Promise<ILeadDocument> {
-    const lead = await LeadModel.findById(id);
+    const filter: FilterQuery<ILeadDocument> = { _id: id };
+    if (scopeFilter && Object.keys(scopeFilter).length > 0) {
+      Object.assign(filter, scopeFilter);
+    }
+    const lead = await LeadModel.findOne(filter);
     if (!lead) throw AppError.notFound('Lead');
 
     const previousAssignee = lead.assignedTo?.toString();
@@ -423,6 +436,18 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     staffId: string,
     performedBy: string,
   ): Promise<{ updated: number }> {
+    // Fix for B-3.6: Validate that target staff exists and is active
+    if (deps.UserModel) {
+      const staff = await deps.UserModel.findOne({
+        _id: staffId,
+        status: true,
+        isDeleted: { $ne: true },
+      }).lean();
+      if (!staff) {
+        throw AppError.badRequest('Target staff member does not exist or is inactive');
+      }
+    }
+
     const result = await LeadModel.updateMany(
       { _id: { $in: leadIds } },
       { assignedTo: staffId },
@@ -487,9 +512,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         throw AppError.conflict('Lead has already been converted');
       }
 
-      // Create User from lead data
-      const UserModel = connection.model('User');
-      const user = await UserModel.create(
+      // Fix for T-3.11: Use injected UserModel instead of connection.model()
+      const InjectedUserModel = deps.UserModel ?? connection.model('User');
+      const user = await InjectedUserModel.create(
         [
           {
             firstName: lead.firstName,
@@ -510,22 +535,15 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
       const userId = user[0]._id.toString();
 
-      // Create Order
-      const OrderModel = connection.model('Order');
-      // Generate order number
-      const lastOrder = await OrderModel.findOne({}, { orderNumber: 1 })
-        .sort({ _id: -1 })
-        .session(session)
-        .lean<{ orderNumber: string }>();
-
-      let nextOrderNum = 1;
-      if (lastOrder?.orderNumber) {
-        const match = lastOrder.orderNumber.match(/QGS-O-(\d+)/);
-        if (match) nextOrderNum = parseInt(match[1], 10) + 1;
+      // Fix for T-3.11, B-3.13: Use injected OrderModel and atomic counter
+      const InjectedOrderModel = deps.OrderModel ?? connection.model('Order');
+      if (!CounterModel) {
+        throw new Error('CounterModel is required for atomic order number generation');
       }
-      const orderNumber = `QGS-O-${String(nextOrderNum).padStart(4, '0')}`;
+      const orderSeq = await getNextSequence(CounterModel, 'order');
+      const orderNumber = `QGS-O-${String(orderSeq).padStart(4, '0')}`;
 
-      const order = await OrderModel.create(
+      const order = await InjectedOrderModel.create(
         [
           {
             orderNumber,
@@ -612,26 +630,20 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         throw AppError.conflict('Lead has already been converted');
       }
 
-      // Verify user exists
-      const UserModel = connection.model('User');
-      const user = await UserModel.findById(userId).session(session);
+      // Fix for T-3.11: Use injected UserModel
+      const InjectedUserModel = deps.UserModel ?? connection.model('User');
+      const user = await InjectedUserModel.findById(userId).session(session);
       if (!user) throw AppError.notFound('User');
 
-      // Create Order
-      const OrderModel = connection.model('Order');
-      const lastOrder = await OrderModel.findOne({}, { orderNumber: 1 })
-        .sort({ _id: -1 })
-        .session(session)
-        .lean<{ orderNumber: string }>();
-
-      let nextOrderNum = 1;
-      if (lastOrder?.orderNumber) {
-        const match = lastOrder.orderNumber.match(/QGS-O-(\d+)/);
-        if (match) nextOrderNum = parseInt(match[1], 10) + 1;
+      // Fix for T-3.11, B-3.13: Use injected OrderModel and atomic counter
+      const InjectedOrderModel = deps.OrderModel ?? connection.model('Order');
+      if (!CounterModel) {
+        throw new Error('CounterModel is required for atomic order number generation');
       }
-      const orderNumber = `QGS-O-${String(nextOrderNum).padStart(4, '0')}`;
+      const orderSeq = await getNextSequence(CounterModel, 'order');
+      const orderNumber = `QGS-O-${String(orderSeq).padStart(4, '0')}`;
 
-      const order = await OrderModel.create(
+      const order = await InjectedOrderModel.create(
         [
           {
             orderNumber,
@@ -699,46 +711,77 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
   // ─── Merge Lead (LM-INV-06) ──────────────────────────────────────────
 
+  // Fix for T-3.7: Wrap merge in MongoDB transaction
   async function mergeLead(
     primaryId: string,
     secondaryId: string,
     fieldSelections: Record<string, 'primary' | 'secondary'>,
   ): Promise<ILeadDocument> {
-    const [primary, secondary] = await Promise.all([
-      LeadModel.findById(primaryId),
-      LeadModel.findById(secondaryId),
+    // Fix for S-3.2, B-3.3: Allowlist of mergeable fields to prevent arbitrary field injection
+    const MERGEABLE_FIELDS: ReadonlySet<string> = new Set([
+      'firstName', 'lastName', 'email', 'mobile', 'preferredLanguage',
+      'preferredContact', 'suburb', 'state', 'postcode', 'financialYear',
+      'maritalStatus', 'hasSpouse', 'numberOfDependants', 'employmentType',
+      'hasRentalProperty', 'hasSharePortfolio', 'hasForeignIncome',
+      'tags', 'notes',
     ]);
-    if (!primary) throw AppError.notFound('Primary lead');
-    if (!secondary) throw AppError.notFound('Secondary lead');
 
-    // Apply field selections from secondary to primary
-    for (const [field, selection] of Object.entries(fieldSelections)) {
-      if (selection === 'secondary') {
-        const value = (secondary as Record<string, unknown>)[field];
-        (primary as Record<string, unknown>)[field] = value;
-      }
+    // Reject any fieldSelections key not in the allowlist
+    const invalidFields = Object.keys(fieldSelections).filter((f) => !MERGEABLE_FIELDS.has(f));
+    if (invalidFields.length > 0) {
+      throw AppError.badRequest(
+        `Cannot merge protected or unknown fields: ${invalidFields.join(', ')}`,
+        invalidFields.map((f) => ({ field: f, message: 'Field not allowed in merge' })),
+      );
     }
 
-    await primary.save();
+    const session = await connection.startSession();
+    session.startTransaction();
 
-    // Transfer all activities from secondary to primary
-    await LeadActivityModel.updateMany(
-      { leadId: secondaryId },
-      { leadId: primaryId },
-    );
+    try {
+      const [primary, secondary] = await Promise.all([
+        LeadModel.findById(primaryId).session(session),
+        LeadModel.findById(secondaryId).session(session),
+      ]);
+      if (!primary) throw AppError.notFound('Primary lead');
+      if (!secondary) throw AppError.notFound('Secondary lead');
 
-    // Transfer all reminders from secondary to primary
-    await LeadReminderModel.updateMany(
-      { leadId: secondaryId },
-      { leadId: primaryId },
-    );
+      // Apply field selections from secondary to primary
+      for (const [field, selection] of Object.entries(fieldSelections)) {
+        if (selection === 'secondary') {
+          const value = (secondary as Record<string, unknown>)[field];
+          (primary as Record<string, unknown>)[field] = value;
+        }
+      }
 
-    // Soft-delete secondary
-    secondary.isDeleted = true;
-    secondary.deletedAt = new Date();
-    await secondary.save();
+      await primary.save({ session });
 
-    return (await LeadModel.findById(primaryId).lean<ILeadDocument>())!;
+      // Transfer all activities from secondary to primary
+      await LeadActivityModel.updateMany(
+        { leadId: secondaryId },
+        { leadId: primaryId },
+      ).session(session);
+
+      // Transfer all reminders from secondary to primary
+      await LeadReminderModel.updateMany(
+        { leadId: secondaryId },
+        { leadId: primaryId },
+      ).session(session);
+
+      // Soft-delete secondary
+      secondary.isDeleted = true;
+      secondary.deletedAt = new Date();
+      await secondary.save({ session });
+
+      await session.commitTransaction();
+
+      return (await LeadModel.findById(primaryId).lean<ILeadDocument>())!;
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      await session.endSession();
+    }
   }
 
   // ─── Search Leads ─────────────────────────────────────────────────────

@@ -22,9 +22,12 @@ function getConfig(): AuthConfig {
  * Returns plaintext codes (shown to user once) and hashed codes (stored).
  * FIX for Vegeta S-3: Backup codes are hashed before storage.
  */
-async function generateBackupCodes(count = 10): Promise<{ plaintext: string[]; hashed: string[] }> {
+// Fix for S-3.20: Use configurable backup code count
+async function generateBackupCodes(count?: number): Promise<{ plaintext: string[]; hashed: string[] }> {
+  const config = getConfig();
+  const codeCount = count ?? config.mfaBackupCodeCount ?? 10;
   const codes: string[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < codeCount; i++) {
     codes.push(crypto.randomBytes(4).toString('hex').toUpperCase());
   }
   const hashed = await Promise.all(codes.map((code) => bcrypt.hash(code, 10)));

@@ -39,6 +39,14 @@ export function createApp(): express.Express {
     }),
   );
 
+  // Fix for T-3.4: Stripe raw body parser BEFORE global JSON parser
+  // Stripe webhook signature verification requires the raw body.
+  const config2 = getConfig();
+  app.use(
+    `/api/${config2.API_VERSION}/payments/webhooks/stripe`,
+    express.raw({ type: 'application/json' }),
+  );
+
   // --- Parsing ---
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -52,6 +60,52 @@ export function createApp(): express.Express {
 
   // --- Rate limiting (NFR-03: 100/min per user) ---
   app.use(`/api/${config.API_VERSION}`, createApiLimiter());
+
+  // Fix for S-3.6: CSRF protection for state-changing routes
+  // Skip CSRF on webhook endpoints (they use signature verification)
+  if (config.CSRF_SECRET) {
+    const webhookPaths = ['/payments/webhooks/'];
+    app.use(`/api/${config.API_VERSION}`, (req: Request, res: Response, next: express.NextFunction): void => {
+      // Skip CSRF for webhooks and safe HTTP methods
+      if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+        next();
+        return;
+      }
+      // Skip CSRF for webhook paths
+      if (webhookPaths.some((p) => req.path.includes(p))) {
+        next();
+        return;
+      }
+      // Validate CSRF token from header or body
+      const csrfToken = (req.headers['x-csrf-token'] as string | undefined)
+        ?? (req.body as Record<string, unknown> | undefined)?._csrf as string | undefined;
+      if (!csrfToken || csrfToken !== (req.cookies as Record<string, string>)?._csrf) {
+        res.status(403).json({
+          status: 403,
+          code: 'CSRF_INVALID',
+          message: 'Invalid or missing CSRF token',
+        });
+        return;
+      }
+      next();
+    });
+  }
+
+  // CSRF token generation endpoint
+  app.get(`/api/${config.API_VERSION}/csrf-token`, (_req: Request, res: Response): void => {
+    const csrfConfig = getConfig();
+    if (!csrfConfig.CSRF_SECRET) {
+      res.status(200).json({ status: 200, data: { csrfEnabled: false } });
+      return;
+    }
+    const token = require('crypto').randomBytes(32).toString('hex');
+    res.cookie('_csrf', token, {
+      httpOnly: true,
+      secure: csrfConfig.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+    res.status(200).json({ status: 200, data: { csrfToken: token } });
+  });
 
   // --- Health check endpoints ---
 
@@ -98,12 +152,7 @@ export function finalizeApp(
     void deepHealthCheck(req, res);
   });
 
-  // PAY-INV-04: Stripe webhooks require raw body for signature verification.
-  // Mount BEFORE json parser routes — use express.raw() for the webhook path.
-  app.use(
-    `${prefix}/payments/webhooks/stripe`,
-    express.raw({ type: 'application/json' }),
-  );
+  // NOTE: Stripe raw body parser moved to createApp() BEFORE express.json() — Fix T-3.4
 
   // Mount routes
   app.use(`${prefix}/auth`, routes.authRouter);

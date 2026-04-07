@@ -1,8 +1,18 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
+import { param } from 'express-validator';
 import type { Model, Connection } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
-import * as auditLog from '@nugen/audit-log';
+import * as _auditLog from '@nugen/audit-log';
+
+// Fix for B-3.45: Wrap audit log to catch failures instead of silent void
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
+    });
+  },
+};
 import type { ILeadDocument, ILeadActivityDocument, ILeadReminderDocument } from './lead.types';
 import { createLeadService } from './lead.service';
 import { createLeadActivityService } from './leadActivity.service';
@@ -41,6 +51,9 @@ export interface LeadRouteDeps {
   LeadActivityModel: Model<ILeadActivityDocument>;
   LeadReminderModel: Model<ILeadReminderDocument>;
   connection: Connection;
+  CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
+  UserModel?: Model<Record<string, unknown>>;
+  OrderModel?: Model<Record<string, unknown>>;
   authenticate: () => RequestHandler;
   checkPermission: (resource: string, action: string) => RequestHandler;
 }
@@ -54,6 +67,9 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
 
   const leadService = createLeadService({
     LeadModel, LeadActivityModel, LeadReminderModel, connection,
+    CounterModel: deps.CounterModel,
+    UserModel: deps.UserModel,
+    OrderModel: deps.OrderModel,
   });
 
   const activityService = createLeadActivityService({
@@ -140,7 +156,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
         authReq.user.userId,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'create',
@@ -256,7 +272,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
       };
       const merged = await leadService.mergeLead(primaryLeadId, secondaryLeadId, fieldSelections);
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'admin',
         action: 'merge',
@@ -281,7 +297,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
       const { leadIds, assignedTo } = req.body as { leadIds: string[]; assignedTo: string };
       const result = await leadService.bulkAssign(leadIds, assignedTo, authReq.user.userId);
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'admin',
         action: 'bulk_action',
@@ -484,10 +500,12 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
   // ──────────────────────────────────────────────────────────────────────
 
   // 3. GET /leads/:id — Full detail
+  // Fix for B-3.43: Validate :id is a valid MongoId
   router.get(
     '/:id',
     auth() as never,
     check('leads', 'read') as never,
+    ...validate([param('id').isMongoId().withMessage('Invalid lead ID')]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const lead = await leadService.getLead(req.params.id, authReq.scopeFilter);
@@ -509,7 +527,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
         authReq.scopeFilter,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'update',
@@ -544,7 +562,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
         authReq.scopeFilter,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'status_change',
@@ -567,9 +585,10 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const { assignedTo } = req.body as { assignedTo: string };
-      const lead = await leadService.assignLead(req.params.id, assignedTo, authReq.user.userId);
+      // Fix for S-3.4, B-3.10: Pass scopeFilter to prevent IDOR
+      const lead = await leadService.assignLead(req.params.id, assignedTo, authReq.user.userId, authReq.scopeFilter);
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'admin',
         action: 'assign',
@@ -620,6 +639,29 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
     }),
   );
 
+  // Fix for B-3.31: DELETE /leads/:id — Soft delete
+  router.delete(
+    '/:id',
+    auth() as never,
+    check('leads', 'delete') as never,
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
+      const lead = await leadService.softDelete(req.params.id, authReq.scopeFilter);
+
+      auditLog.log({
+        actor: authReq.user.userId,
+        actorType: 'admin',
+        action: 'delete',
+        resource: 'lead',
+        resourceId: req.params.id,
+        description: `Lead ${lead.leadNumber} soft-deleted`,
+        severity: 'warning',
+      });
+
+      res.status(200).json({ status: 200, data: { message: 'Lead deleted' } });
+    }),
+  );
+
   // 26. POST /leads/:id/convert — Convert to user + order
   router.post(
     '/:id/convert',
@@ -630,7 +672,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
       const authReq = req as AuthenticatedRequest;
       const result = await leadService.convertLead(req.params.id, authReq.user.userId);
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'convert',
@@ -659,7 +701,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
         authReq.user.userId,
       );
 
-      void auditLog.log({
+      auditLog.log({
         actor: authReq.user.userId,
         actorType: 'staff',
         action: 'convert',

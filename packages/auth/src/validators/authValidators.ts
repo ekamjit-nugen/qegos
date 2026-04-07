@@ -12,6 +12,8 @@ export function signupValidation(): ValidationChain[] {
       .matches(/^\+61\d{9}$/)
       .withMessage('Must be a valid Australian mobile (+61XXXXXXXXX)'),
     body('otp').trim().notEmpty().withMessage('OTP is required'),
+    // Fix for S-3.17: Validate deviceId
+    body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
 
@@ -24,6 +26,8 @@ export function signinValidation(): ValidationChain[] {
       .isEmail()
       .withMessage('Must be a valid email'),
     body('password').notEmpty().withMessage('Password is required'),
+    // Fix for S-3.17: Validate deviceId
+    body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
 
@@ -47,6 +51,8 @@ export function verifyOtpValidation(): ValidationChain[] {
       .matches(/^\+61\d{9}$/)
       .withMessage('Must be a valid Australian mobile (+61XXXXXXXXX)'),
     body('otp').trim().notEmpty().withMessage('OTP is required'),
+    // Fix for S-3.17: Validate deviceId
+    body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
 
@@ -101,6 +107,8 @@ export function mfaVerifyValidation(): ValidationChain[] {
   return [
     body('challengeToken').trim().notEmpty().withMessage('MFA challenge token is required'),
     body('token').trim().notEmpty().withMessage('MFA token is required'),
+    // Fix for S-3.17: Validate deviceId
+    body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
 
@@ -114,6 +122,8 @@ export function mfaBackupValidation(): ValidationChain[] {
   return [
     body('challengeToken').trim().notEmpty().withMessage('MFA challenge token is required'),
     body('backupCode').trim().notEmpty().withMessage('Backup code is required'),
+    // Fix for S-3.17: Validate deviceId
+    body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
 

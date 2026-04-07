@@ -21,6 +21,14 @@ export interface AuthConfig {
   passwordPolicy: PasswordPolicy;
   phoneRegex: RegExp;
   mfaIssuer: string;
+  /** Fix for S-3.15: Max OTP verification attempts before lockout (default: 5) */
+  otpMaxAttempts?: number;
+  /** Fix for S-3.20: Max failed login attempts before account lockout (default: 10) */
+  maxFailedLoginAttempts?: number;
+  /** Fix for S-3.20: Lockout duration in ms (default: 1800000 = 30 min) */
+  lockoutDurationMs?: number;
+  /** Fix for S-3.20: Number of MFA backup codes to generate (default: 10) */
+  mfaBackupCodeCount?: number;
   sendOtp?: (mobile: string, otp: string) => Promise<void>;
   sendPasswordResetEmail?: (email: string, token: string) => Promise<void>;
 }

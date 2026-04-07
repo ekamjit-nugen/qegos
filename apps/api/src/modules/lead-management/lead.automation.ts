@@ -83,54 +83,65 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
 
     if (eligible.length === 0) return { processed: 0 };
 
-    let processed = 0;
-    for (let i = 0; i < unassigned.length; i++) {
-      const staffIndex = i % eligible.length;
-      await LeadModel.findByIdAndUpdate(unassigned[i]._id, {
-        assignedTo: eligible[staffIndex]._id,
-      });
-      processed++;
-    }
+    // Fix for B-3.17: Use bulkWrite instead of N+1 individual updates
+    const bulkOps = unassigned.map((lead, i) => ({
+      updateOne: {
+        filter: { _id: lead._id },
+        update: { $set: { assignedTo: eligible[i % eligible.length]._id } },
+      },
+    }));
+    await LeadModel.bulkWrite(bulkOps);
 
-    return { processed };
+    return { processed: unassigned.length };
   }
 
   /**
    * Stale lead alert: New lead > 24hr with no activity.
    */
+  // Fix for B-3.17: Use aggregation with $lookup instead of N+1 per-lead queries
+  // Fix for B-3.19: Use null performedBy with isSystemGenerated: true
   async function staleLeadAlert(): Promise<{ alerted: number }> {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const staleLeads = await LeadModel.find({
-      status: LeadStatus.New,
-      createdAt: { $lte: twentyFourHoursAgo },
-    }).select('_id assignedTo leadNumber').lean<Array<{ _id: string; assignedTo?: string; leadNumber: string }>>();
+    // Single aggregation to find stale leads with zero non-system activities
+    const staleLeads = await LeadModel.aggregate<{ _id: string; assignedTo?: string; leadNumber: string }>([
+      {
+        $match: {
+          status: LeadStatus.New,
+          createdAt: { $lte: twentyFourHoursAgo },
+          isDeleted: { $ne: true },
+        },
+      },
+      {
+        $lookup: {
+          from: 'leadactivities',
+          let: { leadId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$leadId', '$$leadId'] }, isSystemGenerated: false } },
+            { $limit: 1 },
+          ],
+          as: 'manualActivities',
+        },
+      },
+      { $match: { manualActivities: { $size: 0 } } },
+      { $project: { _id: 1, assignedTo: 1, leadNumber: 1 } },
+    ]);
 
-    let alerted = 0;
-    for (const lead of staleLeads) {
-      // Check if any activity exists
-      const activityCount = await LeadActivityModel.countDocuments({
-        leadId: lead._id,
-        isSystemGenerated: false,
-      });
+    if (staleLeads.length === 0) return { alerted: 0 };
 
-      if (activityCount === 0) {
-        // In production: send push notification + Slack alert
-        // For now, log a system activity as alert marker
-        await LeadActivityModel.create({
-          leadId: lead._id,
-          type: 'note',
-          description: 'ALERT: New lead has had no activity for 24+ hours',
-          performedBy: lead.assignedTo ?? lead._id, // system fallback
-          isSystemGenerated: true,
-          servicesQuoted: [],
-          attachments: [],
-        });
-        alerted++;
-      }
-    }
+    // Batch insert alert activities
+    const alertActivities = staleLeads.map((lead) => ({
+      leadId: lead._id,
+      type: 'note' as const,
+      description: 'ALERT: New lead has had no activity for 24+ hours',
+      performedBy: null,
+      isSystemGenerated: true,
+      servicesQuoted: [],
+      attachments: [],
+    }));
+    await LeadActivityModel.insertMany(alertActivities);
 
-    return { alerted };
+    return { alerted: staleLeads.length };
   }
 
   /**
@@ -144,22 +155,30 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
       lastContactedAt: { $lte: fourteenDaysAgo },
     }).select('_id').lean<Array<{ _id: string }>>();
 
-    let transitioned = 0;
-    for (const lead of candidates) {
-      await LeadModel.findByIdAndUpdate(lead._id, { status: LeadStatus.Dormant });
-      await LeadActivityModel.create({
-        leadId: lead._id,
-        type: 'status_change',
-        description: 'Auto-transitioned to Dormant: 14 days without activity',
-        performedBy: lead._id, // system
-        isSystemGenerated: true,
-        servicesQuoted: [],
-        attachments: [],
-      });
-      transitioned++;
-    }
+    if (candidates.length === 0) return { transitioned: 0 };
 
-    return { transitioned };
+    // Fix for B-3.17, B-3.18: Use bulkWrite + insertMany instead of N+1 loop
+    // Fix for B-3.18: Use null performedBy with isSystemGenerated: true
+    const bulkOps = candidates.map((lead) => ({
+      updateOne: {
+        filter: { _id: lead._id },
+        update: { $set: { status: LeadStatus.Dormant } },
+      },
+    }));
+    await LeadModel.bulkWrite(bulkOps);
+
+    const activities = candidates.map((lead) => ({
+      leadId: lead._id,
+      type: 'status_change' as const,
+      description: 'Auto-transitioned to Dormant: 14 days without activity',
+      performedBy: null,
+      isSystemGenerated: true,
+      servicesQuoted: [],
+      attachments: [],
+    }));
+    await LeadActivityModel.insertMany(activities);
+
+    return { transitioned: candidates.length };
   }
 
   /**

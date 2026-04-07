@@ -83,13 +83,15 @@ export function authPlugin(schema: Schema): void {
     return lockedUntil > new Date();
   };
 
-  // Instance method: increment failed attempts, lock after 10 (SEC-INV-02)
+  // Instance method: increment failed attempts, lock after threshold (SEC-INV-02)
+  // Fix for S-3.20: Use configurable values instead of hardcoded magic numbers
   schema.methods.incrementFailedAttempts = async function (): Promise<void> {
     const attempts = (this.get('failedLoginAttempts') as number) + 1;
     this.set('failedLoginAttempts', attempts);
-    if (attempts >= 10) {
-      // Lock for 30 minutes
-      this.set('accountLockedUntil', new Date(Date.now() + 30 * 60 * 1000));
+    const maxAttempts = _config?.maxFailedLoginAttempts ?? 10;
+    if (attempts >= maxAttempts) {
+      const lockoutMs = _config?.lockoutDurationMs ?? 30 * 60 * 1000;
+      this.set('accountLockedUntil', new Date(Date.now() + lockoutMs));
     }
     await this.save();
   };

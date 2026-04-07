@@ -55,3 +55,21 @@ export function resolveChangeValidation(): ValidationChain[] {
       .toInt(),
   ];
 }
+
+// Fix for B-3.14, G-3.4: Checklist update validation
+export function updateChecklistValidation(): ValidationChain[] {
+  return [
+    param('orderId').isMongoId().withMessage('Invalid order ID'),
+    body('index')
+      .notEmpty().withMessage('Checklist item index is required')
+      .isInt({ min: 0 }).withMessage('Index must be a non-negative integer')
+      .toInt(),
+    body('checked')
+      .notEmpty().withMessage('Checked value is required')
+      .isBoolean().withMessage('Checked must be a boolean'),
+    body('note')
+      .optional()
+      .trim()
+      .isLength({ max: 1000 }).withMessage('Note must be at most 1000 characters'),
+  ];
+}

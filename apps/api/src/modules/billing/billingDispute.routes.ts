@@ -227,7 +227,12 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
         resolvedAmount?: number;
       };
 
-      const dispute = await BillingDisputeModel.findById(id);
+      // Fix for B-3.34: Apply scopeFilter to prevent IDOR
+      const disputeQuery: Record<string, unknown> = { _id: id };
+      if (authReq.scopeFilter && Object.keys(authReq.scopeFilter).length > 0) {
+        Object.assign(disputeQuery, authReq.scopeFilter);
+      }
+      const dispute = await BillingDisputeModel.findOne(disputeQuery);
       if (!dispute) {
         throw AppError.notFound('Billing dispute');
       }
@@ -294,9 +299,15 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
       param('id').trim().notEmpty().isMongoId().withMessage('Dispute ID must be a valid ID'),
     ]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
 
-      const dispute = await BillingDisputeModel.findById(id);
+      // Fix for B-3.35: Apply scopeFilter to prevent IDOR
+      const disputeQuery: Record<string, unknown> = { _id: id };
+      if (authReq.scopeFilter && Object.keys(authReq.scopeFilter).length > 0) {
+        Object.assign(disputeQuery, authReq.scopeFilter);
+      }
+      const dispute = await BillingDisputeModel.findOne(disputeQuery);
       if (!dispute) {
         throw AppError.notFound('Billing dispute');
       }

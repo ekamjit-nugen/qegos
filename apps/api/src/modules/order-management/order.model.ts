@@ -10,6 +10,8 @@ import {
   ORDER_TYPES,
   LINE_ITEM_COMPLETION_STATUSES,
 } from './order.types';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 
 // ─── TFN Encryption (SEC-INV-09) ───────────────────────────────────────────
 
@@ -292,21 +294,20 @@ orderSchema.pre('countDocuments', function () {
 
 // ─── Auto-increment orderNumber ─────────────────────────────────────────────
 
-export async function generateOrderNumber(OrderModel: Model<IOrderDocument2>): Promise<string> {
-  const lastOrder = await OrderModel.findOne({}, { orderNumber: 1 })
-    .sort({ _id: -1 })
-    .setOptions({ skipSoftDeleteFilter: true })
-    .lean<{ orderNumber: string }>();
-
-  let nextNum = 1;
-  if (lastOrder?.orderNumber) {
-    const match = lastOrder.orderNumber.match(/QGS-O-(\d+)/);
-    if (match) {
-      nextNum = parseInt(match[1], 10) + 1;
-    }
+/**
+ * Generate the next order number in QGS-O-XXXX format.
+ * Fix for B-3.1, B-3.13: Uses atomic counter with findOneAndUpdate + $inc
+ * to prevent duplicate numbers under concurrent load.
+ */
+export async function generateOrderNumber(
+  _OrderModel: Model<IOrderDocument2>,
+  CounterModel?: Model<ICounterDocument>,
+): Promise<string> {
+  if (!CounterModel) {
+    throw new Error('CounterModel is required for atomic order number generation');
   }
-
-  return `QGS-O-${String(nextNum).padStart(4, '0')}`;
+  const seq = await getNextSequence(CounterModel, 'order');
+  return `QGS-O-${String(seq).padStart(4, '0')}`;
 }
 
 /**

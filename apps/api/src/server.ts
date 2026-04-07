@@ -27,6 +27,9 @@ import { createSalesModel, seedSalesCatalogue } from './modules/order-management
 import { createOrderRoutes, createSalesRoutes } from './modules/order-management/order.routes';
 import { createReviewAssignmentModel } from './modules/review-pipeline/reviewAssignment.model';
 import { createReviewRoutes } from './modules/review-pipeline/review.routes';
+import { createCounterModel } from './database/counter.model';
+import { createAutomationHandlers } from './modules/lead-management/lead.automation';
+import { Queue, Worker, type Job } from 'bullmq';
 
 async function bootstrap(): Promise<void> {
   // 1. Load and validate environment
@@ -101,6 +104,9 @@ async function bootstrap(): Promise<void> {
   // Billing dispute model (QEGOS Tier 2)
   const BillingDisputeModel = createBillingDisputeModel(connection);
 
+  // Fix for B-3.1: Atomic counter model
+  const CounterModel = createCounterModel(connection);
+
   // Phase 3: Lead & Order Core + Review Pipeline models
   const LeadModel = createLeadModel(connection);
   const LeadActivityModel = createLeadActivityModel(connection);
@@ -153,6 +159,7 @@ async function bootstrap(): Promise<void> {
     checkPermission: rbac.check,
   });
 
+  // Fix for S-3.19: Inject auditLog into payment routes
   const paymentRouter = paymentGateway.createPaymentRoutes({
     PaymentModel,
     WebhookEventModel,
@@ -160,6 +167,10 @@ async function bootstrap(): Promise<void> {
     providers,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
   });
 
   const billingDisputeRouter = createBillingDisputeRoutes({
@@ -174,6 +185,10 @@ async function bootstrap(): Promise<void> {
     LeadActivityModel,
     LeadReminderModel,
     connection,
+    // Fix for B-3.1, T-3.11: Pass CounterModel and injected models
+    CounterModel,
+    UserModel: UserModel as never,
+    OrderModel: OrderModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -181,6 +196,10 @@ async function bootstrap(): Promise<void> {
   const orderRouter = createOrderRoutes({
     OrderModel,
     SalesModel,
+    // Fix for S-3.1, B-3.1: Pass ReviewAssignmentModel and CounterModel
+    ReviewAssignmentModel: ReviewAssignmentModel as never,
+    CounterModel,
+    UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -245,6 +264,80 @@ async function bootstrap(): Promise<void> {
     reviewRouter,
   }, deepHealthCheck);
 
+  // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs
+  const automationHandlers = createAutomationHandlers({
+    LeadModel,
+    LeadActivityModel,
+    LeadReminderModel,
+    recalculateScore: createLeadService({
+      LeadModel, LeadActivityModel, LeadReminderModel, connection, CounterModel,
+      UserModel: UserModel as never, OrderModel: OrderModel as never,
+    }).calculateScore,
+  });
+
+  const redisConnectionOpts = {
+    host: config.REDIS_HOST,
+    port: config.REDIS_PORT,
+    password: config.REDIS_PASSWORD || undefined,
+  };
+
+  const automationQueue = new Queue('lead-automation', { connection: redisConnectionOpts });
+
+  // Register repeatable jobs
+  const repeatableJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'autoAssign', pattern: '*/5 * * * *' },       // every 5 minutes
+    { name: 'staleLeadAlert', pattern: '0 * * * *' },     // every hour
+    { name: 'autoDormant', pattern: '0 2 * * *' },        // daily at 2am
+    { name: 'followUpEscalation', pattern: '*/30 * * * *' }, // every 30 minutes
+    { name: 'overdueMarker', pattern: '*/15 * * * *' },   // every 15 minutes
+    { name: 'reEngagementFlag', pattern: '0 3 * * *' },   // daily at 3am
+  ];
+
+  for (const job of repeatableJobs) {
+    await automationQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  // Worker to process automation jobs
+  const automationWorker = new Worker(
+    'lead-automation',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'autoAssign':
+          await automationHandlers.autoAssignNewLead();
+          break;
+        case 'staleLeadAlert':
+          await automationHandlers.staleLeadAlert();
+          break;
+        case 'autoDormant':
+          await automationHandlers.autoDormant();
+          break;
+        case 'followUpEscalation':
+          await automationHandlers.followUpEscalation();
+          break;
+        case 'overdueMarker':
+          await automationHandlers.overdueMarker();
+          break;
+        case 'reEngagementFlag':
+          await automationHandlers.reEngagementFlag();
+          break;
+        default:
+          // On-demand jobs like scoreRecalculation
+          if (job.name === 'scoreRecalculation' && job.data.leadId) {
+            await automationHandlers.scoreRecalculation(job.data.leadId as string);
+          }
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  automationWorker.on('failed', (job, err) => {
+    console.warn(`[AUTOMATION] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
   // 8. Start server
   const port = config.PORT;
   const server = app.listen(port, () => {
@@ -255,6 +348,8 @@ async function bootstrap(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     console.warn(`${signal} received. Shutting down gracefully...`); // eslint-disable-line no-console
     server.close(async () => {
+      await automationWorker.close();
+      await automationQueue.close();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

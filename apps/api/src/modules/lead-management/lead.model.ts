@@ -10,6 +10,8 @@ import {
   EMPLOYMENT_TYPES,
   LOST_REASONS,
 } from './lead.types';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 
 const leadSchema = new Schema<ILeadDocument>(
   {
@@ -177,22 +179,18 @@ leadSchema.pre('countDocuments', function () {
 
 /**
  * Generate the next lead number in QGS-L-XXXX format.
+ * Fix for B-3.1: Uses atomic counter with findOneAndUpdate + $inc
+ * to prevent duplicate numbers under concurrent load.
  */
-export async function generateLeadNumber(LeadModel: Model<ILeadDocument>): Promise<string> {
-  const lastLead = await LeadModel.findOne({}, { leadNumber: 1 })
-    .sort({ _id: -1 })
-    .setOptions({ skipSoftDeleteFilter: true })
-    .lean<{ leadNumber: string }>();
-
-  let nextNum = 1;
-  if (lastLead?.leadNumber) {
-    const match = lastLead.leadNumber.match(/QGS-L-(\d+)/);
-    if (match) {
-      nextNum = parseInt(match[1], 10) + 1;
-    }
+export async function generateLeadNumber(
+  _LeadModel: Model<ILeadDocument>,
+  CounterModel?: Model<ICounterDocument>,
+): Promise<string> {
+  if (!CounterModel) {
+    throw new Error('CounterModel is required for atomic lead number generation');
   }
-
-  return `QGS-L-${String(nextNum).padStart(4, '0')}`;
+  const seq = await getNextSequence(CounterModel, 'lead');
+  return `QGS-L-${String(seq).padStart(4, '0')}`;
 }
 
 /**

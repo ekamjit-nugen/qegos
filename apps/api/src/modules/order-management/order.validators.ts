@@ -72,8 +72,9 @@ export function assignOrderValidation(): ValidationChain[] {
 
 export function bulkAssignValidation(): ValidationChain[] {
   return [
+    // Fix for B-3.12: Add max size limit
     body('orderIds')
-      .isArray({ min: 1 }).withMessage('At least one order ID is required'),
+      .isArray({ min: 1, max: 100 }).withMessage('Order IDs must be 1-100 items'),
     body('orderIds.*')
       .isMongoId().withMessage('Each order ID must be a valid ID'),
     body('processingBy')

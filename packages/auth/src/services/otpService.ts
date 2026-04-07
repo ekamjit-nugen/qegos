@@ -87,6 +87,14 @@ export async function verifyOtp(mobile: string, otpCode: string): Promise<boolea
     return false;
   }
 
+  // Fix for S-3.15: Check max attempts before comparing
+  const config = getConfig();
+  const maxAttempts = config.otpMaxAttempts ?? 5;
+  if (otpRecord.attempts >= maxAttempts) {
+    await OtpModel.deleteOne({ _id: otpRecord._id });
+    return false;
+  }
+
   // Increment attempts
   otpRecord.attempts += 1;
 
