@@ -13,6 +13,13 @@ import { createUserRoutes } from './modules/user/user.routes';
 import { createTaxRuleConfigModel } from './modules/tax-rules/taxRule.model';
 import { createTaxRuleRoutes } from './modules/tax-rules/taxRule.routes';
 import { seedTaxRules } from './modules/tax-rules/taxRule.seed';
+
+// Phase 4: Tax Engine (enhanced calculator, estimates, results, amendments)
+import { createTaxRuleConfigModelV2 } from './modules/tax-engine/taxRuleConfig.model';
+import { createTaxEstimateLogModel } from './modules/tax-engine/taxEstimateLog.model';
+import { createTaxReturnResultModel } from './modules/tax-engine/taxReturnResult.model';
+import { createTaxEngineRoutes } from './modules/tax-engine/taxEngine.routes';
+import { seedTaxEngineRules } from './modules/tax-engine/taxEngine.seed';
 import { createBillingDisputeModel } from './modules/billing/billingDispute.model';
 import { createBillingDisputeRoutes } from './modules/billing/billingDispute.routes';
 import type { IUserDocument } from './modules/user/user.types';
@@ -22,6 +29,7 @@ import { createLeadModel } from './modules/lead-management/lead.model';
 import { createLeadActivityModel } from './modules/lead-management/leadActivity.model';
 import { createLeadReminderModel } from './modules/lead-management/leadReminder.model';
 import { createLeadRoutes } from './modules/lead-management/lead.routes';
+import { createLeadService } from './modules/lead-management/lead.service';
 import { createOrderModel } from './modules/order-management/order.model';
 import { createSalesModel, seedSalesCatalogue } from './modules/order-management/sales.model';
 import { createOrderRoutes, createSalesRoutes } from './modules/order-management/order.routes';
@@ -87,8 +95,13 @@ async function bootstrap(): Promise<void> {
   // Audit log
   const { AuditLogModel } = auditLog.init(connection);
 
-  // Tax rule config model
+  // Tax rule config model (Phase 0 — legacy)
   const TaxRuleConfigModel = createTaxRuleConfigModel(connection);
+
+  // Phase 4: Tax engine models (enhanced)
+  const TaxRuleConfigModelV2 = createTaxRuleConfigModelV2(connection);
+  const TaxEstimateLogModel = createTaxEstimateLogModel(connection);
+  const TaxReturnResultModel = createTaxReturnResultModel(connection);
 
   // Payment gateway (Phase 1)
   const { PaymentModel, WebhookEventModel, GatewayConfigModel, providers } =
@@ -122,6 +135,7 @@ async function bootstrap(): Promise<void> {
   const systemUser = await UserModel.findOne({ userType: 0 });
   if (systemUser) {
     await seedTaxRules(TaxRuleConfigModel, systemUser._id);
+    await seedTaxEngineRules(TaxRuleConfigModelV2, systemUser._id);
   }
 
   // Seed Sales catalogue with Australian services (Phase 3)
@@ -210,6 +224,17 @@ async function bootstrap(): Promise<void> {
     checkPermission: rbac.check,
   });
 
+  // Phase 4: Tax engine routes
+  const taxEngineRouter = createTaxEngineRoutes({
+    TaxRuleConfigModel: TaxRuleConfigModelV2,
+    TaxEstimateLogModel,
+    TaxReturnResultModel,
+    CounterModel,
+    connection,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
   const reviewRouter = createReviewRoutes({
     ReviewAssignmentModel,
     OrderModel: OrderModel as never,
@@ -262,6 +287,7 @@ async function bootstrap(): Promise<void> {
     orderRouter,
     salesRouter,
     reviewRouter,
+    taxEngineRouter,
   }, deepHealthCheck);
 
   // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs

@@ -21,11 +21,11 @@ export async function seedTaxRules(
     effectiveTo: new Date('2025-06-30'),
     status: 'active',
     brackets: [
-      { min: 0, max: 1800000, rate: 0, baseTax: 0 },           // $0 - $18,000: nil
-      { min: 1800000, max: 4500000, rate: 0.16, baseTax: 0 },   // $18,001 - $45,000: 16%
-      { min: 4500000, max: 13500000, rate: 0.30, baseTax: 432000 }, // $45,001 - $135,000: 30%
-      { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3132000 }, // $135,001 - $190,000: 37%
-      { min: 19000000, max: null, rate: 0.45, baseTax: 5167000 }, // $190,001+: 45%
+      { min: 0, max: 1820000, rate: 0, baseTax: 0 },             // $0 - $18,200: nil
+      { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 },    // $18,201 - $45,000: 16%
+      { min: 4500000, max: 13500000, rate: 0.30, baseTax: 428800 }, // $45,001 - $135,000: 30%
+      { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3128800 }, // $135,001 - $190,000: 37%
+      { min: 19000000, max: null, rate: 0.45, baseTax: 5163800 }, // $190,001+: 45%
     ],
     medicareLevy: {
       rate: 0.02,

@@ -140,6 +140,8 @@ export function finalizeApp(
     orderRouter?: express.Router;
     salesRouter?: express.Router;
     reviewRouter?: express.Router;
+    // Phase 4: Tax Engine
+    taxEngineRouter?: express.Router;
   },
   deepHealthCheck: (req: Request, res: Response) => Promise<void>,
 ): void {
@@ -181,6 +183,11 @@ export function finalizeApp(
   }
   if (routes.reviewRouter) {
     app.use(`${prefix}/order-reviews`, routes.reviewRouter);
+  }
+
+  // Phase 4: Tax Engine
+  if (routes.taxEngineRouter) {
+    app.use(`${prefix}/tax-engine`, routes.taxEngineRouter);
   }
 
   // 404 handler

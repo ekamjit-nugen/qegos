@@ -46,6 +46,10 @@ export interface LeadServiceResult {
   getStaffStats: () => Promise<Record<string, unknown>>;
   getSourceStats: () => Promise<Record<string, unknown>>;
   getAgingStats: () => Promise<Record<string, unknown>>;
+  // Phase 4 — Lead Advanced
+  bulkScore: () => Promise<{ processed: number; errors: number }>;
+  importLeads: (rows: Array<{ firstName: string; lastName?: string; mobile: string; email?: string; source?: string; state?: string; postcode?: string; suburb?: string; financialYear?: string; preferredLanguage?: string; preferredContact?: string; maritalStatus?: string; employmentType?: string; hasRentalProperty?: string; hasSharePortfolio?: string; hasForeignIncome?: string }>, performedBy: string) => Promise<{ imported: number; leads: ILeadDocument[]; validationErrors?: Array<{ row: number; errors: string[] }> }>;
+  exportLeads: (query: LeadListQuery) => Promise<Array<Record<string, unknown>>>;
 }
 
 export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
@@ -962,6 +966,209 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     return { stats };
   }
 
+  // ─── Bulk Score Recalculation (Phase 4 — C1) ──────────────────────────
+
+  async function bulkScore(): Promise<{ processed: number; errors: number }> {
+    const cursor = LeadModel.find({
+      isDeleted: { $ne: true },
+      status: { $in: [LeadStatus.New, LeadStatus.Contacted, LeadStatus.Qualified, LeadStatus.QuoteSent, LeadStatus.Negotiation] },
+    }).select('_id').lean<Array<{ _id: string }>>();
+
+    let processed = 0;
+    let errors = 0;
+
+    for await (const lead of cursor) {
+      try {
+        await calculateScore(String(lead._id));
+        processed++;
+      } catch {
+        errors++;
+      }
+    }
+
+    return { processed, errors };
+  }
+
+  // ─── Import Leads — Two-Pass (Phase 4 — C2, LM-INV-08) ──────────────
+
+  interface ImportRow {
+    firstName: string;
+    lastName?: string;
+    mobile: string;
+    email?: string;
+    source?: string;
+    state?: string;
+    postcode?: string;
+    suburb?: string;
+    financialYear?: string;
+    preferredLanguage?: string;
+    preferredContact?: string;
+    maritalStatus?: string;
+    employmentType?: string;
+    hasRentalProperty?: string;
+    hasSharePortfolio?: string;
+    hasForeignIncome?: string;
+  }
+
+  async function importLeads(
+    rows: ImportRow[],
+    performedBy: string,
+  ): Promise<{
+    imported: number;
+    leads: ILeadDocument[];
+    validationErrors?: Array<{ row: number; errors: string[] }>;
+  }> {
+    // ── Pass 1: Validate ALL rows. If ANY fail, reject entire batch.
+    const validationErrors: Array<{ row: number; errors: string[] }> = [];
+
+    const validSources = new Set([
+      'phone_inbound', 'phone_outbound', 'walk_in', 'web_form', 'referral',
+      'sms_inquiry', 'whatsapp', 'social_media', 'marketing_campaign',
+      'repeat_client', 'partner', 'google_ads', 'facebook_ads', 'other',
+    ]);
+    const validStates = new Set(['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT']);
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowErrors: string[] = [];
+
+      if (!row.firstName || typeof row.firstName !== 'string' || row.firstName.trim().length === 0) {
+        rowErrors.push('firstName is required');
+      }
+      if (!row.mobile || typeof row.mobile !== 'string' || !/^\+61\d{9}$/.test(row.mobile)) {
+        rowErrors.push('mobile must be in E.164 format (+61XXXXXXXXX)');
+      }
+      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+        rowErrors.push('email must be a valid email address');
+      }
+      if (row.source && !validSources.has(row.source)) {
+        rowErrors.push(`source must be one of: ${Array.from(validSources).join(', ')}`);
+      }
+      if (row.state && !validStates.has(row.state)) {
+        rowErrors.push('state must be a valid Australian state');
+      }
+      if (row.postcode && !/^\d{4}$/.test(row.postcode)) {
+        rowErrors.push('postcode must be a 4-digit number');
+      }
+
+      if (rowErrors.length > 0) {
+        validationErrors.push({ row: i + 1, errors: rowErrors });
+      }
+    }
+
+    // If ANY row has errors, return ALL errors and import nothing
+    if (validationErrors.length > 0) {
+      return { imported: 0, leads: [], validationErrors };
+    }
+
+    // ── Pass 2: All rows valid — import batch
+    const leads: ILeadDocument[] = [];
+
+    for (const row of rows) {
+      const seq = CounterModel
+        ? await getNextSequence(CounterModel, 'lead')
+        : 0;
+      const leadNumber = seq
+        ? `QGS-L-${String(seq).padStart(4, '0')}`
+        : await generateLeadNumber(LeadModel);
+
+      const parseBool = (val: string | undefined): boolean | undefined => {
+        if (val === undefined || val === '') return undefined;
+        return val === 'true' || val === '1' || val === 'yes';
+      };
+
+      const lead = await LeadModel.create({
+        leadNumber,
+        firstName: row.firstName.trim(),
+        lastName: row.lastName?.trim(),
+        mobile: row.mobile.trim(),
+        email: row.email?.trim(),
+        source: row.source || 'other',
+        state: row.state,
+        postcode: row.postcode,
+        suburb: row.suburb?.trim(),
+        financialYear: row.financialYear?.trim(),
+        preferredLanguage: row.preferredLanguage,
+        preferredContact: row.preferredContact,
+        maritalStatus: row.maritalStatus,
+        employmentType: row.employmentType,
+        hasRentalProperty: parseBool(row.hasRentalProperty),
+        hasSharePortfolio: parseBool(row.hasSharePortfolio),
+        hasForeignIncome: parseBool(row.hasForeignIncome),
+        status: LeadStatus.New,
+        priority: 'warm' as LeadPriority,
+        score: 0,
+        followUpCount: 0,
+        serviceInterest: [],
+        tags: [],
+        isConverted: false,
+        isDeleted: false,
+      });
+
+      // Log import activity
+      await LeadActivityModel.create({
+        leadId: lead._id,
+        type: 'note',
+        description: 'Lead imported via bulk import',
+        performedBy,
+        isSystemGenerated: true,
+        servicesQuoted: [],
+        attachments: [],
+      });
+
+      leads.push(lead);
+    }
+
+    return { imported: leads.length, leads };
+  }
+
+  // ─── Export Leads — Streaming CSV (Phase 4 — C2) ──────────────────────
+
+  async function exportLeads(
+    query: LeadListQuery,
+  ): Promise<Array<Record<string, unknown>>> {
+    const filter: FilterQuery<ILeadDocument> = { isDeleted: { $ne: true } };
+    if (query.scopeFilter) Object.assign(filter, query.scopeFilter);
+    if (query.status) filter.status = query.status;
+    if (query.priority) filter.priority = query.priority;
+    if (query.source) filter.source = query.source;
+    if (query.assignedTo) filter.assignedTo = query.assignedTo;
+    if (query.state) filter.state = query.state;
+    if (query.dateFrom || query.dateTo) {
+      filter.createdAt = {};
+      if (query.dateFrom) filter.createdAt.$gte = new Date(query.dateFrom);
+      if (query.dateTo) filter.createdAt.$lte = new Date(query.dateTo);
+    }
+
+    const leads = await LeadModel.find(filter)
+      .sort({ createdAt: -1 })
+      .lean<ILeadDocument[]>();
+
+    return leads.map((l) => ({
+      leadNumber: l.leadNumber,
+      firstName: l.firstName,
+      lastName: l.lastName ?? '',
+      mobile: l.mobile,
+      email: l.email ?? '',
+      source: l.source,
+      status: l.status,
+      priority: l.priority,
+      score: l.score,
+      state: l.state ?? '',
+      postcode: l.postcode ?? '',
+      suburb: l.suburb ?? '',
+      financialYear: l.financialYear ?? '',
+      maritalStatus: l.maritalStatus ?? '',
+      employmentType: l.employmentType ?? '',
+      hasRentalProperty: l.hasRentalProperty ? 'yes' : 'no',
+      hasSharePortfolio: l.hasSharePortfolio ? 'yes' : 'no',
+      hasForeignIncome: l.hasForeignIncome ? 'yes' : 'no',
+      estimatedValue: l.estimatedValue ?? 0,
+      assignedTo: l.assignedTo ? String(l.assignedTo) : '',
+      createdAt: l.createdAt.toISOString(),
+    }));
+  }
+
   return {
     createLead,
     updateLead,
@@ -983,5 +1190,8 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     getStaffStats,
     getSourceStats,
     getAgingStats,
+    bulkScore,
+    importLeads,
+    exportLeads,
   };
 }

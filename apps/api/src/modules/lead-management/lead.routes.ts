@@ -35,6 +35,8 @@ import {
   snoozeReminderValidation,
   listLeadValidation,
   searchLeadValidation,
+  importLeadValidation,
+  exportLeadValidation,
 } from './lead.validators';
 
 interface AuthenticatedRequest extends Request {
@@ -200,33 +202,86 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
     }),
   );
 
-  // 9. POST /leads/import — Excel/CSV import (two-pass)
+  // 9. POST /leads/import — Two-pass JSON import (Phase 4)
   router.post(
     '/import',
     auth() as never,
     check('leads', 'create') as never,
-    asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-      // LM-INV-08: Two-pass validation — placeholder for file upload integration
-      res.status(501).json({
-        status: 501,
-        code: 'NOT_IMPLEMENTED',
-        message: 'Import requires file-storage integration. Coming in Phase 4.',
+    ...validate(importLeadValidation()),
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
+      const { rows } = req.body as { rows: Array<{ firstName: string; mobile: string; [key: string]: string | undefined }> };
+      const result = await leadService.importLeads(rows, authReq.user.userId);
+
+      if (result.validationErrors && result.validationErrors.length > 0) {
+        res.status(422).json({
+          status: 422,
+          code: 'IMPORT_VALIDATION_FAILED',
+          message: `${result.validationErrors.length} row(s) failed validation. No leads were imported.`,
+          errors: result.validationErrors,
+        });
+        return;
+      }
+
+      auditLog.log({
+        actor: authReq.user.userId,
+        actorType: 'staff',
+        action: 'lead.bulk_import',
+        resource: 'lead',
+        resourceId: 'bulk',
+        description: `Imported ${result.imported} leads`,
+        severity: 'medium',
+      });
+
+      res.status(201).json({
+        status: 201,
+        data: { imported: result.imported },
       });
     }),
   );
 
-  // 10. POST /leads/export — Excel export
-  router.post(
+  // 10. GET /leads/export — CSV export (Phase 4)
+  router.get(
     '/export',
     auth() as never,
     check('leads', 'read') as never,
-    asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-      // Placeholder for Excel export integration
-      res.status(501).json({
-        status: 501,
-        code: 'NOT_IMPLEMENTED',
-        message: 'Export requires file-storage integration. Coming in Phase 4.',
+    ...validate(exportLeadValidation()),
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const authReq = req as AuthenticatedRequest;
+      const data = await leadService.exportLeads({
+        status: req.query.status ? parseInt(req.query.status as string) : undefined,
+        priority: req.query.priority as string | undefined,
+        source: req.query.source as string | undefined,
+        assignedTo: req.query.assignedTo as string | undefined,
+        state: req.query.state as string | undefined,
+        dateFrom: req.query.dateFrom as string | undefined,
+        dateTo: req.query.dateTo as string | undefined,
+        scopeFilter: authReq.scopeFilter,
       });
+
+      if (data.length === 0) {
+        res.status(200).json({ status: 200, data: [] });
+        return;
+      }
+
+      // Return as CSV
+      const headers = Object.keys(data[0]);
+      const csvLines = [
+        headers.join(','),
+        ...data.map((row) =>
+          headers.map((h) => {
+            const val = String(row[h] ?? '');
+            // Escape CSV values containing commas or quotes
+            return val.includes(',') || val.includes('"')
+              ? `"${val.replace(/"/g, '""')}"`
+              : val;
+          }).join(','),
+        ),
+      ];
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=leads-export.csv');
+      res.status(200).send(csvLines.join('\n'));
     }),
   );
 
@@ -241,6 +296,21 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
       const { query: searchQuery } = req.body as { query: string };
       const results = await leadService.searchLeads(searchQuery, authReq.scopeFilter);
       res.status(200).json({ status: 200, data: results });
+    }),
+  );
+
+  // 11b. POST /leads/bulk-score — Recalculate scores for all active leads (Phase 4)
+  router.post(
+    '/bulk-score',
+    auth() as never,
+    check('leads', 'update') as never,
+    asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+      const result = await leadService.bulkScore();
+      res.status(200).json({
+        status: 200,
+        data: result,
+        meta: { message: `Scored ${result.processed} leads with ${result.errors} errors` },
+      });
     }),
   );
 

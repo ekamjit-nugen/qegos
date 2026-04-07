@@ -300,3 +300,28 @@ export function searchLeadValidation(): ValidationChain[] {
       .isLength({ min: 2 }).withMessage('Search query must be at least 2 characters'),
   ];
 }
+
+// ─── Phase 4: Import/Export Validators ──────────────────────────────────────
+
+export function importLeadValidation(): ValidationChain[] {
+  return [
+    body('rows')
+      .isArray({ min: 1, max: 500 }).withMessage('Rows must be 1-500 items'),
+    body('rows.*.firstName')
+      .trim().notEmpty().withMessage('Each row must have a firstName'),
+    body('rows.*.mobile')
+      .trim().notEmpty().withMessage('Each row must have a mobile number'),
+  ];
+}
+
+export function exportLeadValidation(): ValidationChain[] {
+  return [
+    query('status').optional().isInt({ min: 1, max: 8 }).withMessage('Status must be 1-8').toInt(),
+    query('priority').optional().isIn([...LEAD_PRIORITIES]).withMessage('Invalid priority'),
+    query('source').optional().isIn([...LEAD_SOURCES]).withMessage('Invalid source'),
+    query('assignedTo').optional().isMongoId().withMessage('Invalid staff ID'),
+    query('state').optional().isIn([...AU_STATES]).withMessage('Invalid state'),
+    query('dateFrom').optional().isISO8601().withMessage('dateFrom must be a valid date'),
+    query('dateTo').optional().isISO8601().withMessage('dateTo must be a valid date'),
+  ];
+}
