@@ -1,0 +1,20 @@
+{
+  "name": "@nugen/rbac",
+  "version": "1.0.0",
+  "description": "Role-based access control with scope filtering, permission snapshots, and anomaly detection",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "@nugen/error-handler": "^1.0.0",
+    "ioredis": "^5.0.0",
+    "mongoose": "^8.0.0"
+  },
+  "keywords": ["rbac", "permissions", "access-control"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

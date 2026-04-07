@@ -1,0 +1,31 @@
+{
+  "name": "@nugen/auth",
+  "version": "1.0.0",
+  "description": "JWT, refresh rotation, OTP, MFA, session management — product-agnostic auth package",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "otpauth": "^9.3.1",
+    "qrcode": "^1.5.4"
+  },
+  "peerDependencies": {
+    "@nugen/error-handler": "^1.0.0",
+    "@nugen/validator": "^1.0.0",
+    "mongoose": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/qrcode": "^1.5.5"
+  },
+  "keywords": ["auth", "jwt", "mfa", "otp"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

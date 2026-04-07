@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/error-handler" },
+    { "path": "packages/validator" },
+    { "path": "packages/rate-limiter" },
+    { "path": "packages/auth" },
+    { "path": "packages/rbac" },
+    { "path": "packages/audit-log" },
+    { "path": "packages/payment-gateway" },
+    { "path": "apps/api" }
+  ]
+}

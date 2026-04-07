@@ -1,0 +1,31 @@
+{
+  "name": "@nugen/payment-gateway",
+  "version": "1.0.0",
+  "description": "Gateway abstraction (Stripe, Payzoo), idempotency, webhooks, refunds, GST — product-agnostic payment package",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "stripe": "^14.21.0",
+    "uuid": "^9.0.1"
+  },
+  "peerDependencies": {
+    "@nugen/error-handler": "^1.0.0",
+    "@nugen/validator": "^1.0.0",
+    "@nugen/audit-log": "^1.0.0",
+    "@nugen/rbac": "^1.0.0",
+    "express": "^4.19.0",
+    "ioredis": "^5.4.0",
+    "mongoose": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.8"
+  },
+  "keywords": ["payment", "stripe", "payzoo", "gateway", "webhooks", "idempotency", "gst"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

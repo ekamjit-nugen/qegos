@@ -1,0 +1,20 @@
+{
+  "name": "@nugen/audit-log",
+  "version": "1.0.0",
+  "description": "Append-only audit logging with archival, export, and stats",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "@nugen/error-handler": "^1.0.0",
+    "@nugen/validator": "^1.0.0",
+    "mongoose": "^8.0.0"
+  },
+  "keywords": ["audit-log", "compliance", "append-only"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

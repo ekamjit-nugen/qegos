@@ -1,0 +1,22 @@
+{
+  "name": "@nugen/validator",
+  "version": "1.0.0",
+  "description": "Typed express-validator wrappers and common validators for Australian tax platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express-validator": "^7.1.0",
+    "mongo-sanitize": "^1.1.0"
+  },
+  "peerDependencies": {
+    "@nugen/error-handler": "^1.0.0"
+  },
+  "keywords": ["validator", "express", "australian-tax"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

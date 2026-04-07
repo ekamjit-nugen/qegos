@@ -1,0 +1,22 @@
+{
+  "name": "@nugen/rate-limiter",
+  "version": "1.0.0",
+  "description": "Redis-backed rate limiting with pre-built auth limiters",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express-rate-limit": "^7.3.1",
+    "rate-limit-redis": "^4.2.0"
+  },
+  "peerDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "keywords": ["rate-limiter", "redis", "express"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}
