@@ -5,6 +5,17 @@ import { api } from '@/lib/api/client';
 import type { Conversation, ConversationListQuery } from '@/types/chat';
 import type { PaginatedResponse, ApiResponse } from '@/types/api';
 
+export function useConversation(id: string | undefined) {
+  return useQuery({
+    queryKey: ['conversations', id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Conversation>>(`/chat/conversations/${id}`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useConversationList(filters: ConversationListQuery) {
   return useQuery({
     queryKey: ['conversations', filters],

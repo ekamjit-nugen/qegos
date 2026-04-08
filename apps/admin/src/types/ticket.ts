@@ -67,6 +67,15 @@ export const TICKET_CATEGORY_LABELS: Record<TicketCategory, string> = {
   other: 'Other',
 };
 
+export interface TicketMessage {
+  senderId: string;
+  senderType: 'client' | 'staff' | 'system';
+  content: string;
+  attachments?: string[];
+  isInternal?: boolean;
+  createdAt?: string;
+}
+
 export interface SupportTicket {
   _id: string;
   ticketNumber: string;
@@ -76,8 +85,15 @@ export interface SupportTicket {
   priority: TicketPriority;
   status: TicketStatus;
   subject: string;
+  description?: string;
+  source?: string;
   assignedTo?: string;
+  escalatedTo?: string;
+  messages?: TicketMessage[];
+  slaDeadline?: string;
   slaBreached: boolean;
+  resolvedAt?: string;
+  closedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -33,6 +33,7 @@ export interface TaxDeadline {
   financialYear: string;
   isRecurring: boolean;
   isActive: boolean;
+  notificationsSent?: number;
   createdAt: string;
 }
 

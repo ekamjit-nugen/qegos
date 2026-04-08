@@ -20,6 +20,17 @@ export function useReviewList_Rep(filters: ReviewListQuery_Rep) {
   });
 }
 
+export function useReview_Rep(id: string | undefined) {
+  return useQuery({
+    queryKey: ['reputation-reviews', id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Review>>(`/reputation/${id}`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useReviewStats() {
   return useQuery({
     queryKey: ['reviews-rep', 'stats'],

@@ -5,6 +5,17 @@ import { api } from '@/lib/api/client';
 import type { Referral, ReferralConfig, ReferralListQuery } from '@/types/referral';
 import type { PaginatedResponse, ApiResponse } from '@/types/api';
 
+export function useReferral(id: string | undefined) {
+  return useQuery({
+    queryKey: ['referrals', id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Referral>>(`/referrals/${id}`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useReferralList(filters: ReferralListQuery) {
   return useQuery({
     queryKey: ['referrals', filters],

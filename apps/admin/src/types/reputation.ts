@@ -24,6 +24,8 @@ export interface Review {
   comment?: string;
   tags: string[];
   googleReviewPrompted: boolean;
+  googleReviewClicked: boolean;
+  adminResponse?: string;
   status: ReviewStatus_Rep;
   createdAt: string;
   updatedAt: string;

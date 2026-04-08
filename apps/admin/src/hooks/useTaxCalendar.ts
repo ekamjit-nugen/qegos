@@ -20,6 +20,17 @@ export function useTaxDeadlineList(filters: TaxDeadlineListQuery) {
   });
 }
 
+export function useTaxDeadline(id: string | undefined) {
+  return useQuery({
+    queryKey: ['tax-deadlines', id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TaxDeadline>>(`/tax-calendar/deadlines/${id}`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useCreateTaxDeadline() {
   const qc = useQueryClient();
   return useMutation({
