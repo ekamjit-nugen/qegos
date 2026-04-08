@@ -17,7 +17,7 @@ function isValidTfn(value: string): boolean {
   for (let i = 0; i < 9; i++) {
     sum += parseInt(digits[i], 10) * weights[i];
   }
-  return sum % 11 === 0;
+  return sum > 0 && sum % 11 === 0;
 }
 
 /**

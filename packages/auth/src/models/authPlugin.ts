@@ -1,5 +1,5 @@
 import type { Schema } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import type { IAuthFields, AuthConfig } from '../types';
 
 let _config: AuthConfig | null = null;

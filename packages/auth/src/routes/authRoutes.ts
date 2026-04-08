@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';

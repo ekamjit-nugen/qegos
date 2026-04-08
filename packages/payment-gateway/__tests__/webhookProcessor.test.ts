@@ -42,8 +42,9 @@ let shouldPaymentExist = true;
 let currentPaymentStatus = 'captured';
 
 const MockWebhookEventModel = {
-  findOne: jest.fn(async (query: { eventId: string }) => {
-    return webhookEventStore.get(query.eventId) ?? null;
+  findOne: jest.fn((query: { eventId: string }) => {
+    const result = webhookEventStore.get(query.eventId) ?? null;
+    return { lean: jest.fn().mockResolvedValue(result) };
   }),
   create: jest.fn(async (data: Record<string, unknown>) => {
     const doc = {

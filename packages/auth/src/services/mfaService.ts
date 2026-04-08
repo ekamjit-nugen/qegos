@@ -1,5 +1,5 @@
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
 import * as OTPAuth from 'otpauth';
 import QRCode from 'qrcode';
 import type { AuthConfig, MfaEnrollmentResult, IAuthDocument } from '../types';

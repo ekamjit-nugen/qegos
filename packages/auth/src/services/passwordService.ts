@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import type { AuthConfig, PasswordPolicy } from '../types';
 
 let _config: AuthConfig | null = null;
