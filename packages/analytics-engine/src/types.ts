@@ -1,58 +1,78 @@
-import type { Document, Model } from 'mongoose';
-import type { RequestHandler } from 'express';
+/**
+ * @nugen/analytics-engine — Type Definitions
+ *
+ * All interfaces and types for the analytics dashboard engine.
+ * Product-agnostic: consuming app provides model refs via AnalyticsRouteDeps.
+ */
 
-// ─── Config ─────────────────────────────────────────────────────────────────
+import type { Model, Document } from 'mongoose';
+import type { RequestHandler } from 'express';
+import type { Redis } from 'ioredis';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Config
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export interface AnalyticsEngineConfig {
-  /** MongoDB read-replica URI. Falls back to primary if not set. */
+  /** URI for analytics read-replica MongoDB (optional — uses primary if omitted) */
   analyticsReplicaUri?: string;
-
-  /** ANA-INV-04: Year 1 conversion rate benchmark (default 0.62) */
+  /** Assumed year-1 conversion rate when < 12 months data (default 0.62) */
   year1ConversionRate?: number;
-
-  /** ANA-INV-04: Average order value in cents (default 85000 = $850) */
+  /** Average order value in cents for benchmark estimates (default 85000 = $850) */
   averageOrderValueCents?: number;
-
-  /** ANA-INV-04: Months before switching from benchmarks to historical (default 12) */
+  /** Minimum months of data before switching from benchmark to regression (default 12) */
   benchmarkMonthsThreshold?: number;
-
-  /** ANA-INV-06: Cache TTL in seconds (default 300) */
+  /** Default cache TTL in seconds (default 300 = 5 min) */
   cacheTtlSeconds?: number;
-
   /** Export file expiry in hours (default 48) */
   exportExpiryHours?: number;
 }
 
-// ─── Route Dependencies ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Route Dependencies (Dependency Injection)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export interface AnalyticsRouteDeps {
-  // Existing models (all read-only)
+  // Models — consumer provides replica-backed models (ANA-INV-01)
   OrderModel: Model<Document>;
   PaymentModel: Model<Document>;
   LeadModel: Model<Document>;
   LeadActivityModel: Model<Document>;
-  CampaignModel: Model<Document>;
+  UserModel: Model<Document>;
   ReviewAssignmentModel: Model<Document>;
   SupportTicketModel: Model<Document>;
   TaxYearSummaryModel: Model<Document>;
-  UserModel: Model<Document>;
+  CampaignModel: Model<Document>;
 
   // Infrastructure
-  redisClient: unknown; // ioredis instance
+  redisClient: Redis;
+
+  // Middleware
   authenticate: () => RequestHandler;
   checkPermission: (resource: string, action: string) => RequestHandler;
-  auditLog?: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest?: (req: unknown, entry: Record<string, unknown>) => Promise<void>;
-  };
+
+  // Audit logging (shape varies per product)
+  auditLog: Record<string, unknown>;
+
+  // Config
   config: AnalyticsEngineConfig;
 
-  // Optional export queue (BullMQ)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  exportQueue?: any;
+  // BullMQ export queue (optional — export endpoint disabled if omitted)
+  exportQueue?: {
+    add: (name: string, data: unknown) => Promise<unknown>;
+  };
 }
 
-// ─── View Type ──────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Common Params
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface DateRangeParams {
+  dateFrom: Date;
+  dateTo: Date;
+}
+
+export type Granularity = 'week' | 'month';
 
 export type AnalyticsView =
   | 'executive-summary'
@@ -66,147 +86,143 @@ export type AnalyticsView =
   | 'collection-rate'
   | 'pipeline-health';
 
-// ─── Date Range ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Response Interfaces
+// ═══════════════════════════════════════════════════════════════════════════════
 
-export interface DateRangeParams {
-  dateFrom: string;
-  dateTo: string;
-}
-
-// ─── Response Types ─────────────────────────────────────────────────────────
-
-export interface RevenueByPeriod {
-  period: string;
-  revenue: number; // cents
+/** Revenue by period bucket */
+export interface RevenueBucket {
+  period: string; // ISO date or "YYYY-Www" / "YYYY-MM"
+  totalCents: number;
   count: number;
 }
 
-export interface ExecutiveSummaryResponse {
-  generatedAt: string;
-  dateRange: DateRangeParams;
-  financialYear: string;
-  revenue: RevenueByPeriod[];
-  collectionRate: CollectionRateResponse;
-  pipelineHealth: PipelineStageEntry[];
-  churnRisk: { atRiskClients: ChurnRiskEntry[]; riskCount: number };
-  seasonalTrends: { trends: SeasonalTrendEntry[]; peakPeriod: string | null; peakCount: number };
-  serviceMix: ServiceMixEntry[];
-  topClients: ClvEntry[];
-  staffBenchmark: StaffBenchmarkEntry[];
-  channelRoi: ChannelRoiEntry[];
-  revenueForecast: RevenueForecastResponse;
-}
-
-export interface RevenueForecastEntry {
-  quarter: string;
-  forecast: number;
-  isEstimated: boolean;
-  confidenceLow?: number;
-  confidenceHigh?: number;
-}
-
+/** Revenue forecast (ANA-INV-04) */
 export interface RevenueForecastResponse {
-  isEstimated: boolean;
+  historical: RevenueBucket[];
+  forecast: ForecastQuarter[];
+  isEstimated: boolean; // true if < benchmarkMonthsThreshold data
   dataMonths: number;
-  benchmarkNote: string | null;
-  totalRevenue: number;
-  totalTransactions: number;
-  averageMonthlyRevenue: number;
-  trendSlope?: number;
-  rSquared?: number;
-  quarters: RevenueForecastEntry[];
 }
 
+export interface ForecastQuarter {
+  quarter: string; // e.g. "2026-Q3"
+  predictedCents: number;
+  lowerBoundCents: number;
+  upperBoundCents: number;
+}
+
+/** Customer lifetime value */
 export interface ClvEntry {
   userId: string;
-  name: string;
-  email: string;
-  clvScore: number;
-  totalPaid: number;
-  ordersCount: number;
-  averageOrderValue: number;
-  lastOrderDate?: string;
+  displayName: string;
+  totalSpentCents: number;
+  paymentCount: number;
+  firstPayment: Date;
+  lastPayment: Date;
+  segment?: string;
 }
 
+/** Staff benchmark (cross-collection) */
 export interface StaffBenchmarkEntry {
   staffId: string;
-  name: string;
-  email: string;
+  displayName: string;
   ordersCompleted: number;
-  ordersTotal: number;
-  totalRevenue: number;
-  avgCompletionDays: number | null;
-  leadActivities: number;
+  avgReviewMinutes: number;
   leadsContacted: number;
-  reviewsCompleted: number;
-  reviewsTotal: number;
-  avgReviewTimeDays: number | null;
   ticketsResolved: number;
-  ticketsTotal: number;
-  avgResolutionHours: number | null;
 }
 
+/** Channel ROI (multi-hop) */
 export interface ChannelRoiEntry {
   channel: string;
   campaignCount: number;
-  totalSpend: number;
-  totalLeads: number;
-  totalConverted: number;
-  conversionRate: number;
-  totalRevenue: number;
-  roi: number | null;
-  costPerLead: number | null;
-  costPerConversion: number | null;
+  leadsGenerated: number;
+  conversions: number;
+  revenueCents: number;
+  costCents: number;
+  roi: number; // (revenue - cost) / cost
 }
 
+/** Seasonal trends */
 export interface SeasonalTrendEntry {
   period: string;
-  filings: number;
-  yoyChange: number | null;
-  yoyCompare: number | null;
+  orderCount: number;
+  revenueCents: number;
+  previousYearOrderCount?: number;
+  previousYearRevenueCents?: number;
 }
 
+/** Churn risk */
 export interface ChurnRiskEntry {
   userId: string;
-  name: string;
-  email: string;
-  lastFilingFY: string;
-  lastFilingDate: string;
-  daysSinceLastFiling: number;
-  riskScore: number;
+  displayName: string;
+  lastFinancialYear: string;
+  totalPaidCents: number;
+  daysSinceLastOrder: number;
 }
 
+/** Service mix */
 export interface ServiceMixEntry {
   serviceTitle: string;
+  orderCount: number;
   quantity: number;
-  revenue: number;
+  revenueCents: number;
   percentOfTotal: number;
-  averagePrice: number;
 }
 
+/** Collection rate */
 export interface CollectionRateResponse {
-  invoicesTotal: number;
-  invoicesPaidOnTime: number;
-  onTimePaymentRate: number;
-  averageDaysToPayment: number;
-  outstandingReceivables: number;
-  outstandingCount: number;
-  collectionRate: number;
+  onTimeRate: number; // 0-1
+  avgDaysToPayment: number;
+  outstandingReceivablesCents: number;
+  totalInvoicedCents: number;
+  totalCollectedCents: number;
 }
 
+/** Pipeline health */
 export interface PipelineStageEntry {
-  status: number;
-  statusName: string;
+  stage: number; // 1-8
+  stageName: string;
   count: number;
-  totalValue: number;
-  averageValue: number;
-  conversionRate: number | null;
-  avgAgeDays: number;
-  bottleneck: boolean;
+  totalValueCents: number;
+  conversionRate: number; // to next stage
+  avgDaysInStage: number;
+  isBottleneck: boolean;
 }
 
+/** Executive summary (pre-computed, ANA-INV-07) */
+export interface ExecutiveSummaryResponse {
+  generatedAt: string; // ISO date
+  revenue: {
+    totalCents: number;
+    monthOverMonth: number; // percentage change
+    forecast: ForecastQuarter[];
+    isEstimated: boolean;
+  };
+  pipeline: {
+    totalLeads: number;
+    conversionRate: number;
+    avgDaysToConvert: number;
+  };
+  orders: {
+    totalActive: number;
+    completedThisMonth: number;
+    avgCompletionPercent: number;
+  };
+  churn: {
+    atRiskCount: number;
+  };
+  collection: {
+    onTimeRate: number;
+    outstandingCents: number;
+  };
+}
+
+/** Export job */
 export interface ExportJobResponse {
   jobId: string;
-  status: string;
-  message?: string;
+  status: 'queued';
+  format: 'pdf' | 'xlsx';
+  widgets: AnalyticsView[];
 }

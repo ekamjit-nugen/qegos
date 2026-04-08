@@ -10,14 +10,12 @@ import { MERGE_TAG_FALLBACKS } from '../types';
 // ─── Module State ────────────────────────────────────────────────────────────
 
 let TemplateModel: Model<IBroadcastTemplateDocument>;
-let engineConfig: BroadcastEngineConfig;
 
 export function initTemplateService(
   model: Model<IBroadcastTemplateDocument>,
-  config: BroadcastEngineConfig,
+  _config: BroadcastEngineConfig,
 ): void {
   TemplateModel = model;
-  engineConfig = config;
 }
 
 // ─── Merge Tag Rendering ─────────────────────────────────────────────────────

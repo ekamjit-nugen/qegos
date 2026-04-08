@@ -1,95 +1,80 @@
+/**
+ * CLV Service — Customer Lifetime Value (ANA-INV-03)
+ *
+ * Uses ONLY succeeded/captured payments for CLV calculation.
+ */
+
 import type { Model, Document } from 'mongoose';
-import type { ClvEntry } from '../types';
+import type { DateRangeParams, ClvEntry } from '../types';
 import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
+export interface ClvParams {
+  topN?: number;
+  segment?: string;
+  dateRange?: DateRangeParams;
+}
+
 /**
- * ANA-INV-03: Client Lifetime Value using only succeeded/captured payments.
+ * Compute CLV by grouping payments per user, ranking by total spent.
  */
 export async function getClv(
   PaymentModel: Model<Document>,
   UserModel: Model<Document>,
-  params: {
-    topN?: number;
-    dateRange?: { dateFrom: string; dateTo: string };
-  },
+  params: ClvParams = {},
 ): Promise<ClvEntry[]> {
+  const { topN = 50, dateRange } = params;
+
   const matchStage: Record<string, unknown> = {
     status: { $in: [...REVENUE_PAYMENT_STATUSES] },
   };
-
-  if (params.dateRange) {
-    matchStage.createdAt = {
-      $gte: new Date(params.dateRange.dateFrom),
-      $lte: new Date(params.dateRange.dateTo),
-    };
+  if (dateRange) {
+    matchStage.createdAt = { $gte: dateRange.dateFrom, $lte: dateRange.dateTo };
   }
 
-  const pipeline: unknown[] = [
+  const clvData = await PaymentModel.aggregate([
     { $match: matchStage },
     {
       $group: {
         _id: '$userId',
-        totalPaid: { $sum: '$amount' },
-        ordersCount: { $addToSet: '$orderId' },
-        lastPaymentDate: { $max: '$createdAt' },
+        totalSpentCents: { $sum: '$amount' },
+        paymentCount: { $sum: 1 },
+        firstPayment: { $min: '$createdAt' },
+        lastPayment: { $max: '$createdAt' },
       },
     },
-    {
-      $addFields: {
-        ordersCount: { $size: '$ordersCount' },
-      },
-    },
-    { $sort: { totalPaid: -1 } },
-  ];
+    { $sort: { totalSpentCents: -1 } },
+    { $limit: topN },
+  ]);
 
-  if (params.topN) {
-    pipeline.push({ $limit: params.topN });
-  }
+  if (clvData.length === 0) return [];
 
-  // Lookup user details
-  pipeline.push(
-    {
-      $lookup: {
-        from: UserModel.collection.name,
-        localField: '_id',
-        foreignField: '_id',
-        as: 'user',
-      },
-    },
-    { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-    {
-      $project: {
-        _id: 0,
-        userId: '$_id',
-        name: { $concat: [{ $ifNull: ['$user.firstName', ''] }, ' ', { $ifNull: ['$user.lastName', ''] }] },
-        email: '$user.email',
-        clvScore: '$totalPaid',
-        totalPaid: 1,
-        ordersCount: 1,
-        averageOrderValue: {
-          $cond: [
-            { $gt: ['$ordersCount', 0] },
-            { $round: [{ $divide: ['$totalPaid', '$ordersCount'] }, 0] },
-            0,
-          ],
-        },
-        lastOrderDate: {
-          $dateToString: { format: '%Y-%m-%d', date: '$lastPaymentDate' },
-        },
-      },
-    },
+  // Enrich with user display names
+  const userIds = clvData.map((c: { _id: unknown }) => c._id);
+  const users = await UserModel.find(
+    { _id: { $in: userIds } },
+    { firstName: 1, lastName: 1 },
+  ).lean();
+
+  const userMap = new Map(
+    users.map((u: Record<string, unknown>) => [
+      String(u._id),
+      `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+    ]),
   );
 
-  const results = await PaymentModel.aggregate(pipeline);
-
-  return results.map((r) => ({
-    userId: String(r.userId),
-    name: (r.name ?? '').trim(),
-    email: r.email ?? '',
-    clvScore: r.clvScore ?? r.totalPaid,
-    totalPaid: r.totalPaid,
-    ordersCount: r.ordersCount,
-    averageOrderValue: r.averageOrderValue,
-    lastOrderDate: r.lastOrderDate,
+  return clvData.map((c: {
+    _id: { toString: () => string };
+    totalSpentCents: number;
+    paymentCount: number;
+    firstPayment: Date;
+    lastPayment: Date;
+  }) => ({
+    userId: c._id.toString(),
+    displayName: userMap.get(c._id.toString()) ?? 'Unknown',
+    totalSpentCents: c.totalSpentCents,
+    paymentCount: c.paymentCount,
+    firstPayment: c.firstPayment,
+    lastPayment: c.lastPayment,
+    segment: params.segment,
   }));
 }

@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
 import { validate, requiredString, objectId, pagination } from '@nugen/validator';
-import { check, invalidateRoleCache, invalidateAllRoleCaches } from '../middleware/checkPermission';
+import { check, invalidateRoleCache } from '../middleware/checkPermission';
 import { computeDiff } from '../models/permissionSnapshotModel';
 import { getBaselinePermissions } from '../seed/defaultRoles';
 import { detectAnomalies } from '../services/anomalyDetector';
@@ -232,7 +232,7 @@ export function createRbacRoutes(deps: RbacRouteDeps): Router {
       }
 
       user.roleId = roleId;
-      await (user as { save: () => Promise<void> }).save();
+      await (user as unknown as { save: () => Promise<void> }).save();
       await invalidateRoleCache(roleId);
 
       res.status(200).json({ status: 200, data: { message: 'Role assigned' } });

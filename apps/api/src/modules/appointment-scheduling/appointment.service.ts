@@ -441,7 +441,7 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
   async function processReminders(): Promise<number> {
     const now = new Date();
     const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const _in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
     // Find appointments in next 24h that are active
     const upcoming = await AppointmentModel.find({

@@ -9,7 +9,8 @@
     "build:clean": "rm -rf dist && tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "start": "node dist/server.js",
-    "test": "jest"
+    "test": "jest",
+    "seed": "ts-node-dev --transpile-only src/database/seed.ts"
   },
   "dependencies": {
     "@nugen/error-handler": "*",
@@ -28,6 +29,7 @@
     "@nugen/xero-connector": "*",
     "@nugen/notification-engine": "*",
     "@nugen/analytics-engine": "*",
+    "socket.io": "^4.7.0",
     "multer": "^1.4.5-lts.1",
     "stripe": "^14.21.0",
     "compression": "^1.7.4",

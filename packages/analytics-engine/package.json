@@ -1,23 +1,20 @@
 {
   "name": "@nugen/analytics-engine",
   "version": "1.0.0",
-  "description": "Analytics dashboard engine with caching, read-replica support, revenue forecasting, CLV, staff benchmarks, and pipeline health",
+  "description": "Tier 1 — Admin analytics dashboard: widgets, caching, read-replica routing, export",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "build:clean": "rm -rf dist && tsc",
-    "test": "jest"
+    "build:clean": "rm -rf dist && tsc"
   },
   "peerDependencies": {
-    "@nugen/error-handler": "^1.0.0",
-    "@nugen/validator": "^1.0.0",
     "express": "^4.19.0",
     "express-validator": "^7.0.0",
-    "ioredis": "^5.4.0",
-    "mongoose": "^8.0.0"
+    "mongoose": "^8.0.0",
+    "ioredis": "^5.3.0"
   },
-  "keywords": ["analytics", "dashboard", "revenue", "forecast", "clv", "pipeline", "benchmark", "cache"],
+  "keywords": ["nugen", "analytics", "dashboard", "reporting", "caching"],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

@@ -8,12 +8,6 @@ interface RoleSeed {
 }
 
 // Full permission matrix from PRD Section 2.3
-const allResources = [
-  'users', 'orders', 'payments', 'leads', 'lead_activities', 'broadcasts',
-  'vault_documents', 'xero_config', 'payment_config', 'analytics', 'reviews',
-  'chat', 'referrals', 'staff_mgmt', 'system_config', 'audit_logs', 'calendar',
-  'whatsapp_config',
-];
 
 function perm(resource: string, actions: string[], scope: string): IPermission {
   return {

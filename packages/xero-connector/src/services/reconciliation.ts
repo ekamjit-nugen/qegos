@@ -5,16 +5,14 @@ import { callXeroApi } from './xeroClient';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
-let XeroConfigModel: Model<IXeroConfigDocument>;
 let OrderModel: Model<any>;
 let PaymentModel: Model<any>;
 
 export function initReconciliation(
-  configModel: Model<IXeroConfigDocument>,
+  _configModel: Model<IXeroConfigDocument>,
   orderModel: Model<any>,
   paymentModel: Model<any>,
 ): void {
-  XeroConfigModel = configModel;
   OrderModel = orderModel;
   PaymentModel = paymentModel;
 }
@@ -65,15 +63,15 @@ export async function runReconciliation(
       status: 'succeeded',
     }).select('amount').lean();
 
-    const totalCents = payments.reduce(
+    const totalCents = (payments as any[]).reduce(
       (sum: number, p: { amount: number }) => sum + p.amount, 0,
     );
-    qegosPayments.set(order._id.toString(), totalCents);
+    qegosPayments.set((order as any)._id.toString(), totalCents);
   }
 
   // Get Xero invoice payment totals
   const xeroPayments = await callXeroApi(async (accessToken, tenantId) => {
-    const xeroInvoiceIds = orders
+    const xeroInvoiceIds = (orders as any[])
       .map((o: { xeroInvoiceId: string }) => o.xeroInvoiceId)
       .filter(Boolean);
 
@@ -122,9 +120,9 @@ export async function runReconciliation(
   };
 
   for (const order of orders) {
-    const orderId = order._id.toString();
+    const orderId = (order as any)._id.toString();
     const qegosCents = qegosPayments.get(orderId) ?? 0;
-    const xeroCents = xeroPayments.get(order.xeroInvoiceId as string) ?? 0;
+    const xeroCents = xeroPayments.get((order as any).xeroInvoiceId as string) ?? 0;
     const diff = Math.abs(qegosCents - xeroCents);
 
     if (diff <= RECONCILIATION_THRESHOLD_CENTS) {
@@ -132,7 +130,7 @@ export async function runReconciliation(
     } else {
       result.mismatched.push({
         orderId,
-        orderNumber: order.orderNumber as string,
+        orderNumber: (order as any).orderNumber as string,
         qegosAmountCents: qegosCents,
         xeroAmountCents: xeroCents,
         differenceCents: diff,

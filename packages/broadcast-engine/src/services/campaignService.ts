@@ -12,7 +12,6 @@ import type {
   BroadcastEngineConfig,
   IChannelProvider,
   CostPerMessage,
-  ResolvedRecipient,
 } from '../types';
 import { CAMPAIGN_STATUS_TRANSITIONS, DEFAULT_COST_PER_MESSAGE } from '../types';
 import { resolveAudience, getAudienceCount } from './audienceService';
@@ -22,18 +21,16 @@ import { renderMessage, incrementUsageCount } from './templateService';
 // ─── Module State ────────────────────────────────────────────────────────────
 
 let CampaignModel: Model<IBroadcastCampaignDocument>;
-let TemplateModel: Model<IBroadcastTemplateDocument>;
 let engineConfig: BroadcastEngineConfig;
 let providers: Map<SingleChannel, IChannelProvider>;
 
 export function initCampaignService(
   campaignModel: Model<IBroadcastCampaignDocument>,
-  templateModel: Model<IBroadcastTemplateDocument>,
+  _templateModel: Model<IBroadcastTemplateDocument>,
   config: BroadcastEngineConfig,
   channelProviders: Map<SingleChannel, IChannelProvider>,
 ): void {
   CampaignModel = campaignModel;
-  TemplateModel = templateModel;
   engineConfig = config;
   providers = channelProviders;
 }

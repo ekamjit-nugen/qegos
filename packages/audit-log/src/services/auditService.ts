@@ -47,7 +47,7 @@ export async function logFromRequest(
     actorType?: AuditActorType;
   },
 ): Promise<IAuditLogDocument> {
-  const user = (req as Record<string, unknown>).user as {
+  const user = (req as unknown as Record<string, unknown>).user as {
     userId: string;
     userType: number;
   } | undefined;

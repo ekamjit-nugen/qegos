@@ -5,7 +5,7 @@ import { Schema, type Model, type Connection, type Document } from 'mongoose';
  * Uses findOneAndUpdate with $inc to prevent race conditions on
  * lead/order number generation under concurrent load.
  */
-export interface ICounterDocument extends Document {
+export interface ICounterDocument extends Document<string> {
   _id: string;
   seq: number;
 }

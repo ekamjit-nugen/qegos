@@ -3,9 +3,7 @@ import type {
   ISupportTicketDocument,
   TicketStatus,
   TicketPriority,
-  TicketCategory,
   TicketSource,
-  ResolutionCategory,
   MessageSenderType,
 } from '../types';
 import {

@@ -1,76 +1,64 @@
+/**
+ * Service Mix Service — Revenue breakdown by service line item
+ */
+
 import type { Model, Document } from 'mongoose';
 import type { DateRangeParams, ServiceMixEntry } from '../types';
-import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
 /**
- * Service mix: revenue breakdown by service type from order line items.
+ * Unwind order lineItems and group by service title to show revenue mix.
  */
 export async function getServiceMix(
   OrderModel: Model<Document>,
-  PaymentModel: Model<Document>,
   dateRange: DateRangeParams,
 ): Promise<ServiceMixEntry[]> {
-  // Get total revenue for percentage calculation
-  const totalRevenueResult = await PaymentModel.aggregate([
+  const result = await OrderModel.aggregate([
     {
       $match: {
-        status: { $in: [...REVENUE_PAYMENT_STATUSES] },
-        createdAt: {
-          $gte: new Date(dateRange.dateFrom),
-          $lte: new Date(dateRange.dateTo),
-        },
-      },
-    },
-    { $group: { _id: null, total: { $sum: '$amount' } } },
-  ]);
-
-  const totalRevenue = totalRevenueResult[0]?.total ?? 0;
-
-  // Aggregate line items from completed orders
-  const serviceMix = await OrderModel.aggregate([
-    {
-      $match: {
-        createdAt: {
-          $gte: new Date(dateRange.dateFrom),
-          $lte: new Date(dateRange.dateTo),
-        },
-        status: { $in: [6, 7, 8] }, // Completed, Lodged, Assessed
+        createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
+        status: { $ne: 9 }, // not cancelled
         isDeleted: { $ne: true },
       },
     },
     { $unwind: '$lineItems' },
     {
-      $group: {
-        _id: '$lineItems.title',
-        quantity: { $sum: { $ifNull: ['$lineItems.quantity', 1] } },
-        revenue: { $sum: '$lineItems.priceAtCreation' },
+      $match: {
+        'lineItems.completionStatus': { $ne: 'cancelled' },
       },
     },
-    { $sort: { revenue: -1 } },
+    {
+      $group: {
+        _id: '$lineItems.title',
+        orderCount: { $addToSet: '$_id' },
+        quantity: { $sum: '$lineItems.quantity' },
+        revenueCents: {
+          $sum: {
+            $multiply: ['$lineItems.price', '$lineItems.quantity'],
+          },
+        },
+      },
+    },
+    { $sort: { revenueCents: -1 } },
     {
       $project: {
         _id: 0,
         serviceTitle: '$_id',
+        orderCount: { $size: '$orderCount' },
         quantity: 1,
-        revenue: 1,
-        averagePrice: {
-          $cond: [
-            { $gt: ['$quantity', 0] },
-            { $round: [{ $divide: ['$revenue', '$quantity'] }, 0] },
-            0,
-          ],
-        },
+        revenueCents: 1,
       },
     },
   ]);
 
-  return serviceMix.map((s) => ({
-    serviceTitle: s.serviceTitle,
-    quantity: s.quantity,
-    revenue: s.revenue,
+  // Calculate total for percentage
+  const totalRevenue = result.reduce(
+    (sum: number, r: { revenueCents: number }) => sum + r.revenueCents, 0,
+  );
+
+  return result.map((r: { serviceTitle: string; orderCount: number; quantity: number; revenueCents: number }) => ({
+    ...r,
     percentOfTotal: totalRevenue > 0
-      ? Math.round((s.revenue / totalRevenue) * 100) / 100
+      ? Math.round((r.revenueCents / totalRevenue) * 10000) / 100
       : 0,
-    averagePrice: s.averagePrice,
   }));
 }

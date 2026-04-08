@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Row, Col, Card, Descriptions, Tag, List, Spin, Empty } from 'antd';
 import { useConversation, useConversationMessages } from '@/hooks/useChat';
+import { useChatSocket } from '@/hooks/useSocket';
 import type { ConversationStatus } from '@/types/chat';
 import { CONVERSATION_STATUS_LABELS, CONVERSATION_STATUS_COLORS } from '@/types/chat';
 import { formatDateTime } from '@/lib/utils/format';
@@ -23,6 +24,15 @@ const SENDER_TYPE_COLORS: Record<string, string> = {
 export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
   const { data: conversation, isLoading: convLoading } = useConversation(id);
   const { data: messages, isLoading: msgLoading } = useConversationMessages(id);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+
+  // Socket.io — real-time message updates + typing indicator
+  useChatSocket(id, {
+    onTyping: useCallback((payload) => {
+      setTypingUser(payload.userId);
+      setTimeout(() => { setTypingUser(null); }, 3000);
+    }, []),
+  });
 
   if (convLoading || msgLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
   if (!conversation) { return <Empty description="Conversation not found" />; }
@@ -74,6 +84,11 @@ export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
                   </List.Item>
                 )}
               />
+            )}
+            {typingUser && (
+              <div style={{ padding: '8px 16px', fontSize: 12, color: '#8c8c8c', fontStyle: 'italic' }}>
+                Client is typing...
+              </div>
             )}
           </Card>
         </Col>

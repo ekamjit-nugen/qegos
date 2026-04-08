@@ -2,7 +2,7 @@ import type { Model } from 'mongoose';
 import type { Redis } from 'ioredis';
 import type { IXeroConfigDocument, XeroConnectorConfig } from '../types';
 import { XERO_RATE_LIMIT_PER_MINUTE } from '../types';
-import { refreshTokenIfNeeded, getDecryptedTokens } from './tokenService';
+import { refreshTokenIfNeeded } from './tokenService';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@ import { asyncHandler } from '@nugen/error-handler';
 import { AppError } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as auditLog from '@nugen/audit-log';
-import type { IErasureRequestDocument, IDataExportDocument, ModelFieldConfig } from '@nugen/data-lifecycle';
+import type { IErasureRequestDocument, IDataExportDocument } from '@nugen/data-lifecycle';
 import {
   createErasureRequest,
   listErasureRequests,

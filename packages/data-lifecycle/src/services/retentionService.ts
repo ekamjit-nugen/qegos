@@ -1,4 +1,3 @@
-import type { Model, Document } from 'mongoose';
 import type { RetentionPolicyConfig, ModelFieldConfig } from '../types';
 
 // ─── Module State ───────────────────────────────────────────────────────────

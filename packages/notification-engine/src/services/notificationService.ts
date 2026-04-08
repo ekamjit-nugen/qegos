@@ -380,5 +380,5 @@ export async function listNotifications(
     NotificationModel.countDocuments(query),
   ]);
 
-  return { notifications: notifications as INotificationDocument[], total };
+  return { notifications: notifications as unknown as INotificationDocument[], total };
 }

@@ -193,7 +193,7 @@ export async function listDocuments(
 
 export async function getDocument(
   docId: Types.ObjectId,
-  userId: Types.ObjectId,
+  _userId: Types.ObjectId,
 ): Promise<{ document: IVaultDocumentDocument; downloadUrl: string } | null> {
   const doc = await VaultDocumentModel.findOne({
     _id: docId,

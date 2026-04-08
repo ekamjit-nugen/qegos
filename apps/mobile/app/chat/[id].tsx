@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -18,6 +18,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/auth/useAuth';
 import { useConversationMessages, useSendMessage } from '@/hooks/useChat';
+import { useChatSocket } from '@/hooks/useSocket';
 import type { ChatMessage } from '@/types/chat';
 
 export default function ChatConversationScreen(): React.ReactNode {
@@ -28,15 +29,34 @@ export default function ChatConversationScreen(): React.ReactNode {
   const { data, isLoading } = useConversationMessages(id);
   const sendMessage = useSendMessage();
   const [messageText, setMessageText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Socket.io — real-time messages + typing indicator
+  const { sendTyping } = useChatSocket(
+    id,
+    useCallback((payload) => {
+      setIsTyping(payload.isTyping);
+      if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); }
+      typingTimeoutRef.current = setTimeout(() => { setIsTyping(false); }, 3000);
+    }, []),
+  );
 
   const messages = data?.data ?? [];
 
   async function handleSend(): Promise<void> {
-    if (!messageText.trim() || !id) return;
+    if (!messageText.trim() || !id) { return; }
     const body = messageText.trim();
     setMessageText('');
     await sendMessage.mutateAsync({ conversationId: id, body });
+  }
+
+  function handleTextChange(text: string): void {
+    setMessageText(text);
+    if (id && text.trim()) {
+      sendTyping(id);
+    }
   }
 
   function renderMessage({
@@ -112,10 +132,18 @@ export default function ChatConversationScreen(): React.ReactNode {
         />
       )}
 
+      {isTyping && (
+        <View style={styles.typingBar}>
+          <Text variant="labelSmall" style={styles.typingText}>
+            Staff is typing...
+          </Text>
+        </View>
+      )}
+
       <Surface style={styles.inputBar} elevation={2}>
         <TextInput
           value={messageText}
-          onChangeText={setMessageText}
+          onChangeText={handleTextChange}
           placeholder="Type a message..."
           mode="outlined"
           style={styles.textInput}
@@ -165,6 +193,14 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     marginTop: 4,
     textAlign: 'right',
+  },
+  typingBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  typingText: {
+    fontStyle: 'italic',
+    opacity: 0.6,
   },
   inputBar: {
     flexDirection: 'row',

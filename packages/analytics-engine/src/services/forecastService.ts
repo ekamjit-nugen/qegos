@@ -1,179 +1,177 @@
+/**
+ * Forecast Service — Revenue forecasting (ANA-INV-04)
+ *
+ * < benchmarkMonthsThreshold months of data → benchmark mode (isEstimated: true)
+ * >= benchmarkMonthsThreshold months → simple linear regression
+ */
+
 import type { Model, Document } from 'mongoose';
-import type { AnalyticsEngineConfig, RevenueForecastResponse, RevenueForecastEntry } from '../types';
-import { REVENUE_PAYMENT_STATUSES, DEFAULT_YEAR1_CONVERSION_RATE, DEFAULT_AVG_ORDER_VALUE_CENTS, DEFAULT_BENCHMARK_MONTHS } from '../constants';
+import type {
+  AnalyticsEngineConfig,
+  DateRangeParams,
+  RevenueForecastResponse,
+  RevenueBucket,
+  ForecastQuarter,
+} from '../types';
+import {
+  REVENUE_PAYMENT_STATUSES,
+  DEFAULT_YEAR1_CONVERSION_RATE,
+  DEFAULT_AVG_ORDER_VALUE_CENTS,
+  DEFAULT_BENCHMARK_MONTHS,
+} from '../constants';
 
 /**
- * ANA-INV-04: Revenue forecast.
- * If < 12 months of data → benchmark mode (isEstimated: true).
- * Else → simple linear regression on monthly revenue.
+ * Generate revenue forecast with confidence intervals.
  */
 export async function getRevenueForecast(
   PaymentModel: Model<Document>,
   config: AnalyticsEngineConfig,
-  dateRange: { dateFrom: string; dateTo: string },
+  dateRange: DateRangeParams,
 ): Promise<RevenueForecastResponse> {
-  const dateFrom = new Date(dateRange.dateFrom);
-  const dateTo = new Date(dateRange.dateTo);
+  const benchmarkMonths = config.benchmarkMonthsThreshold ?? DEFAULT_BENCHMARK_MONTHS;
 
   // Get monthly revenue history
-  const monthlyRevenue = await PaymentModel.aggregate([
+  const historical = await PaymentModel.aggregate([
     {
       $match: {
         status: { $in: [...REVENUE_PAYMENT_STATUSES] },
-        createdAt: { $gte: dateFrom, $lte: dateTo },
+        createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
       },
     },
     {
       $group: {
-        _id: {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-        },
-        revenue: { $sum: '$amount' },
+        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+        totalCents: { $sum: '$amount' },
         count: { $sum: 1 },
       },
     },
-    { $sort: { '_id.year': 1, '_id.month': 1 } },
-  ]);
+    { $sort: { _id: 1 } },
+    {
+      $project: { _id: 0, period: '$_id', totalCents: 1, count: 1 },
+    },
+  ]) as RevenueBucket[];
 
-  const benchmarkMonths = config.benchmarkMonthsThreshold ?? DEFAULT_BENCHMARK_MONTHS;
-  const isEstimated = monthlyRevenue.length < benchmarkMonths;
+  const dataMonths = historical.length;
+  const isEstimated = dataMonths < benchmarkMonths;
 
-  const totalRevenue = monthlyRevenue.reduce((sum, m) => sum + m.revenue, 0);
-  const totalTransactions = monthlyRevenue.reduce((sum, m) => sum + m.count, 0);
+  let forecast: ForecastQuarter[];
 
   if (isEstimated) {
-    // ANA-INV-04: Benchmark mode
+    // Benchmark mode: use configurable conversion rate and average order value
     const conversionRate = config.year1ConversionRate ?? DEFAULT_YEAR1_CONVERSION_RATE;
-    const avgOrderValue = config.averageOrderValueCents ?? DEFAULT_AVG_ORDER_VALUE_CENTS;
+    const avgOrderCents = config.averageOrderValueCents ?? DEFAULT_AVG_ORDER_VALUE_CENTS;
+    const monthlyEstimate = Math.round(avgOrderCents * conversionRate * 30); // rough monthly
 
-    // Use available data + benchmarks for forecast
-    const avgMonthlyRevenue = monthlyRevenue.length > 0
-      ? totalRevenue / monthlyRevenue.length
-      : avgOrderValue * conversionRate * 10; // assume 10 leads/month baseline
+    forecast = generateQuarterlyForecast(dateRange.dateTo, monthlyEstimate, 0.25);
+  } else {
+    // Linear regression on monthly totals
+    const values = historical.map((h) => h.totalCents);
+    const { slope, intercept } = linearRegression(values);
 
-    const quarters = buildQuarterlyForecast(dateTo, avgMonthlyRevenue, 0, true);
-
-    return {
-      isEstimated: true,
-      dataMonths: monthlyRevenue.length,
-      benchmarkNote: `Forecast based on ${monthlyRevenue.length} month(s) of data with industry benchmarks (conversion: ${conversionRate * 100}%, avg order: $${(avgOrderValue / 100).toFixed(0)})`,
-      totalRevenue,
-      totalTransactions,
-      averageMonthlyRevenue: Math.round(avgMonthlyRevenue),
-      quarters,
-    };
+    const nextMonthIndex = values.length;
+    forecast = generateQuarterlyFromRegression(
+      dateRange.dateTo,
+      slope,
+      intercept,
+      nextMonthIndex,
+    );
   }
 
-  // Linear regression on monthly revenue
-  const { slope, intercept, rSquared } = linearRegression(monthlyRevenue.map((m, i) => ({ x: i, y: m.revenue })));
+  return { historical, forecast, isEstimated, dataMonths };
+}
 
-  const avgMonthlyRevenue = Math.round(totalRevenue / monthlyRevenue.length);
-  const quarters = buildQuarterlyForecast(dateTo, avgMonthlyRevenue, slope, false);
+/**
+ * Simple linear regression: y = slope * x + intercept
+ */
+function linearRegression(values: number[]): { slope: number; intercept: number } {
+  const n = values.length;
+  if (n < 2) return { slope: 0, intercept: values[0] ?? 0 };
 
-  // Add confidence based on R²
-  for (const q of quarters) {
-    const spread = Math.round(q.forecast * (1 - rSquared) * 0.5);
-    q.confidenceLow = Math.max(0, q.forecast - spread);
-    q.confidenceHigh = q.forecast + spread;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += i;
+    sumY += values[i];
+    sumXY += i * values[i];
+    sumX2 += i * i;
   }
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
 
   return {
-    isEstimated: false,
-    dataMonths: monthlyRevenue.length,
-    benchmarkNote: null,
-    totalRevenue,
-    totalTransactions,
-    averageMonthlyRevenue: avgMonthlyRevenue,
-    trendSlope: Math.round(slope),
-    rSquared: Math.round(rSquared * 100) / 100,
-    quarters,
+    slope: Number.isFinite(slope) ? slope : 0,
+    intercept: Number.isFinite(intercept) ? intercept : 0,
   };
 }
 
 /**
- * Build 4 quarterly forecasts starting from the end of the data range.
+ * Generate 4 quarterly forecasts from a monthly estimate with confidence band.
  */
-function buildQuarterlyForecast(
-  lastDate: Date,
-  avgMonthly: number,
-  slope: number,
-  isEstimated: boolean,
-): RevenueForecastEntry[] {
-  const quarters: RevenueForecastEntry[] = [];
-  const startMonth = lastDate.getMonth() + 1; // 0-indexed → 1-indexed
-  const startYear = lastDate.getFullYear();
+function generateQuarterlyForecast(
+  fromDate: Date,
+  monthlyEstimate: number,
+  uncertaintyPct: number,
+): ForecastQuarter[] {
+  const quarters: ForecastQuarter[] = [];
+  const startMonth = fromDate.getMonth();
+  const startYear = fromDate.getFullYear();
 
   for (let q = 0; q < 4; q++) {
-    const quarterStart = new Date(startYear, startMonth + q * 3, 1);
-    const qYear = quarterStart.getFullYear();
-    const qMonth = quarterStart.getMonth(); // 0-indexed
+    const monthOffset = (q + 1) * 3;
+    const qMonth = (startMonth + monthOffset) % 12;
+    const qYear = startYear + Math.floor((startMonth + monthOffset) / 12);
     const quarterNum = Math.floor(qMonth / 3) + 1;
-    const label = `Q${quarterNum} ${qYear}`;
 
-    // Project 3 months of revenue for this quarter
-    const monthsAhead = (q + 1) * 3;
-    const projectedMonthly = avgMonthly + slope * monthsAhead;
-    const quarterForecast = Math.round(Math.max(0, projectedMonthly * 3));
+    const predicted = monthlyEstimate * 3;
+    const uncertainty = predicted * uncertaintyPct * (q + 1);
 
-    const entry: RevenueForecastEntry = {
-      quarter: label,
-      forecast: quarterForecast,
-      isEstimated,
-    };
-
-    if (!isEstimated) {
-      // Placeholder — overridden by caller with R² based confidence
-      entry.confidenceLow = quarterForecast;
-      entry.confidenceHigh = quarterForecast;
-    }
-
-    quarters.push(entry);
+    quarters.push({
+      quarter: `${qYear}-Q${quarterNum}`,
+      predictedCents: Math.round(predicted),
+      lowerBoundCents: Math.round(predicted - uncertainty),
+      upperBoundCents: Math.round(predicted + uncertainty),
+    });
   }
 
   return quarters;
 }
 
 /**
- * Simple linear regression: y = slope * x + intercept.
+ * Generate quarterly forecasts from linear regression.
  */
-function linearRegression(
-  points: Array<{ x: number; y: number }>,
-): { slope: number; intercept: number; rSquared: number } {
-  const n = points.length;
-  if (n === 0) return { slope: 0, intercept: 0, rSquared: 0 };
-  if (n === 1) return { slope: 0, intercept: points[0].y, rSquared: 0 };
+function generateQuarterlyFromRegression(
+  fromDate: Date,
+  slope: number,
+  intercept: number,
+  nextIndex: number,
+): ForecastQuarter[] {
+  const quarters: ForecastQuarter[] = [];
+  const startMonth = fromDate.getMonth();
+  const startYear = fromDate.getFullYear();
 
-  let sumX = 0;
-  let sumY = 0;
-  let sumXY = 0;
-  let sumX2 = 0;
+  for (let q = 0; q < 4; q++) {
+    const monthOffset = (q + 1) * 3;
+    const qMonth = (startMonth + monthOffset) % 12;
+    const qYear = startYear + Math.floor((startMonth + monthOffset) / 12);
+    const quarterNum = Math.floor(qMonth / 3) + 1;
 
-  for (const p of points) {
-    sumX += p.x;
-    sumY += p.y;
-    sumXY += p.x * p.y;
-    sumX2 += p.x * p.x;
+    // Sum 3 months of predicted values
+    let quarterTotal = 0;
+    for (let m = 0; m < 3; m++) {
+      const idx = nextIndex + q * 3 + m;
+      quarterTotal += slope * idx + intercept;
+    }
+
+    const predicted = Math.round(Math.max(0, quarterTotal));
+    const confidenceWidth = Math.round(predicted * 0.15 * (q + 1));
+
+    quarters.push({
+      quarter: `${qYear}-Q${quarterNum}`,
+      predictedCents: predicted,
+      lowerBoundCents: Math.max(0, predicted - confidenceWidth),
+      upperBoundCents: predicted + confidenceWidth,
+    });
   }
 
-  const denominator = n * sumX2 - sumX * sumX;
-  if (denominator === 0) return { slope: 0, intercept: sumY / n, rSquared: 0 };
-
-  const slope = (n * sumXY - sumX * sumY) / denominator;
-  const intercept = (sumY - slope * sumX) / n;
-
-  // R² calculation
-  const meanY = sumY / n;
-  let ssRes = 0;
-  let ssTot = 0;
-
-  for (const p of points) {
-    const predicted = slope * p.x + intercept;
-    ssRes += (p.y - predicted) ** 2;
-    ssTot += (p.y - meanY) ** 2;
-  }
-
-  const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-
-  return { slope, intercept, rSquared: Math.max(0, rSquared) };
+  return quarters;
 }

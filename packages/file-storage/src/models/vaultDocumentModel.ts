@@ -1,5 +1,5 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { IVaultDocumentDocument, VaultDocumentCategory, VirusScanStatus, OcrStatus, UploadedBy } from '../types';
+import type { IVaultDocumentDocument, VirusScanStatus, OcrStatus, UploadedBy } from '../types';
 import { VAULT_DOCUMENT_CATEGORIES } from '../types';
 
 const vaultDocumentSchema = new Schema<IVaultDocumentDocument>(

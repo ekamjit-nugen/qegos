@@ -21,7 +21,7 @@ export async function detectAnomalies(
   const results: AnomalyResult[] = [];
 
   const roles = await RoleModel.find({}).lean<IRoleDocument[]>();
-  const users = await (UserModel as Model<UserLike>)
+  const users = await (UserModel as unknown as Model<UserLike>)
     .find({ isDeleted: { $ne: true } })
     .populate('roleId')
     .lean<UserLike[]>();

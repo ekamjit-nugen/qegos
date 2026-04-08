@@ -1,73 +1,76 @@
+/**
+ * Cache Service — Redis-backed caching with stale-while-revalidate (ANA-INV-06)
+ */
+
+import type { Redis } from 'ioredis';
 import { createHash } from 'crypto';
 import { DEFAULT_CACHE_TTL } from '../constants';
 
 /**
- * Build a deterministic cache key from view name and params.
- * Key format: analytics:{view}:{md5_hash}
+ * Build a deterministic cache key for a given analytics view and params.
  */
-export function buildCacheKey(
-  view: string,
-  params: Record<string, unknown> = {},
-): string {
-  const sortedParams = JSON.stringify(params, Object.keys(params).sort());
-  const hash = createHash('md5').update(sortedParams).digest('hex').slice(0, 12);
+export function buildCacheKey(view: string, params: Record<string, unknown> = {}): string {
+  const sorted = JSON.stringify(params, Object.keys(params).sort());
+  const hash = createHash('sha256').update(sorted).digest('hex').slice(0, 12);
   return `analytics:${view}:${hash}`;
 }
 
 /**
- * Get cached data from Redis.
+ * Get a cached value from Redis. Returns null if not found.
  */
-export async function getCached<T>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  redis: any,
-  key: string,
-): Promise<T | null> {
+export async function getCached<T>(redis: Redis, key: string): Promise<T | null> {
+  const raw = await redis.get(key);
+  if (!raw) return null;
   try {
-    const cached = await redis.get(key);
-    if (!cached) return null;
-    return JSON.parse(cached) as T;
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
 }
 
 /**
- * Set data in Redis cache with TTL.
+ * Store a value in Redis with TTL.
  */
 export async function setCache(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  redis: any,
+  redis: Redis,
   key: string,
+  ttl: number,
   data: unknown,
-  ttl: number = DEFAULT_CACHE_TTL,
 ): Promise<void> {
-  try {
-    await redis.setex(key, ttl, JSON.stringify(data));
-  } catch {
-    // Cache write failure is non-fatal
-  }
+  await redis.set(key, JSON.stringify(data), 'EX', ttl);
 }
 
 /**
- * ANA-INV-06: Cache-aside with stale-while-revalidate pattern.
- * Returns cached data immediately if available.
- * Computes fresh data on cache miss.
+ * Cache-through wrapper: returns cached data if available, otherwise computes
+ * and stores the result. Implements stale-while-revalidate pattern.
  */
 export async function withCache<T>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  redis: any,
+  redis: Redis | null,
   key: string,
-  ttl: number,
+  ttl: number = DEFAULT_CACHE_TTL,
   computeFn: () => Promise<T>,
 ): Promise<T> {
+  // If no Redis, compute directly
+  if (!redis) {
+    return computeFn();
+  }
+
   // Try cache first
   const cached = await getCached<T>(redis, key);
   if (cached !== null) {
+    // Stale-while-revalidate: if TTL is below 20%, recompute in background
+    const remainingTtl = await redis.ttl(key);
+    if (remainingTtl > 0 && remainingTtl < ttl * 0.2) {
+      // Fire-and-forget revalidation
+      computeFn()
+        .then((fresh) => setCache(redis, key, ttl, fresh))
+        .catch(() => { /* swallow — stale data is still valid */ });
+    }
     return cached;
   }
 
-  // Cache miss — compute and store
+  // Cache miss — compute, store, return
   const fresh = await computeFn();
-  await setCache(redis, key, fresh, ttl);
+  await setCache(redis, key, ttl, fresh);
   return fresh;
 }

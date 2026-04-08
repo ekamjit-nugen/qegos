@@ -8,7 +8,6 @@ import {
   sendFreeformValidation,
   updateConfigValidation,
   getConversationValidation,
-  getMediaValidation,
 } from '../validators/whatsappValidators';
 import {
   initWhatsAppService,

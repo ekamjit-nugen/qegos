@@ -98,3 +98,13 @@ export {
   createCannedResponseValidation,
   searchMessagesValidation,
 } from './validators/chatValidators';
+
+export {
+  initChatSocket,
+  emitNewMessage,
+  emitMessageRead,
+  emitConversationResolved,
+  getSocketServer,
+} from './socket/chatSocketHandler';
+
+export type { ChatSocketConfig, ChatSocketServer } from './socket/chatSocketHandler';

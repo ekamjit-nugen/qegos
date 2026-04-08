@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { type Options } from 'express-rate-limit';
 import type { RequestHandler } from 'express';
 import type Redis from 'ioredis';
 import type { RateLimiterConfig } from './types';
@@ -19,7 +19,7 @@ export function getRedisClient(): Redis | null {
  */
 export function createLimiter(config: RateLimiterConfig): RequestHandler {
   // Build options without the store first
-  const options: Parameters<typeof rateLimit>[0] = {
+  const options: Partial<Options> = {
     windowMs: config.windowMs,
     max: config.max,
     message: {
@@ -47,7 +47,7 @@ export function createLimiter(config: RateLimiterConfig): RequestHandler {
         sendCommand: (...args: string[]) =>
           (_redisClient as Redis).call(args[0], ...args.slice(1)) as Promise<unknown>,
         prefix: 'rl:',
-      });
+      }) as unknown as Options['store'];
     } catch {
       // Redis store not available, fall back to in-memory
     }

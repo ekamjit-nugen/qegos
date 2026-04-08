@@ -1,63 +1,57 @@
+/**
+ * Channel ROI Service — Multi-hop: Campaign → Lead → Order → Payment
+ *
+ * Tracks acquisition cost and revenue per marketing channel.
+ */
+
 import type { Model, Document } from 'mongoose';
 import type { DateRangeParams, ChannelRoiEntry } from '../types';
 import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
+export interface ChannelRoiDeps {
+  CampaignModel: Model<Document>;
+  LeadModel: Model<Document>;
+  PaymentModel: Model<Document>;
+}
+
 /**
- * Channel ROI: multi-hop Campaign → Lead → Order → Payment.
- * 3 queries with in-memory join to calculate ROI per marketing channel.
+ * Compute ROI per channel by tracing Campaign → Lead → Order → Payment.
  */
 export async function getChannelRoi(
-  deps: {
-    CampaignModel: Model<Document>;
-    LeadModel: Model<Document>;
-    OrderModel: Model<Document>;
-    PaymentModel: Model<Document>;
-  },
+  deps: ChannelRoiDeps,
   dateRange: DateRangeParams,
   channels?: string[],
 ): Promise<ChannelRoiEntry[]> {
-  const dateFilter = {
-    $gte: new Date(dateRange.dateFrom),
-    $lte: new Date(dateRange.dateTo),
-  };
+  const { CampaignModel, LeadModel, PaymentModel } = deps;
 
-  // Step 1: Get campaigns with spend data
+  // 1. Campaigns grouped by channel
   const campaignMatch: Record<string, unknown> = {
-    createdAt: dateFilter,
+    createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
   };
   if (channels && channels.length > 0) {
     campaignMatch.channel = { $in: channels };
   }
 
-  const campaigns = await deps.CampaignModel.aggregate([
+  const campaigns = await CampaignModel.aggregate([
     { $match: campaignMatch },
     {
       $group: {
         _id: '$channel',
-        campaignIds: { $addToSet: '$_id' },
-        totalSpend: { $sum: '$budget' },
         campaignCount: { $sum: 1 },
+        campaignIds: { $push: '$_id' },
+        costCents: { $sum: { $ifNull: ['$budgetCents', 0] } },
       },
     },
   ]);
 
   if (campaigns.length === 0) return [];
 
-  // Build channel → campaignIds map
-  const channelCampaignMap = new Map<string, { campaignIds: unknown[]; totalSpend: number; campaignCount: number }>();
-  const allCampaignIds: unknown[] = [];
+  // 2. Leads per campaign → channel
+  const allCampaignIds = campaigns.flatMap(
+    (c: { campaignIds: unknown[] }) => c.campaignIds,
+  );
 
-  for (const c of campaigns) {
-    channelCampaignMap.set(c._id, {
-      campaignIds: c.campaignIds,
-      totalSpend: c.totalSpend ?? 0,
-      campaignCount: c.campaignCount,
-    });
-    allCampaignIds.push(...c.campaignIds);
-  }
-
-  // Step 2: Get leads attributed to these campaigns
-  const leads = await deps.LeadModel.aggregate([
+  const leads = await LeadModel.aggregate([
     {
       $match: {
         campaignId: { $in: allCampaignIds },
@@ -67,42 +61,31 @@ export async function getChannelRoi(
     {
       $group: {
         _id: '$campaignId',
-        leadCount: { $sum: 1 },
+        leadsGenerated: { $sum: 1 },
         convertedOrderIds: {
-          $addToSet: {
-            $cond: [
-              { $and: ['$isConverted', { $ne: ['$convertedOrderId', null] }] },
-              '$convertedOrderId',
-              '$$REMOVE',
-            ],
+          $push: {
+            $cond: [{ $eq: ['$isConverted', true] }, '$convertedOrderId', '$$REMOVE'],
           },
-        },
-        convertedCount: {
-          $sum: { $cond: ['$isConverted', 1, 0] },
         },
       },
     },
   ]);
 
-  // Map campaignId → lead stats
-  const campaignLeadMap = new Map<string, { leadCount: number; convertedOrderIds: unknown[]; convertedCount: number }>();
-  const allOrderIds: unknown[] = [];
+  const leadsByCampaign = new Map(
+    leads.map((l: { _id: unknown; leadsGenerated: number; convertedOrderIds: unknown[] }) => [
+      String(l._id),
+      { leadsGenerated: l.leadsGenerated, convertedOrderIds: l.convertedOrderIds },
+    ]),
+  );
 
-  for (const l of leads) {
-    const orderIds = (l.convertedOrderIds ?? []).filter((id: unknown) => id != null);
-    campaignLeadMap.set(String(l._id), {
-      leadCount: l.leadCount,
-      convertedOrderIds: orderIds,
-      convertedCount: l.convertedCount,
-    });
-    allOrderIds.push(...orderIds);
-  }
+  // 3. Revenue from converted orders' payments
+  const allOrderIds = leads.flatMap(
+    (l: { convertedOrderIds: unknown[] }) => l.convertedOrderIds,
+  ).filter(Boolean);
 
-  // Step 3: Get revenue from payments linked to converted orders
-  let orderPaymentMap = new Map<string, number>();
-
+  const revenueByOrder = new Map<string, number>();
   if (allOrderIds.length > 0) {
-    const payments = await deps.PaymentModel.aggregate([
+    const payments = await PaymentModel.aggregate([
       {
         $match: {
           orderId: { $in: allOrderIds },
@@ -112,65 +95,49 @@ export async function getChannelRoi(
       {
         $group: {
           _id: '$orderId',
-          revenue: { $sum: '$amount' },
+          revenueCents: { $sum: '$amount' },
         },
       },
     ]);
-
-    orderPaymentMap = new Map(
-      payments.map((p) => [String(p._id), p.revenue as number]),
-    );
+    for (const p of payments) {
+      revenueByOrder.set(String(p._id), p.revenueCents);
+    }
   }
 
-  // Assemble results per channel
-  const results: ChannelRoiEntry[] = [];
+  // 4. Assemble per channel
+  return campaigns.map((c: {
+    _id: string;
+    campaignCount: number;
+    campaignIds: Array<{ toString: () => string }>;
+    costCents: number;
+  }) => {
+    let leadsGenerated = 0;
+    let conversions = 0;
+    let revenueCents = 0;
 
-  for (const [channel, campaignData] of channelCampaignMap) {
-    let totalLeads = 0;
-    let totalConverted = 0;
-    let totalRevenue = 0;
-
-    for (const campaignId of campaignData.campaignIds) {
-      const leadData = campaignLeadMap.get(String(campaignId));
-      if (!leadData) continue;
-
-      totalLeads += leadData.leadCount;
-      totalConverted += leadData.convertedCount;
-
-      for (const orderId of leadData.convertedOrderIds) {
-        totalRevenue += orderPaymentMap.get(String(orderId)) ?? 0;
+    for (const cid of c.campaignIds) {
+      const data = leadsByCampaign.get(String(cid));
+      if (!data) continue;
+      leadsGenerated += data.leadsGenerated;
+      for (const oid of data.convertedOrderIds) {
+        if (!oid) continue;
+        conversions++;
+        revenueCents += revenueByOrder.get(String(oid)) ?? 0;
       }
     }
 
-    const spend = campaignData.totalSpend;
-    const roi = spend > 0
-      ? Math.round(((totalRevenue - spend) / spend) * 100) / 100
-      : null;
-    const costPerLead = totalLeads > 0
-      ? Math.round(spend / totalLeads)
-      : null;
-    const costPerConversion = totalConverted > 0
-      ? Math.round(spend / totalConverted)
-      : null;
+    const roi = c.costCents > 0
+      ? Math.round(((revenueCents - c.costCents) / c.costCents) * 100) / 100
+      : 0;
 
-    results.push({
-      channel,
-      campaignCount: campaignData.campaignCount,
-      totalSpend: spend,
-      totalLeads,
-      totalConverted,
-      conversionRate: totalLeads > 0
-        ? Math.round((totalConverted / totalLeads) * 100) / 100
-        : 0,
-      totalRevenue,
+    return {
+      channel: c._id,
+      campaignCount: c.campaignCount,
+      leadsGenerated,
+      conversions,
+      revenueCents,
+      costCents: c.costCents,
       roi,
-      costPerLead,
-      costPerConversion,
-    });
-  }
-
-  // Sort by totalRevenue descending
-  results.sort((a, b) => b.totalRevenue - a.totalRevenue);
-
-  return results;
+    };
+  }).sort((a: ChannelRoiEntry, b: ChannelRoiEntry) => b.revenueCents - a.revenueCents);
 }

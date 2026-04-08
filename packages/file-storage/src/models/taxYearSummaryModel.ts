@@ -1,5 +1,5 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ITaxYearSummaryDocument, AtoRefundStatus } from '../types';
+import type { ITaxYearSummaryDocument } from '../types';
 import { ATO_REFUND_STATUSES } from '../types';
 
 const taxYearSummarySchema = new Schema<ITaxYearSummaryDocument>(

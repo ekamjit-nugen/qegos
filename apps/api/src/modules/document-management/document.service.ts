@@ -1,4 +1,4 @@
-import type { Model, Document, Types } from 'mongoose';
+import type { Model, Document } from 'mongoose';
 import * as crypto from 'crypto';
 import {
   uploadToS3,
@@ -268,7 +268,7 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     const doc = documents[documentIndex];
 
     // Download from S3 to get buffer for Zoho
-    const { GetObjectCommand, S3Client } = await import('@aws-sdk/client-s3');
+    const { GetObjectCommand: _GetObjectCommand, S3Client: _S3Client } = await import('@aws-sdk/client-s3');
     // We use getPresignedUrl + fetch as a simpler approach
     const presignedUrl = await getPresignedUrl(doc.fileUrl);
     const response = await fetch(presignedUrl);

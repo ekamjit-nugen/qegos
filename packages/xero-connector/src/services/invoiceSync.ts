@@ -1,4 +1,4 @@
-import type { Model, Types } from 'mongoose';
+import type { Model } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
 import type { IXeroSyncLogDocument, IXeroConfigDocument } from '../types';
 import { calculateGst } from '../types';
@@ -10,18 +10,16 @@ import { syncContact } from './contactSync';
 let XeroSyncLogModel: Model<IXeroSyncLogDocument>;
 let XeroConfigModel: Model<IXeroConfigDocument>;
 let OrderModel: Model<any>;
-let UserModel: Model<any>;
 
 export function initInvoiceSync(
   syncLogModel: Model<IXeroSyncLogDocument>,
   configModel: Model<IXeroConfigDocument>,
   orderModel: Model<any>,
-  userModel: Model<any>,
+  _userModel: Model<any>,
 ): void {
   XeroSyncLogModel = syncLogModel;
   XeroConfigModel = configModel;
   OrderModel = orderModel;
-  UserModel = userModel;
 }
 
 // ─── Create Invoice (XRO-INV-04, XRO-INV-07, XRO-INV-11) ──────────────
@@ -224,7 +222,7 @@ export async function bulkSyncInvoices(): Promise<{ synced: number; failed: numb
 
   for (const order of orders) {
     try {
-      await createInvoice(order._id.toString());
+      await createInvoice((order as any)._id.toString());
       synced++;
     } catch {
       failed++;
@@ -278,7 +276,8 @@ function buildLineItems(
     // XRO-INV-07: Use priceAtCreation (integer cents), convert to dollars for Xero
     const unitAmountDollars = item.priceAtCreation / 100;
     // XRO-INV-11: GST component
-    const _gstCents = calculateGst(item.priceAtCreation * quantity);
+    // XRO-INV-11: GST component (used by Xero LineAmountTypes=Inclusive)
+    calculateGst(item.priceAtCreation * quantity);
 
     return {
       Description: item.description ?? item.serviceName ?? 'Tax Service',

@@ -1,31 +1,16 @@
 'use client';
 
-import { Card, Row, Col, Empty } from 'antd';
-import {
-  BarChartOutlined,
-  DollarOutlined,
-  TeamOutlined,
-  RiseOutlined,
-  FundOutlined,
-  CalendarOutlined,
-  WarningOutlined,
-  PieChartOutlined,
-  BankOutlined,
-  DashboardOutlined,
-} from '@ant-design/icons';
-
-const WIDGETS = [
-  { title: 'Executive Summary', icon: <DashboardOutlined /> },
-  { title: 'Revenue Forecast', icon: <DollarOutlined /> },
-  { title: 'Customer Lifetime Value', icon: <TeamOutlined /> },
-  { title: 'Staff Benchmark', icon: <BarChartOutlined /> },
-  { title: 'Channel ROI', icon: <FundOutlined /> },
-  { title: 'Seasonal Trends', icon: <CalendarOutlined /> },
-  { title: 'Churn Risk', icon: <WarningOutlined /> },
-  { title: 'Service Mix', icon: <PieChartOutlined /> },
-  { title: 'Collection Rate', icon: <BankOutlined /> },
-  { title: 'Pipeline Health', icon: <RiseOutlined /> },
-];
+import { Row, Col } from 'antd';
+import { ExecutiveSummaryWidget } from './widgets/ExecutiveSummaryWidget';
+import { RevenueForecastWidget } from './widgets/RevenueForecastWidget';
+import { ClvWidget } from './widgets/ClvWidget';
+import { StaffBenchmarkWidget } from './widgets/StaffBenchmarkWidget';
+import { ChannelRoiWidget } from './widgets/ChannelRoiWidget';
+import { SeasonalTrendsWidget } from './widgets/SeasonalTrendsWidget';
+import { ChurnRiskWidget } from './widgets/ChurnRiskWidget';
+import { ServiceMixWidget } from './widgets/ServiceMixWidget';
+import { CollectionRateWidget } from './widgets/CollectionRateWidget';
+import { PipelineHealthWidget } from './widgets/PipelineHealthWidget';
 
 export function AnalyticsPage(): React.ReactNode {
   return (
@@ -34,25 +19,54 @@ export function AnalyticsPage(): React.ReactNode {
         <h2 style={{ margin: 0 }}>Analytics Dashboard</h2>
       </div>
 
+      {/* Row 1: Executive Summary (full width) */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24}>
+          <ExecutiveSummaryWidget />
+        </Col>
+      </Row>
+
+      {/* Row 2: Revenue Forecast + Collection Rate */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={16}>
+          <RevenueForecastWidget />
+        </Col>
+        <Col xs={24} lg={8}>
+          <CollectionRateWidget />
+        </Col>
+      </Row>
+
+      {/* Row 3: Pipeline Health + Service Mix */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={12}>
+          <PipelineHealthWidget />
+        </Col>
+        <Col xs={24} lg={12}>
+          <ServiceMixWidget />
+        </Col>
+      </Row>
+
+      {/* Row 4: Seasonal Trends + Staff Benchmark */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={12}>
+          <SeasonalTrendsWidget />
+        </Col>
+        <Col xs={24} lg={12}>
+          <StaffBenchmarkWidget />
+        </Col>
+      </Row>
+
+      {/* Row 5: Channel ROI + CLV + Churn Risk */}
       <Row gutter={[16, 16]}>
-        {WIDGETS.map((widget) => (
-          <Col xs={24} sm={12} lg={8} key={widget.title}>
-            <Card
-              title={
-                <span>
-                  {widget.icon}
-                  <span style={{ marginLeft: 8 }}>{widget.title}</span>
-                </span>
-              }
-              style={{ minHeight: 200 }}
-            >
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="Coming Soon"
-              />
-            </Card>
-          </Col>
-        ))}
+        <Col xs={24} lg={8}>
+          <ChannelRoiWidget />
+        </Col>
+        <Col xs={24} lg={8}>
+          <ClvWidget />
+        </Col>
+        <Col xs={24} lg={8}>
+          <ChurnRiskWidget />
+        </Col>
       </Row>
     </div>
   );

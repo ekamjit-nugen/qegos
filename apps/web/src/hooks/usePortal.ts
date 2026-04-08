@@ -173,7 +173,8 @@ export function useConversations(): ReturnType<typeof useQuery<Conversation[]>> 
       const res = await api.get<ApiResponse<Conversation[]>>('/portal/chat/conversations');
       return res.data.data;
     },
-    refetchInterval: 15_000,
+    // Real-time updates via Socket.io; fall back to 30s polling as safety net
+    refetchInterval: 30_000,
   });
 }
 
@@ -189,7 +190,8 @@ export function useConversationMessages(
       return res.data.data;
     },
     enabled: !!id,
-    refetchInterval: 10_000,
+    // Real-time updates via Socket.io; fall back to 30s polling as safety net
+    refetchInterval: 30_000,
   });
 }
 

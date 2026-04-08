@@ -1,5 +1,5 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ICannedResponseDocument, CannedResponseCategory } from '../types';
+import type { ICannedResponseDocument } from '../types';
 import { CANNED_RESPONSE_CATEGORIES } from '../types';
 
 const cannedResponseSchema = new Schema<ICannedResponseDocument>(

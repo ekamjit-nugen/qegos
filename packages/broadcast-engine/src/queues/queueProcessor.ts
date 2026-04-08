@@ -14,19 +14,17 @@ import { renderMessage } from '../services/templateService';
 // ─── Module State ────────────────────────────────────────────────────────────
 
 let CampaignModel: Model<IBroadcastCampaignDocument>;
-let MessageModel: Model<IBroadcastMessageDocument>;
 let providers: Map<SingleChannel, IChannelProvider>;
 let engineConfig: BroadcastEngineConfig;
 let rateLimits: RateLimitConfig;
 
 export function initQueueProcessor(
   campaignModel: Model<IBroadcastCampaignDocument>,
-  messageModel: Model<IBroadcastMessageDocument>,
+  _messageModel: Model<IBroadcastMessageDocument>,
   channelProviders: Map<SingleChannel, IChannelProvider>,
   config: BroadcastEngineConfig,
 ): void {
   CampaignModel = campaignModel;
-  MessageModel = messageModel;
   providers = channelProviders;
   engineConfig = config;
   rateLimits = { ...DEFAULT_RATE_LIMITS, ...config.rateLimits };

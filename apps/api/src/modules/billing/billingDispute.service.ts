@@ -64,7 +64,7 @@ export async function listDisputes(
     BillingDisputeModel.countDocuments(filter),
   ]);
 
-  return { disputes: disputes as IBillingDisputeDocument[], total };
+  return { disputes: disputes as unknown as IBillingDisputeDocument[], total };
 }
 
 // ─── Get Dispute ───────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ export async function getDispute(
     throw AppError.notFound('Billing dispute');
   }
 
-  return dispute as IBillingDisputeDocument;
+  return dispute as unknown as IBillingDisputeDocument;
 }
 
 // ─── Update Dispute ────────────────────────────────────────────────────────

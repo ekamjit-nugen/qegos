@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { validationResult } from 'express-validator';
 import type { BroadcastRouteDeps, SingleChannel, MessageStatus } from '../types';
+export type { BroadcastRouteDeps } from '../types';
 import * as campaignService from '../services/campaignService';
 import * as templateService from '../services/templateService';
 import * as messageService from '../services/messageService';
@@ -424,7 +425,7 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
           { $setOnInsert: entry },
           { upsert: true, new: true, rawResult: true },
         );
-        if (result.lastErrorObject?.updatedExisting) {
+        if ((result as any).lastErrorObject?.updatedExisting) {
           skipped++;
         } else {
           imported++;

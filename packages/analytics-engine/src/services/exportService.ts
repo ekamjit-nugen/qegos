@@ -1,33 +1,40 @@
-import type { AnalyticsView, ExportJobResponse } from '../types';
+/**
+ * Export Service — Async analytics export via BullMQ
+ */
 
-interface ExportQueue {
-  add(name: string, data: Record<string, unknown>): Promise<{ id: string | number }>;
+import type { AnalyticsView, ExportJobResponse } from '../types';
+import { randomUUID } from 'crypto';
+
+export interface ExportParams {
+  format: 'pdf' | 'xlsx';
+  widgets: AnalyticsView[];
+  dateFrom?: string;
+  dateTo?: string;
+  requestedBy: string; // userId
 }
 
 /**
- * Enqueue an analytics export job for async processing.
- * Returns jobId for status polling.
+ * Enqueue an analytics export job. Returns the job ID for polling.
  */
 export async function createExportJob(
-  queue: ExportQueue,
-  params: {
-    format: 'pdf' | 'xlsx';
-    widgets: AnalyticsView[];
-    dateRange: { dateFrom: string; dateTo: string };
-    requestedBy: string;
-  },
+  queue: { add: (name: string, data: unknown) => Promise<unknown> },
+  params: ExportParams,
 ): Promise<ExportJobResponse> {
-  const job = await queue.add('analytics-export', {
+  const jobId = randomUUID();
+
+  await queue.add('analytics-export', {
+    jobId,
     format: params.format,
     widgets: params.widgets,
-    dateRange: params.dateRange,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
     requestedBy: params.requestedBy,
-    requestedAt: new Date().toISOString(),
   });
 
   return {
-    jobId: String(job.id),
+    jobId,
     status: 'queued',
-    message: `Export job queued. Format: ${params.format}, widgets: ${params.widgets.length}`,
+    format: params.format,
+    widgets: params.widgets,
   };
 }

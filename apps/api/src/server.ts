@@ -1,3 +1,4 @@
+import { createServer as createHttpServer } from 'http';
 import type { Request, Response } from 'express';
 import * as auth from '@nugen/auth';
 import * as rbac from '@nugen/rbac';
@@ -1272,15 +1273,27 @@ async function bootstrap(): Promise<void> {
     console.warn(`[APPOINTMENT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
   });
 
-  // 8. Start server
+  // 8. Create HTTP server + Socket.io for real-time chat
   const port = config.PORT;
-  const server = app.listen(port, () => {
-    console.warn(`QEGOS API running on port ${port} [${config.NODE_ENV}]`); // eslint-disable-line no-console
+  const httpServer = createHttpServer(app);
+
+  // Attach Socket.io to the HTTP server
+  const chatSocketServer = chatEngine.initChatSocket(httpServer, {
+    corsOrigins: config.CORS_ORIGINS ? config.CORS_ORIGINS.split(',') : '*',
+    verifyToken: async (token: string) => {
+      const payload = auth.jwtService.verifyAccessToken(token);
+      return { userId: payload.userId, userType: String(payload.userType) };
+    },
+  });
+
+  const server = httpServer.listen(port, () => {
+    console.warn(`QEGOS API running on port ${port} [${config.NODE_ENV}] (Socket.io enabled)`); // eslint-disable-line no-console
   });
 
   // 9. Graceful shutdown
   const shutdown = async (signal: string): Promise<void> => {
     console.warn(`${signal} received. Shutting down gracefully...`); // eslint-disable-line no-console
+    chatSocketServer.close();
     server.close(async () => {
       await automationWorker.close();
       await automationQueue.close();

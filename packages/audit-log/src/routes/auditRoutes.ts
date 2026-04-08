@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
-import { validate, pagination, dateRange, search } from '@nugen/validator';
+import { validate, pagination, dateRange } from '@nugen/validator';
 import type { IAuditLogDocument } from '../types';
 
 export interface AuditRouteDeps {

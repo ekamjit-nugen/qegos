@@ -11,6 +11,7 @@
     "composite": true,
     "incremental": true,
     "skipLibCheck": true,
+    "types": ["node"],
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "noUnusedLocals": true,

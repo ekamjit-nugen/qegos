@@ -24,7 +24,7 @@ export function initContactSync(
 export async function syncContact(
   userId: string,
 ): Promise<{ xeroContactId: string; created: boolean }> {
-  const user = await UserModel.findById(userId).lean();
+  const user = await UserModel.findById(userId).lean() as any;
   if (!user) throw new Error('User not found');
 
   // Check if already synced via sync log
@@ -34,8 +34,8 @@ export async function syncContact(
     status: 'success',
   }).lean();
 
-  if (existingLog?.xeroEntityId) {
-    return { xeroContactId: existingLog.xeroEntityId, created: false };
+  if ((existingLog as any)?.xeroEntityId) {
+    return { xeroContactId: (existingLog as any).xeroEntityId, created: false };
   }
 
   const syncLog = await XeroSyncLogModel.create({
@@ -114,7 +114,7 @@ export async function bulkSyncContacts(): Promise<{ synced: number; failed: numb
 
   for (const user of unsyncedUsers) {
     try {
-      await syncContact(user._id.toString());
+      await syncContact((user as any)._id.toString());
       synced++;
     } catch {
       failed++;

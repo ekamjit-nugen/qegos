@@ -16,7 +16,6 @@ import {
 import {
   initChatService,
   findOrCreateConversation,
-  getConversation,
   listConversations,
   resolveConversation,
   transferConversation,

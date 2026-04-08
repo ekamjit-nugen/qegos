@@ -7,6 +7,7 @@ import type {
   IPaymentDocument,
   IWebhookEventDocument,
   IGatewayConfigDocument,
+  IGatewayConfig,
   IPaymentProvider,
   PaymentGateway,
   AuthenticatedPaymentRequest,
@@ -61,7 +62,6 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
   const router = Router();
   const {
     PaymentModel,
-    WebhookEventModel,
     GatewayConfigModel,
     providers,
     authenticate,
@@ -134,19 +134,16 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       }
 
       // Get gateway config
-      let config = await GatewayConfigModel.findOne().lean();
-      if (!config) {
-        // Create default config if none exists
-        config = await GatewayConfigModel.create({
-          primaryGateway: 'stripe',
-          routingRule: 'primary_only',
-        });
-      }
+      const config = (await GatewayConfigModel.findOne()) ?? await GatewayConfigModel.create({
+        primaryGateway: 'stripe',
+        routingRule: 'primary_only',
+      });
 
       // Generate payment number
       const paymentNumber = await generatePaymentNumber(PaymentModel);
 
       // Route the payment through the gateway abstraction layer
+      const configObj = config.toObject() as unknown as IGatewayConfig;
       const intentResult = await routePayment(
         {
           amount,
@@ -159,9 +156,9 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
           },
         },
         {
-          ...config,
+          ...configObj,
           // Allow explicit gateway override if provided and enabled
-          primaryGateway: gateway ?? config.primaryGateway,
+          primaryGateway: gateway ?? configObj.primaryGateway,
         },
         providers,
       );
@@ -577,13 +574,10 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
     authenticate() as RequestHandler,
     checkPermission('payments', 'read') as RequestHandler,
     asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-      let config = await GatewayConfigModel.findOne().lean();
-      if (!config) {
-        config = await GatewayConfigModel.create({
-          primaryGateway: 'stripe',
-          routingRule: 'primary_only',
-        });
-      }
+      const config = (await GatewayConfigModel.findOne()) ?? await GatewayConfigModel.create({
+        primaryGateway: 'stripe',
+        routingRule: 'primary_only',
+      });
 
       res.status(200).json({
         status: 200,
@@ -634,9 +628,9 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       const changes: Record<string, { from: unknown; to: unknown }> = {};
       for (const field of allowedFields) {
         if (updates[field] !== undefined) {
-          const oldValue = (config as Record<string, unknown>)[field];
+          const oldValue = (config as unknown as Record<string, unknown>)[field];
           changes[field] = { from: oldValue, to: updates[field] };
-          (config as Record<string, unknown>)[field] = updates[field];
+          (config as unknown as Record<string, unknown>)[field] = updates[field];
         }
       }
 
@@ -925,7 +919,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
     authenticate() as RequestHandler,
     checkPermission('payments', 'update') as RequestHandler,
     ...validate(adjustInvoiceValidation()),
-    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    asyncHandler(async (req: Request, _res: Response): Promise<void> => {
       const { id: _orderId } = req.params;
 
       // BIL-INV-02: Invoice adjustment void + recreate is a Phase 2 feature

@@ -1,4 +1,4 @@
-import type { Schema } from 'mongoose';
+import { Schema } from 'mongoose';
 
 /**
  * Mongoose plugin that adds RBAC fields to any user schema.

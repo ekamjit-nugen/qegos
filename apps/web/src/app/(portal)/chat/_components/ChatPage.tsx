@@ -21,6 +21,7 @@ import {
   useMarkRead,
   useCreateConversation,
 } from '@/hooks/usePortal';
+import { useChatSocket } from '@/hooks/useSocket';
 import type { Conversation, ChatMessage } from '@/types/chat';
 import { formatRelative } from '@/lib/utils/format';
 
@@ -31,13 +32,26 @@ export function ChatPage(): React.ReactNode {
   const [messageText, setMessageText] = useState('');
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('');
+  const [typingUser, setTypingUser] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: conversations, isLoading: convosLoading } = useConversations();
   const { data: messages, isLoading: msgsLoading } = useConversationMessages(selectedId);
   const sendMutation = useSendMessage();
   const markReadMutation = useMarkRead();
   const createConvoMutation = useCreateConversation();
+
+  // Socket.io integration — real-time messages, typing indicators
+  const { sendTyping } = useChatSocket(
+    selectedId,
+    useCallback((payload) => {
+      setTypingUser(payload.userId);
+      // Clear typing indicator after 3 seconds
+      if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); }
+      typingTimeoutRef.current = setTimeout(() => { setTypingUser(null); }, 3000);
+    }, []),
+  );
 
   // Mark conversation as read when selected
   useEffect(() => {
@@ -78,6 +92,16 @@ export function ChatPage(): React.ReactNode {
       }
     },
     [handleSend],
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setMessageText(e.target.value);
+      if (selectedId && e.target.value.trim()) {
+        sendTyping(selectedId);
+      }
+    },
+    [selectedId, sendTyping],
   );
 
   return (
@@ -269,6 +293,13 @@ export function ChatPage(): React.ReactNode {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Typing indicator */}
+              {typingUser && (
+                <div style={{ padding: '4px 16px', fontSize: 12, color: '#8c8c8c', fontStyle: 'italic' }}>
+                  Staff is typing...
+                </div>
+              )}
+
               {/* Input */}
               <div
                 style={{
@@ -280,7 +311,7 @@ export function ChatPage(): React.ReactNode {
                   <Input
                     placeholder="Type a message..."
                     value={messageText}
-                    onChange={(e) => { setMessageText(e.target.value); }}
+                    onChange={handleInputChange}
                     onKeyDown={handleKeyPress}
                     disabled={sendMutation.isPending}
                   />

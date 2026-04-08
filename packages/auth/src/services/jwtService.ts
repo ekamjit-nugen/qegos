@@ -29,7 +29,7 @@ export function generateAccessToken(payload: TokenPayload): string {
   return jwt.sign(
     { userId: payload.userId, userType: payload.userType, roleId: payload.roleId },
     config.jwtAccessSecret,
-    { expiresIn: config.jwtAccessExpiry },
+    { expiresIn: config.jwtAccessExpiry } as jwt.SignOptions,
   );
 }
 
@@ -38,7 +38,7 @@ export function generateRefreshToken(payload: RefreshTokenPayload): string {
   return jwt.sign(
     { userId: payload.userId, deviceId: payload.deviceId, tokenVersion: payload.tokenVersion },
     config.jwtRefreshSecret,
-    { expiresIn: config.jwtRefreshExpiry },
+    { expiresIn: config.jwtRefreshExpiry } as jwt.SignOptions,
   );
 }
 

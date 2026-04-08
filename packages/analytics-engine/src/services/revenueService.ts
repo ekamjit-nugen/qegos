@@ -1,35 +1,34 @@
+/**
+ * Revenue Service — Payment-based revenue aggregation (ANA-INV-02)
+ *
+ * Revenue is computed ONLY from payments with status in REVENUE_PAYMENT_STATUSES.
+ */
+
 import type { Model, Document } from 'mongoose';
-import type { DateRangeParams, RevenueByPeriod, CollectionRateResponse } from '../types';
+import type { DateRangeParams, Granularity, RevenueBucket, CollectionRateResponse } from '../types';
 import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
 /**
- * ANA-INV-02: Revenue aggregation using only Payment collection with succeeded/captured status.
+ * Aggregate revenue by time period (day/week/month).
  */
 export async function getRevenueByPeriod(
   PaymentModel: Model<Document>,
   dateRange: DateRangeParams,
-  groupBy: 'day' | 'week' | 'month' = 'month',
-): Promise<RevenueByPeriod[]> {
-  const dateGrouping = {
-    day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-    week: { $dateToString: { format: '%Y-W%V', date: '$createdAt' } },
-    month: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
-  };
+  groupBy: Granularity = 'month',
+): Promise<RevenueBucket[]> {
+  const dateFormat = groupBy === 'week' ? '%Y-W%V' : '%Y-%m';
 
-  const results = await PaymentModel.aggregate([
+  const result = await PaymentModel.aggregate([
     {
       $match: {
         status: { $in: [...REVENUE_PAYMENT_STATUSES] },
-        createdAt: {
-          $gte: new Date(dateRange.dateFrom),
-          $lte: new Date(dateRange.dateTo),
-        },
+        createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
       },
     },
     {
       $group: {
-        _id: dateGrouping[groupBy],
-        revenue: { $sum: '$amount' },
+        _id: { $dateToString: { format: dateFormat, date: '$createdAt' } },
+        totalCents: { $sum: '$amount' },
         count: { $sum: 1 },
       },
     },
@@ -38,99 +37,95 @@ export async function getRevenueByPeriod(
       $project: {
         _id: 0,
         period: '$_id',
-        revenue: 1,
+        totalCents: 1,
         count: 1,
       },
     },
   ]);
 
-  return results;
+  return result as RevenueBucket[];
 }
 
 /**
- * Collection rate: payment timeliness and receivables.
+ * Collection rate: on-time payments, avg days to payment, outstanding receivables.
  */
 export async function getCollectionRate(
   PaymentModel: Model<Document>,
   OrderModel: Model<Document>,
   dateRange: DateRangeParams,
 ): Promise<CollectionRateResponse> {
-  const dateMatch = {
-    createdAt: {
-      $gte: new Date(dateRange.dateFrom),
-      $lte: new Date(dateRange.dateTo),
-    },
-  };
-
-  // Total completed orders in range
-  const orderStats = await OrderModel.aggregate([
+  // Total invoiced (orders created in range that aren't cancelled)
+  const invoiced = await OrderModel.aggregate([
     {
       $match: {
-        ...dateMatch,
-        status: { $in: [6, 7, 8, 9] }, // Completed, Lodged, Assessed, Cancelled
+        createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
+        status: { $ne: 9 }, // not cancelled
         isDeleted: { $ne: true },
       },
     },
     {
       $group: {
         _id: null,
-        total: { $sum: 1 },
-        totalAmount: { $sum: '$finalAmount' },
+        totalInvoicedCents: { $sum: '$finalAmount' },
       },
     },
   ]);
 
-  // Payment stats
-  const paymentStats = await PaymentModel.aggregate([
+  // Total collected (succeeded/captured payments in range)
+  const collected = await PaymentModel.aggregate([
     {
       $match: {
-        ...dateMatch,
         status: { $in: [...REVENUE_PAYMENT_STATUSES] },
+        createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
       },
     },
     {
       $group: {
         _id: null,
-        totalPaid: { $sum: '$amount' },
+        totalCollectedCents: { $sum: '$amount' },
+        avgDays: {
+          $avg: {
+            $divide: [
+              { $subtract: ['$updatedAt', '$createdAt'] },
+              1000 * 60 * 60 * 24, // ms to days
+            ],
+          },
+        },
         count: { $sum: 1 },
-        avgDays: { $avg: { $divide: [{ $subtract: ['$updatedAt', '$createdAt'] }, 86400000] } },
       },
     },
   ]);
 
-  // Outstanding (pending/authorized but not yet succeeded)
-  const outstandingStats = await PaymentModel.aggregate([
+  // Total pending (pending/authorised/requires_capture payments)
+  const pending = await PaymentModel.aggregate([
     {
       $match: {
-        ...dateMatch,
-        status: { $in: ['pending', 'requires_capture', 'authorised'] },
+        status: { $in: ['pending', 'authorised', 'requires_capture'] },
+        createdAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
       },
     },
     {
       $group: {
         _id: null,
-        outstanding: { $sum: '$amount' },
-        count: { $sum: 1 },
+        outstandingCents: { $sum: '$amount' },
       },
     },
   ]);
 
-  const totalOrders = orderStats[0]?.total ?? 0;
-  const paidCount = paymentStats[0]?.count ?? 0;
-  const avgDays = paymentStats[0]?.avgDays ?? 0;
-  const outstandingAmount = outstandingStats[0]?.outstanding ?? 0;
-  const outstandingCount = outstandingStats[0]?.count ?? 0;
+  const totalInvoicedCents = invoiced[0]?.totalInvoicedCents ?? 0;
+  const totalCollectedCents = collected[0]?.totalCollectedCents ?? 0;
+  const avgDaysToPayment = Math.round(collected[0]?.avgDays ?? 0);
+  const outstandingReceivablesCents = pending[0]?.outstandingCents ?? 0;
 
-  const collectionRate = totalOrders > 0 ? paidCount / totalOrders : 0;
-  const onTimeRate = collectionRate; // Simplified — all payments within period are "on time"
+  const onTimeRate = totalInvoicedCents > 0
+    ? totalCollectedCents / totalInvoicedCents
+    : 0;
 
   return {
-    invoicesTotal: totalOrders,
-    invoicesPaidOnTime: paidCount,
-    onTimePaymentRate: Math.round(onTimeRate * 100) / 100,
-    averageDaysToPayment: Math.round(avgDays * 10) / 10,
-    outstandingReceivables: outstandingAmount,
-    outstandingCount,
-    collectionRate: Math.round(collectionRate * 100) / 100,
+    onTimeRate: Math.min(onTimeRate, 1),
+    avgDaysToPayment,
+    outstandingReceivablesCents,
+    totalInvoicedCents,
+    totalCollectedCents,
   };
 }
