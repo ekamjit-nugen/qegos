@@ -1,0 +1,342 @@
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api/client';
+import type { Order } from '@/types/order';
+import type {
+  VaultDocument,
+  VaultYear,
+  StorageUsage,
+  VaultDocumentListQuery,
+} from '@/types/vault';
+import type { TaxYearSummary, YearComparison, AtoStatus } from '@/types/taxSummary';
+import type { Conversation, ChatMessage } from '@/types/chat';
+import type { Notification, NotificationPreferences } from '@/types/notification';
+import type { Appointment } from '@/types/appointment';
+import type { ApiResponse, PaginatedResponse } from '@/types/api';
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+export function useMyOrders(): ReturnType<typeof useQuery<Order[]>> {
+  return useQuery({
+    queryKey: ['portal', 'orders'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Order[]>>('/portal/orders');
+      return res.data.data;
+    },
+  });
+}
+
+export function useOrder(id: string | undefined): ReturnType<typeof useQuery<Order>> {
+  return useQuery({
+    queryKey: ['portal', 'orders', id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Order>>(`/portal/orders/${id}`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
+// ─── Vault ────────────────────────────────────────────────────────────────────
+
+export function useVaultDocuments(
+  filters: VaultDocumentListQuery,
+): ReturnType<typeof useQuery<PaginatedResponse<VaultDocument>>> {
+  return useQuery({
+    queryKey: ['portal', 'vault', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
+      }
+      const res = await api.get<PaginatedResponse<VaultDocument>>(
+        `/portal/vault/documents?${params.toString()}`,
+      );
+      return res.data;
+    },
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useVaultYears(): ReturnType<typeof useQuery<VaultYear[]>> {
+  return useQuery({
+    queryKey: ['portal', 'vault', 'years'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<VaultYear[]>>('/portal/vault/years');
+      return res.data.data;
+    },
+  });
+}
+
+export function useStorageUsage(): ReturnType<typeof useQuery<StorageUsage>> {
+  return useQuery({
+    queryKey: ['portal', 'vault', 'storage'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<StorageUsage>>('/portal/vault/storage');
+      return res.data.data;
+    },
+  });
+}
+
+export function useUploadDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await api.post<ApiResponse<VaultDocument>>(
+        '/portal/vault/documents',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'vault'] });
+    },
+  });
+}
+
+export function useDeleteDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/portal/vault/documents/${id}`);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'vault'] });
+    },
+  });
+}
+
+export function useArchiveDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
+      await api.patch(`/portal/vault/documents/${id}/archive`, { archive });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'vault'] });
+    },
+  });
+}
+
+// ─── Tax Summaries ────────────────────────────────────────────────────────────
+
+export function useTaxSummaries(): ReturnType<typeof useQuery<TaxYearSummary[]>> {
+  return useQuery({
+    queryKey: ['portal', 'tax-summaries'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TaxYearSummary[]>>('/portal/tax-summaries');
+      return res.data.data;
+    },
+  });
+}
+
+export function useYearComparison(
+  year: string | undefined,
+): ReturnType<typeof useQuery<YearComparison>> {
+  return useQuery({
+    queryKey: ['portal', 'tax-summaries', 'compare', year],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<YearComparison>>(
+        `/portal/tax-summaries/${year}/compare`,
+      );
+      return res.data.data;
+    },
+    enabled: !!year,
+  });
+}
+
+export function useAtoStatus(
+  year: string | undefined,
+): ReturnType<typeof useQuery<AtoStatus>> {
+  return useQuery({
+    queryKey: ['portal', 'tax-summaries', 'ato', year],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<AtoStatus>>(
+        `/portal/tax-summaries/${year}/ato-status`,
+      );
+      return res.data.data;
+    },
+    enabled: !!year,
+  });
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export function useConversations(): ReturnType<typeof useQuery<Conversation[]>> {
+  return useQuery({
+    queryKey: ['portal', 'conversations'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Conversation[]>>('/portal/chat/conversations');
+      return res.data.data;
+    },
+    refetchInterval: 15_000,
+  });
+}
+
+export function useConversationMessages(
+  id: string | undefined,
+): ReturnType<typeof useQuery<ChatMessage[]>> {
+  return useQuery({
+    queryKey: ['portal', 'conversations', id, 'messages'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<ChatMessage[]>>(
+        `/portal/chat/conversations/${id}/messages`,
+      );
+      return res.data.data;
+    },
+    enabled: !!id,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useSendMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      conversationId,
+      content,
+    }: {
+      conversationId: string;
+      content: string;
+    }) => {
+      const res = await api.post<ApiResponse<ChatMessage>>(
+        `/portal/chat/conversations/${conversationId}/messages`,
+        { content },
+      );
+      return res.data.data;
+    },
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({
+        queryKey: ['portal', 'conversations', vars.conversationId, 'messages'],
+      });
+      void qc.invalidateQueries({ queryKey: ['portal', 'conversations'] });
+    },
+  });
+}
+
+export function useMarkRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (conversationId: string) => {
+      await api.patch(`/portal/chat/conversations/${conversationId}/read`);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'conversations'] });
+    },
+  });
+}
+
+export function useCreateConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (subject: string) => {
+      const res = await api.post<ApiResponse<Conversation>>(
+        '/portal/chat/conversations',
+        { subject },
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'conversations'] });
+    },
+  });
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export function useNotifications(page: number = 1): ReturnType<
+  typeof useQuery<PaginatedResponse<Notification>>
+> {
+  return useQuery({
+    queryKey: ['portal', 'notifications', page],
+    queryFn: async () => {
+      const res = await api.get<PaginatedResponse<Notification>>(
+        `/portal/notifications?page=${page}&limit=20`,
+      );
+      return res.data;
+    },
+  });
+}
+
+export function useUnreadNotificationCount(): ReturnType<typeof useQuery<number>> {
+  return useQuery({
+    queryKey: ['portal', 'notifications', 'unread-count'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<{ count: number }>>(
+        '/portal/notifications/unread-count',
+      );
+      return res.data.data.count;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.patch(`/portal/notifications/${id}/read`);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'notifications'] });
+    },
+  });
+}
+
+export function useMarkAllRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      await api.patch('/portal/notifications/read-all');
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'notifications'] });
+    },
+  });
+}
+
+export function useNotificationPreferences(): ReturnType<
+  typeof useQuery<NotificationPreferences>
+> {
+  return useQuery({
+    queryKey: ['portal', 'notification-preferences'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<NotificationPreferences>>(
+        '/portal/notifications/preferences',
+      );
+      return res.data.data;
+    },
+  });
+}
+
+export function useUpdateNotificationPreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Partial<NotificationPreferences>) => {
+      const res = await api.put<ApiResponse<NotificationPreferences>>(
+        '/portal/notifications/preferences',
+        data,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'notification-preferences'] });
+    },
+  });
+}
+
+// ─── Appointments ─────────────────────────────────────────────────────────────
+
+export function useUpcomingAppointments(): ReturnType<typeof useQuery<Appointment[]>> {
+  return useQuery({
+    queryKey: ['portal', 'appointments'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Appointment[]>>('/portal/appointments/upcoming');
+      return res.data.data;
+    },
+  });
+}
