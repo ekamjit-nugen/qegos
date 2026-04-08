@@ -25,6 +25,8 @@ export interface AutomationDeps {
   LeadActivityModel: Model<ILeadActivityDocument>;
   LeadReminderModel: Model<ILeadReminderDocument>;
   recalculateScore: (leadId: string) => Promise<{ score: number; priority: string }>;
+  /** Optional: smart workload-based assignment (falls back to round-robin if not provided) */
+  smartAssignBulk?: (count: number, request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] }) => Promise<Array<{ staffId: string }>>;
 }
 
 export interface AutomationHandlers {
@@ -41,8 +43,9 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
   const { LeadModel, LeadActivityModel, LeadReminderModel, recalculateScore } = deps;
 
   /**
-   * LM-INV-07: Round-robin assignment.
-   * Skips inactive staff and those at max capacity (50 leads).
+   * LM-INV-07: Smart workload-based assignment with round-robin fallback.
+   * Primary: uses multi-factor workload scoring (leads, orders, reviews, tickets, appointments).
+   * Fallback: round-robin skipping inactive staff and those at max capacity (50 leads).
    */
   async function autoAssignNewLead(): Promise<{ processed: number }> {
     const unassigned = await LeadModel.find({
@@ -52,7 +55,26 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
 
     if (unassigned.length === 0) return { processed: 0 };
 
-    // Get eligible staff — active, userType staff/senior_staff/admin
+    // Try smart workload-based assignment first
+    if (deps.smartAssignBulk) {
+      try {
+        const assignments = await deps.smartAssignBulk(unassigned.length, { context: 'lead' });
+        if (assignments.length > 0) {
+          const bulkOps = unassigned.map((lead, i) => ({
+            updateOne: {
+              filter: { _id: lead._id },
+              update: { $set: { assignedTo: assignments[i % assignments.length].staffId } },
+            },
+          }));
+          await LeadModel.bulkWrite(bulkOps);
+          return { processed: unassigned.length };
+        }
+      } catch {
+        // Fall through to round-robin
+      }
+    }
+
+    // Fallback: basic round-robin
     const UserModel = LeadModel.db.model('User');
     const staffMembers = await UserModel.find({
       status: true,

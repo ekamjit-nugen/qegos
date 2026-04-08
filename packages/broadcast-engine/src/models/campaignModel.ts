@@ -107,6 +107,7 @@ const broadcastCampaignSchema = new Schema<IBroadcastCampaignDocument>(
 broadcastCampaignSchema.index({ status: 1, scheduledAt: 1 });
 broadcastCampaignSchema.index({ createdBy: 1, createdAt: -1 });
 broadcastCampaignSchema.index({ campaignId: 1 }, { unique: true });
+broadcastCampaignSchema.index({ channel: 1, status: 1 }); // list campaigns filter
 
 export function createCampaignModel(connection: Connection): Model<IBroadcastCampaignDocument> {
   if (connection.models.BroadcastCampaign) {

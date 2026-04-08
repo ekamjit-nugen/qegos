@@ -42,6 +42,8 @@ broadcastMessageSchema.index({ campaignId: 1, status: 1 });
 broadcastMessageSchema.index({ recipientId: 1, channel: 1 });
 broadcastMessageSchema.index({ gatewayId: 1 }, { unique: true, sparse: true });
 broadcastMessageSchema.index({ status: 1, createdAt: 1 }); // for queue processing
+broadcastMessageSchema.index({ recipientEmail: 1, status: 1 }); // soft bounce lookup
+broadcastMessageSchema.index({ recipientMobile: 1, status: 1 }); // soft bounce lookup
 
 export function createMessageModel(connection: Connection): Model<IBroadcastMessageDocument> {
   if (connection.models.BroadcastMessage) {

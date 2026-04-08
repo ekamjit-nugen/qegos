@@ -24,6 +24,7 @@ import {
   checkDuplicate,
 } from '@nugen/file-storage';
 import type { StorageUsage, DuplicateCheckResult } from '@nugen/file-storage';
+import { AppError } from '@nugen/error-handler';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
@@ -71,14 +72,11 @@ export async function uploadDocument(params: UploadParams): Promise<UploadDocume
   // CPV-INV-06: Quota check BEFORE upload
   const hasQuota = await checkQuota(userId, buffer.length);
   if (!hasQuota) {
-    const usage = await getUsage(userId);
-    const err = new Error('Storage quota exceeded') as Error & {
-      statusCode: number; code: string; details: Record<string, unknown>;
-    };
-    err.statusCode = 413;
-    err.code = 'STORAGE_EXCEEDED';
-    err.details = { used: usage.used, quota: usage.quota, fileSize: buffer.length };
-    throw err;
+    throw new AppError({
+      statusCode: 413,
+      code: 'STORAGE_EXCEEDED',
+      message: 'Storage quota exceeded',
+    });
   }
 
   // CPV-INV-01: Virus scan BEFORE S3 storage
@@ -89,21 +87,15 @@ export async function uploadDocument(params: UploadParams): Promise<UploadDocume
     const key = buildS3Key(userId.toString(), financialYear, uuid, fileName);
     await quarantineFile(buffer, key, mimeType);
 
-    const err = new Error('File could not be uploaded. Please scan your device and try again.') as Error & {
-      statusCode: number; code: string;
-    };
-    err.statusCode = 422;
-    err.code = 'VIRUS_DETECTED';
-    throw err;
+    throw new AppError({
+      statusCode: 422,
+      code: 'VIRUS_DETECTED',
+      message: 'File could not be uploaded. Please scan your device and try again.',
+    });
   }
 
   if (scanResult === 'error') {
-    const err = new Error('Virus scan failed. Please try again later.') as Error & {
-      statusCode: number; code: string;
-    };
-    err.statusCode = 503;
-    err.code = 'VIRUS_SCAN_ERROR';
-    throw err;
+    throw AppError.serviceUnavailable('Virus scan failed. Please try again later.');
   }
 
   // Content hash for dedup
@@ -239,6 +231,19 @@ export async function archiveDocument(
   return VaultDocumentModel.findOneAndUpdate(
     { _id: docId, userId, isArchived: false },
     { $set: { isArchived: true, archivedAt: new Date() } },
+    { new: true },
+  );
+}
+
+// ─── Restore Archived Document ─────────────────────────────────────────────
+
+export async function restoreDocument(
+  docId: Types.ObjectId,
+  userId: Types.ObjectId,
+): Promise<IVaultDocumentDocument | null> {
+  return VaultDocumentModel.findOneAndUpdate(
+    { _id: docId, userId, isArchived: true },
+    { $set: { isArchived: false }, $unset: { archivedAt: 1 } },
     { new: true },
   );
 }

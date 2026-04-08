@@ -23,6 +23,7 @@ import {
   getDocument,
   updateDocument,
   archiveDocument,
+  restoreDocument,
   listFinancialYears,
   getStorageUsage,
   upsertTaxSummary,
@@ -303,6 +304,29 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       }
 
       res.status(200).json({ status: 200, message: 'Document archived. Will be permanently deleted after 30 days.' });
+    },
+  );
+
+  // ── POST /vault/documents/:id/restore — Restore archived document ────
+
+  router.post(
+    '/vault/documents/:id/restore',
+    ...getDocumentValidation,
+    async (req: Request, res: Response): Promise<void> => {
+      if (!handleValidation(req, res)) return;
+      const user = (req as AuthRequest).user!;
+
+      const doc = await restoreDocument(
+        req.params.id as unknown as Types.ObjectId,
+        user._id,
+      );
+
+      if (!doc) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND', message: 'Archived document not found' });
+        return;
+      }
+
+      res.status(200).json({ status: 200, data: doc });
     },
   );
 

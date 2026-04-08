@@ -41,9 +41,14 @@ export function createApp(): express.Express {
 
   // Fix for T-3.4: Stripe raw body parser BEFORE global JSON parser
   // Stripe webhook signature verification requires the raw body.
-  const config2 = getConfig();
   app.use(
-    `/api/${config2.API_VERSION}/payments/webhooks/stripe`,
+    `/api/${config.API_VERSION}/payments/webhooks/stripe`,
+    express.raw({ type: 'application/json' }),
+  );
+
+  // Zoho Sign webhook raw body parser (same pattern as Stripe)
+  app.use(
+    `/api/${config.API_VERSION}/webhooks/zoho`,
     express.raw({ type: 'application/json' }),
   );
 
@@ -64,7 +69,7 @@ export function createApp(): express.Express {
   // Fix for S-3.6: CSRF protection for state-changing routes
   // Skip CSRF on webhook endpoints (they use signature verification)
   if (config.CSRF_SECRET) {
-    const webhookPaths = ['/payments/webhooks/'];
+    const webhookPaths = ['/payments/webhooks/', '/webhooks/zoho'];
     app.use(`/api/${config.API_VERSION}`, (req: Request, res: Response, next: express.NextFunction): void => {
       // Skip CSRF for webhooks and safe HTTP methods
       if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
@@ -93,15 +98,14 @@ export function createApp(): express.Express {
 
   // CSRF token generation endpoint
   app.get(`/api/${config.API_VERSION}/csrf-token`, (_req: Request, res: Response): void => {
-    const csrfConfig = getConfig();
-    if (!csrfConfig.CSRF_SECRET) {
+    if (!config.CSRF_SECRET) {
       res.status(200).json({ status: 200, data: { csrfEnabled: false } });
       return;
     }
     const token = require('crypto').randomBytes(32).toString('hex');
     res.cookie('_csrf', token, {
       httpOnly: true,
-      secure: csrfConfig.NODE_ENV === 'production',
+      secure: config.NODE_ENV === 'production',
       sameSite: 'strict',
     });
     res.status(200).json({ status: 200, data: { csrfToken: token } });
@@ -150,6 +154,26 @@ export function finalizeApp(
     chatRouter?: express.Router;
     ticketRouter?: express.Router;
     whatsappRouter?: express.Router;
+    // Privacy Act 1988 Compliance
+    privacyRouter?: express.Router;
+    // Phase 2: Xero Integration
+    xeroRouter?: express.Router;
+    // Notification Engine
+    notificationRouter?: express.Router;
+    // Analytics Engine
+    analyticsRouter?: express.Router;
+    // Appointment Scheduling
+    appointmentRouter?: express.Router;
+    staffAvailabilityRouter?: express.Router;
+    // Staff Workload
+    workloadRouter?: express.Router;
+    // Document Management & Signing
+    documentRouter?: express.Router;
+    zohoWebhookRouter?: express.Router;
+    // Phase 8: Engagement Modules
+    referralRouter?: express.Router;
+    calendarRouter?: express.Router;
+    reputationRouter?: express.Router;
   },
   deepHealthCheck: (req: Request, res: Response) => Promise<void>,
 ): void {
@@ -217,6 +241,56 @@ export function finalizeApp(
   }
   if (routes.whatsappRouter) {
     app.use(`${prefix}/whatsapp`, routes.whatsappRouter);
+  }
+
+  // Privacy Act 1988 Compliance
+  if (routes.privacyRouter) {
+    app.use(`${prefix}/privacy`, routes.privacyRouter);
+  }
+
+  // Phase 2: Xero Integration
+  if (routes.xeroRouter) {
+    app.use(`${prefix}/xero`, routes.xeroRouter);
+  }
+
+  // Notification Engine
+  if (routes.notificationRouter) {
+    app.use(`${prefix}/notifications`, routes.notificationRouter);
+  }
+
+  // Analytics Engine
+  if (routes.analyticsRouter) {
+    app.use(`${prefix}/analytics`, routes.analyticsRouter);
+  }
+
+  // Appointment Scheduling
+  if (routes.appointmentRouter) {
+    app.use(`${prefix}/appointments`, routes.appointmentRouter);
+  }
+  if (routes.staffAvailabilityRouter) {
+    app.use(`${prefix}/staff`, routes.staffAvailabilityRouter);
+  }
+  if (routes.workloadRouter) {
+    app.use(`${prefix}/staff`, routes.workloadRouter);
+  }
+
+  // Document Management & Signing
+  if (routes.documentRouter) {
+    app.use(`${prefix}/documents`, routes.documentRouter);
+  }
+  if (routes.zohoWebhookRouter) {
+    app.use(`${prefix}/webhooks`, routes.zohoWebhookRouter);
+  }
+
+  // Phase 8: Engagement Modules
+  if (routes.referralRouter) {
+    app.use(`${prefix}/referrals`, routes.referralRouter);
+  }
+  if (routes.calendarRouter) {
+    app.use(`${prefix}/calendar`, routes.calendarRouter);
+  }
+  if (routes.reputationRouter) {
+    app.use(`${prefix}/reviews`, routes.reputationRouter);
   }
 
   // 404 handler

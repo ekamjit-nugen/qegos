@@ -85,6 +85,26 @@ const envSchema = z.object({
 
   // WhatsApp Webhook (Phase 7)
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+
+  // Xero Integration (Phase 2)
+  XERO_CLIENT_ID: z.string().optional(),
+  XERO_CLIENT_SECRET: z.string().optional(),
+  XERO_REDIRECT_URI: z.string().optional(),
+
+  // Zoho Sign (Document Signing)
+  ZOHO_SIGN_CLIENT_ID: z.string().optional(),
+  ZOHO_SIGN_CLIENT_SECRET: z.string().optional(),
+  ZOHO_SIGN_REFRESH_TOKEN: z.string().optional(),
+  ZOHO_SIGN_WEBHOOK_SECRET: z.string().optional(),
+  ZOHO_SIGN_BASE_URL: z.string().optional().default('https://sign.zoho.com.au'),
+
+  // Analytics Engine
+  ANALYTICS_REPLICA_URI: z.string().optional(),
+
+  // Notification Engine
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  SLACK_WEBHOOK_URL: z.string().optional(),
 }).refine(
   // Fix for S-3.18: Ensure at least one payment gateway is configured
   (data) => {

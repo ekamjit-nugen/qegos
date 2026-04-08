@@ -22,7 +22,6 @@ import { createTaxEngineRoutes } from './modules/tax-engine/taxEngine.routes';
 import { seedTaxEngineRules } from './modules/tax-engine/taxEngine.seed';
 import { createBillingDisputeModel } from './modules/billing/billingDispute.model';
 import { createBillingDisputeRoutes } from './modules/billing/billingDispute.routes';
-import type { IUserDocument } from './modules/user/user.types';
 
 // Phase 3: Lead & Order Core + Review Pipeline
 import { createLeadModel } from './modules/lead-management/lead.model';
@@ -52,6 +51,40 @@ import { reconcileStorageUsage } from '@nugen/file-storage';
 import * as chatEngine from '@nugen/chat-engine';
 import * as supportTickets from '@nugen/support-tickets';
 import * as whatsappConnector from '@nugen/whatsapp-connector';
+
+// Notification Engine
+import * as notificationEngine from '@nugen/notification-engine';
+
+// Analytics Engine
+import * as analyticsEngine from '@nugen/analytics-engine';
+
+// Appointment Scheduling
+import { createAppointmentModel, createStaffAvailabilityModel } from './modules/appointment-scheduling/appointment.model';
+import { createAppointmentRoutes, processAppointmentReminders, markNoShows } from './modules/appointment-scheduling/appointment.routes';
+
+// Staff Workload Balancing
+import { createWorkloadRoutes, getWorkloadService } from './modules/staff-workload/workload.routes';
+
+// Document Management & Signing
+import { createDocumentRoutes, createZohoWebhookRoute } from './modules/document-management/document.routes';
+
+// Phase 2: Xero Integration
+import * as xeroConnector from '@nugen/xero-connector';
+import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
+
+// Phase 8: Engagement Modules
+import { createReferralModel, createReferralConfigModel } from './modules/referral-engine/referral.model';
+import { createReferralRoutes, expireStaleReferrals, expireCreditRewards } from './modules/referral-engine/referral.routes';
+import { createTaxDeadlineModel, createDeadlineReminderModel } from './modules/tax-calendar/taxCalendar.model';
+import { createCalendarRoutes, processReminders as processDeadlineReminders } from './modules/tax-calendar/taxCalendar.routes';
+import { createReviewModel } from './modules/reputation-mgmt/review.model';
+import { createReviewRoutes as createReputationRoutes, sendReviewReminders } from './modules/reputation-mgmt/review.routes';
+
+// Privacy Act 1988 Compliance (GAP-C01/C02)
+import * as dataLifecycle from '@nugen/data-lifecycle';
+import type { ModelFieldConfig } from '@nugen/data-lifecycle';
+import { createPrivacyRoutes } from './modules/privacy/privacy.routes';
+import { cleanupExpiredExports, enforceRetentionPolicies } from '@nugen/data-lifecycle';
 
 async function bootstrap(): Promise<void> {
   // 1. Load and validate environment
@@ -207,6 +240,167 @@ async function bootstrap(): Promise<void> {
     phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
     webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
   });
+
+  // Phase 2: Xero Integration — Models
+  const xeroConfig: xeroConnector.XeroConnectorConfig = {
+    xeroClientId: config.XERO_CLIENT_ID ?? '',
+    xeroClientSecret: config.XERO_CLIENT_SECRET ?? '',
+    xeroRedirectUri: config.XERO_REDIRECT_URI ?? `http://localhost:${config.PORT}/api/${config.API_VERSION}/xero/callback`,
+    xeroScopes: DEFAULT_XERO_SCOPES,
+    encryptionKey: config.ENCRYPTION_KEY,
+  };
+
+  const {
+    XeroConfigModel,
+    XeroSyncLogModel,
+  } = xeroConnector.init(connection, redisClient, xeroConfig);
+
+  // Notification Engine
+  const {
+    NotificationModel,
+    NotificationPreferenceModel,
+    providers: notificationProviders,
+  } = notificationEngine.init(connection, redisClient, {
+    firebaseServiceAccountJson: config.FIREBASE_SERVICE_ACCOUNT_JSON,
+    slackWebhookUrl: config.SLACK_WEBHOOK_URL,
+    twilioAccountSid: config.TWILIO_ACCOUNT_SID,
+    twilioAuthToken: config.TWILIO_AUTH_TOKEN,
+    twilioPhoneNumber: config.TWILIO_PHONE_NUMBER,
+    sesRegion: config.AWS_SES_REGION,
+    sesAccessKeyId: config.AWS_SES_ACCESS_KEY_ID,
+    sesSecretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
+    sesFromEmail: config.AWS_SES_FROM_EMAIL,
+    defaultTimezone: 'Australia/Sydney',
+  }, {
+    UserModel: UserModel as never,
+  });
+
+  // Phase 8: Engagement Modules — Models
+  const ReferralModel = createReferralModel(connection);
+  const ReferralConfigModel = createReferralConfigModel(connection);
+  const TaxDeadlineModel = createTaxDeadlineModel(connection);
+  const DeadlineReminderModel = createDeadlineReminderModel(connection);
+  const ReputationReviewModel = createReviewModel(connection);
+
+  // Appointment Scheduling
+  const AppointmentModel = createAppointmentModel(connection);
+  const StaffAvailabilityModel = createStaffAvailabilityModel(connection);
+
+  // Privacy Act 1988: Data Lifecycle (GAP-C01/C02)
+  const privacyModelConfigs = new Map<string, ModelFieldConfig>([
+    ['User', {
+      displayName: 'User Account',
+      model: UserModel as never,
+      userIdField: '_id',
+      piiFields: {
+        firstName: '[REDACTED]',
+        lastName: '[REDACTED]',
+        email: 'redacted@deleted.local',
+        mobile: '+61000000000',
+        dateOfBirth: '',
+        'address.street': '[REDACTED]',
+        'address.suburb': '[REDACTED]',
+        tfnEncrypted: '',
+        tfnLastThree: '***',
+        abnNumber: '',
+      },
+      exportExclude: ['tfnEncrypted', 'passwordHash', 'mfaSecret'],
+    }],
+    ['Lead', {
+      displayName: 'Lead Records',
+      model: LeadModel as never,
+      userIdField: 'convertedUserId',
+      piiFields: {
+        firstName: '[REDACTED]',
+        lastName: '[REDACTED]',
+        mobile: '+61000000000',
+        email: 'redacted@deleted.local',
+        'address.suburb': '[REDACTED]',
+      },
+    }],
+    ['Order', {
+      displayName: 'Orders',
+      model: OrderModel as never,
+      userIdField: 'userId',
+      piiFields: {
+        'personalDetails.firstName': '[REDACTED]',
+        'personalDetails.lastName': '[REDACTED]',
+        'personalDetails.email': 'redacted@deleted.local',
+        'personalDetails.mobile': '+61000000000',
+        'personalDetails.tfnEncrypted': '',
+        'personalDetails.tfnLastThree': '***',
+        'personalDetails.address.street': '[REDACTED]',
+        'spouse.firstName': '[REDACTED]',
+        'spouse.lastName': '[REDACTED]',
+        'spouse.tfnEncrypted': '',
+      },
+      exportExclude: ['personalDetails.tfnEncrypted', 'spouse.tfnEncrypted'],
+    }],
+    ['VaultDocument', {
+      displayName: 'Vault Documents',
+      model: VaultDocumentModel as never,
+      userIdField: 'userId',
+      piiFields: {},
+      hardDelete: true,
+    }],
+    ['TaxYearSummary', {
+      displayName: 'Tax Year Summaries',
+      model: TaxYearSummaryModel as never,
+      userIdField: 'userId',
+      piiFields: {},
+      hardDelete: true,
+    }],
+    ['ChatConversation', {
+      displayName: 'Chat Conversations',
+      model: ChatConversationModel as never,
+      userIdField: 'userId',
+      piiFields: {},
+      hardDelete: true,
+    }],
+    ['ChatMessage', {
+      displayName: 'Chat Messages',
+      model: ChatMessageModel as never,
+      userIdField: 'senderId',
+      piiFields: { content: '[REDACTED]', contentOriginal: '' },
+      exportExclude: ['contentOriginal'],
+    }],
+    ['SupportTicket', {
+      displayName: 'Support Tickets',
+      model: SupportTicketModel as never,
+      userIdField: 'userId',
+      piiFields: {},
+    }],
+    ['TaxEstimateLog', {
+      displayName: 'Tax Estimate Logs',
+      model: TaxEstimateLogModel as never,
+      userIdField: 'userId',
+      piiFields: {},
+      hardDelete: true,
+    }],
+    ['TaxReturnResult', {
+      displayName: 'Tax Return Results',
+      model: TaxReturnResultModel as never,
+      userIdField: 'userId',
+      piiFields: {},
+      hardDelete: true,
+    }],
+  ]);
+
+  const {
+    ErasureRequestModel,
+    DataExportModel,
+  } = dataLifecycle.init(connection, {
+    erasureGracePeriodDays: 30,
+    exportExpiryHours: 48,
+    retentionPolicies: [
+      {
+        modelName: 'ChatMessage',
+        retentionDays: 730, // 2 years
+        action: 'anonymize',
+        dateField: 'createdAt',
+      },
+    ],
+  }, privacyModelConfigs);
 
   // 5. Seed data
   await rbac.seedRoles(RoleModel);
@@ -425,6 +619,154 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // Privacy Act 1988 routes
+  const privacyRouter = createPrivacyRoutes({
+    ErasureRequestModel,
+    DataExportModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  // Phase 2: Xero Integration routes
+  const xeroRouter = xeroConnector.createXeroRoutes({
+    XeroConfigModel,
+    XeroSyncLogModel,
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    PaymentModel: PaymentModel as never,
+    redisClient,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    config: xeroConfig,
+  });
+
+  // Phase 8: Engagement routes
+  const referralRouter = createReferralRoutes({
+    ReferralModel,
+    ReferralConfigModel,
+    UserModel: UserModel as never,
+    OrderModel: OrderModel as never,
+    LeadModel: LeadModel as never,
+    CounterModel: CounterModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  const calendarRouter = createCalendarRoutes({
+    TaxDeadlineModel,
+    DeadlineReminderModel,
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  const reputationRouter = createReputationRoutes({
+    ReviewModel: ReputationReviewModel,
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  // Notification Engine routes
+  const notificationRouter = notificationEngine.createNotificationRoutes({
+    NotificationModel,
+    NotificationPreferenceModel,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    providers: notificationProviders,
+    redisClient,
+    config: {
+      defaultTimezone: 'Australia/Sydney',
+    },
+  });
+
+  // Analytics Engine — stateless init + routes
+  const analyticsConfig = analyticsEngine.init({
+    analyticsReplicaUri: config.ANALYTICS_REPLICA_URI,
+  });
+
+  const analyticsExportQueue = new Queue('analytics-export', { connection: redisConnectionOpts });
+
+  const analyticsRouter = analyticsEngine.createAnalyticsRoutes({
+    OrderModel: OrderModel as never,
+    PaymentModel: PaymentModel as never,
+    LeadModel: LeadModel as never,
+    LeadActivityModel: LeadActivityModel as never,
+    CampaignModel: BroadcastCampaignModel as never,
+    ReviewAssignmentModel: ReviewAssignmentModel as never,
+    SupportTicketModel: SupportTicketModel as never,
+    TaxYearSummaryModel: TaxYearSummaryModel as never,
+    UserModel: UserModel as never,
+    redisClient,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: {
+      log: auditLog.log,
+      logFromRequest: auditLog.logFromRequest,
+    },
+    config: analyticsConfig,
+    exportQueue: analyticsExportQueue,
+  });
+
+  // Appointment Scheduling routes
+  const { appointmentRouter, staffAvailabilityRouter } = createAppointmentRoutes({
+    AppointmentModel,
+    StaffAvailabilityModel,
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    notificationSend: notificationEngine.send as (params: Record<string, unknown>) => Promise<unknown>,
+  });
+
+  // Staff Workload Balancing routes
+  const workloadRouter = createWorkloadRoutes({
+    UserModel: UserModel as never,
+    LeadModel: LeadModel as never,
+    OrderModel: OrderModel as never,
+    ReviewAssignmentModel: ReviewAssignmentModel as never,
+    SupportTicketModel: SupportTicketModel as never,
+    AppointmentModel: AppointmentModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  // Document Management & Signing routes
+  const zohoSignConfig = {
+    clientId: config.ZOHO_SIGN_CLIENT_ID ?? '',
+    clientSecret: config.ZOHO_SIGN_CLIENT_SECRET ?? '',
+    refreshToken: config.ZOHO_SIGN_REFRESH_TOKEN ?? '',
+    webhookSecret: config.ZOHO_SIGN_WEBHOOK_SECRET ?? '',
+    baseUrl: config.ZOHO_SIGN_BASE_URL,
+  };
+  const documentRouter = createDocumentRoutes({
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: { log: auditLog.log },
+    zohoSignConfig,
+  });
+  const zohoWebhookRouter = createZohoWebhookRoute({
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    auditLog: { log: auditLog.log },
+    zohoSignConfig,
+  });
+
   // Deep health check
   async function deepHealthCheck(_req: Request, res: Response): Promise<void> {
     const checks: Record<string, string> = {};
@@ -475,6 +817,18 @@ async function bootstrap(): Promise<void> {
     chatRouter,
     ticketRouter,
     whatsappRouter,
+    privacyRouter,
+    xeroRouter,
+    referralRouter,
+    calendarRouter,
+    reputationRouter,
+    notificationRouter,
+    analyticsRouter,
+    appointmentRouter,
+    staffAvailabilityRouter,
+    workloadRouter,
+    documentRouter,
+    zohoWebhookRouter,
   }, deepHealthCheck);
 
   // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs
@@ -486,6 +840,7 @@ async function bootstrap(): Promise<void> {
       LeadModel, LeadActivityModel, LeadReminderModel, connection, CounterModel,
       UserModel: UserModel as never, OrderModel: OrderModel as never,
     }).calculateScore,
+    smartAssignBulk: getWorkloadService()?.smartAssignBulk,
   });
 
   const redisConnectionOpts = {
@@ -688,6 +1043,235 @@ async function bootstrap(): Promise<void> {
     console.warn(`[TICKETS] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
   });
 
+  // Privacy Act: Data lifecycle cron jobs
+  const privacyQueue = new Queue('data-lifecycle', { connection: redisConnectionOpts });
+
+  const privacyJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'enforceRetention', pattern: '0 2 * * 0' },          // weekly Sunday 2am
+    { name: 'cleanupExpiredExports', pattern: '0 3 * * *' },     // daily at 3am
+  ];
+
+  for (const job of privacyJobs) {
+    await privacyQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const privacyWorker = new Worker(
+    'data-lifecycle',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'enforceRetention':
+          await enforceRetentionPolicies();
+          break;
+        case 'cleanupExpiredExports':
+          await cleanupExpiredExports();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  privacyWorker.on('failed', (job, err) => {
+    console.warn(`[PRIVACY] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
+  // Phase 2: Xero sync cron jobs
+  const xeroQueue = new Queue('xero-sync', { connection: redisConnectionOpts });
+
+  const xeroJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'retryFailedSyncs', pattern: '*/5 * * * *' },       // every 5 minutes
+    { name: 'flushOfflineQueue', pattern: '*/10 * * * *' },      // every 10 minutes
+  ];
+
+  for (const job of xeroJobs) {
+    await xeroQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const xeroWorker = new Worker(
+    'xero-sync',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'retryFailedSyncs':
+          await xeroConnector.retryFailedSyncs();
+          break;
+        case 'flushOfflineQueue':
+          await xeroConnector.flushOfflineQueue();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  xeroWorker.on('failed', (job, err) => {
+    console.warn(`[XERO] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
+  // Phase 8: Engagement engine cron jobs
+  const engagementQueue = new Queue('engagement-engine', { connection: redisConnectionOpts });
+
+  const engagementJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'expireReferrals', pattern: '0 2 * * *' },            // daily at 2am
+    { name: 'expireCreditRewards', pattern: '0 2 * * *' },        // daily at 2am
+    { name: 'processDeadlineReminders', pattern: '0 8 * * *' },   // daily at 8am (AEST)
+    { name: 'sendReviewReminders', pattern: '0 10 * * *' },       // daily at 10am
+  ];
+
+  for (const job of engagementJobs) {
+    await engagementQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const engagementWorker = new Worker(
+    'engagement-engine',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'expireReferrals':
+          await expireStaleReferrals();
+          break;
+        case 'expireCreditRewards':
+          await expireCreditRewards();
+          break;
+        case 'processDeadlineReminders':
+          await processDeadlineReminders();
+          break;
+        case 'sendReviewReminders':
+          await sendReviewReminders();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  engagementWorker.on('failed', (job, err) => {
+    console.warn(`[ENGAGEMENT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
+  // Notification Engine: FCM token cleanup cron
+  const notificationQueue = new Queue('notification-engine', { connection: redisConnectionOpts });
+
+  const notificationJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'fcmTokenCleanup', pattern: '0 3 * * *' },         // daily at 3am — remove tokens not used in 30+ days
+  ];
+
+  for (const job of notificationJobs) {
+    await notificationQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const notificationWorker = new Worker(
+    'notification-engine',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'fcmTokenCleanup': {
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          await UserModel.updateMany(
+            {},
+            { $pull: { fcmTokens: { lastUsed: { $lt: thirtyDaysAgo } } } } as never,
+          );
+          break;
+        }
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  notificationWorker.on('failed', (job, err) => {
+    console.warn(`[NOTIFICATION] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
+  // Analytics Engine: executive summary pre-computation (ANA-INV-07) + export queue
+  const analyticsQueue = new Queue('analytics-engine', { connection: redisConnectionOpts });
+
+  const analyticsJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'computeExecutiveSummary', pattern: '*/5 * * * *' },  // every 5 minutes
+  ];
+
+  for (const job of analyticsJobs) {
+    await analyticsQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const analyticsWorker = new Worker(
+    'analytics-engine',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'computeExecutiveSummary':
+          await analyticsEngine.computeExecutiveSummary({
+            OrderModel: OrderModel as never,
+            PaymentModel: PaymentModel as never,
+            LeadModel: LeadModel as never,
+            LeadActivityModel: LeadActivityModel as never,
+            CampaignModel: BroadcastCampaignModel as never,
+            ReviewAssignmentModel: ReviewAssignmentModel as never,
+            SupportTicketModel: SupportTicketModel as never,
+            TaxYearSummaryModel: TaxYearSummaryModel as never,
+            UserModel: UserModel as never,
+            redisClient,
+            authenticate: auth.authenticate,
+            checkPermission: rbac.check,
+            config: analyticsConfig,
+          });
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  analyticsWorker.on('failed', (job, err) => {
+    console.warn(`[ANALYTICS] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
+  // Appointment Scheduling: reminders (APT-INV-02) + no-show marking (APT-INV-03)
+  const appointmentQueue = new Queue('appointment-scheduling', { connection: redisConnectionOpts });
+
+  const appointmentJobs: Array<{ name: string; pattern: string }> = [
+    { name: 'processAppointmentReminders', pattern: '*/5 * * * *' },  // every 5 minutes
+    { name: 'markNoShows', pattern: '*/10 * * * *' },                 // every 10 minutes
+  ];
+
+  for (const job of appointmentJobs) {
+    await appointmentQueue.add(job.name, {}, {
+      repeat: { pattern: job.pattern },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    });
+  }
+
+  const appointmentWorker = new Worker(
+    'appointment-scheduling',
+    async (job: Job): Promise<void> => {
+      switch (job.name) {
+        case 'processAppointmentReminders':
+          await processAppointmentReminders();
+          break;
+        case 'markNoShows':
+          await markNoShows();
+          break;
+      }
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  appointmentWorker.on('failed', (job, err) => {
+    console.warn(`[APPOINTMENT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+  });
+
   // 8. Start server
   const port = config.PORT;
   const server = app.listen(port, () => {
@@ -706,6 +1290,19 @@ async function bootstrap(): Promise<void> {
       await vaultQueue.close();
       await ticketWorker.close();
       await ticketQueue.close();
+      await privacyWorker.close();
+      await privacyQueue.close();
+      await engagementWorker.close();
+      await engagementQueue.close();
+      await xeroWorker.close();
+      await xeroQueue.close();
+      await notificationWorker.close();
+      await notificationQueue.close();
+      await analyticsWorker.close();
+      await analyticsQueue.close();
+      await analyticsExportQueue.close();
+      await appointmentWorker.close();
+      await appointmentQueue.close();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

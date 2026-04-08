@@ -1,0 +1,20 @@
+{
+  "name": "@nugen/data-lifecycle",
+  "version": "0.1.0",
+  "description": "Privacy Act compliance — erasure, export, retention lifecycle management",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && tsc"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "express": "^4.19.2",
+    "express-validator": "^7.0.0",
+    "mongoose": "^8.4.4"
+  },
+  "keywords": ["nugen", "data-lifecycle", "privacy", "erasure", "export", "gdpr"],
+  "author": "Nugen IT Services",
+  "license": "UNLICENSED"
+}

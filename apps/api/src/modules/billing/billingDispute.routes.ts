@@ -1,11 +1,23 @@
 import { Router, type Request, type Response, type RequestHandler } from 'express';
-import { body, param, query as queryValidator } from 'express-validator';
 import type { Model } from 'mongoose';
-import { AppError, asyncHandler } from '@nugen/error-handler';
+import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as auditLog from '@nugen/audit-log';
 import type { IBillingDisputeDocument, DisputeStatus } from './billingDispute.types';
-import { VALID_DISPUTE_TRANSITIONS } from './billingDispute.types';
+import {
+  initBillingService,
+  createDispute,
+  listDisputes,
+  getDispute,
+  updateDispute,
+  softDeleteDispute,
+} from './billingDispute.service';
+import {
+  validateCreateDispute,
+  validateUpdateDispute,
+  validateDisputeId,
+  validateListDisputes,
+} from './billingDispute.validators';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -22,97 +34,35 @@ export interface BillingDisputeRouteDeps {
   checkPermission: (resource: string, action: string) => RequestHandler;
 }
 
-function createDisputeValidation(): import('express-validator').ValidationChain[] {
-  return [
-    body('orderId')
-      .trim().notEmpty().withMessage('Order ID is required')
-      .isMongoId().withMessage('Order ID must be a valid ID'),
-    body('paymentId')
-      .trim().notEmpty().withMessage('Payment ID is required')
-      .isMongoId().withMessage('Payment ID must be a valid ID'),
-    body('disputeType')
-      .trim().notEmpty().withMessage('Dispute type is required')
-      .isIn(['overcharge', 'service_not_delivered', 'quality_issue', 'incorrect_amount', 'duplicate_charge', 'unauthorised'])
-      .withMessage('Invalid dispute type'),
-    body('disputedAmount')
-      .notEmpty().withMessage('Disputed amount is required')
-      .isInt({ min: 1 }).withMessage('Disputed amount must be a positive integer (cents)')
-      .toInt(),
-    body('clientStatement')
-      .trim().notEmpty().withMessage('Client statement is required')
-      .isLength({ max: 2000 }).withMessage('Client statement must be at most 2000 characters'),
-    body('ticketId')
-      .optional().trim().isMongoId().withMessage('Ticket ID must be a valid ID'),
-  ];
-}
-
-function updateDisputeValidation(): import('express-validator').ValidationChain[] {
-  return [
-    param('id').trim().notEmpty().isMongoId().withMessage('Dispute ID must be a valid ID'),
-    body('status')
-      .optional()
-      .isIn(['investigating', 'pending_approval', 'approved', 'rejected', 'completed'])
-      .withMessage('Invalid status'),
-    body('staffAssessment')
-      .optional().trim().isLength({ max: 2000 })
-      .withMessage('Staff assessment must be at most 2000 characters'),
-    body('resolution')
-      .optional()
-      .isIn(['full_refund', 'partial_refund', 'credit_issued', 'no_action', 'service_redo', 'discount_applied'])
-      .withMessage('Invalid resolution'),
-    body('resolvedAmount')
-      .optional().isInt({ min: 0 }).withMessage('Resolved amount must be a non-negative integer (cents)')
-      .toInt(),
-  ];
-}
-
-/**
- * Create billing dispute routes with injected dependencies.
- */
 export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Router {
   const router = Router();
   const { BillingDisputeModel, authenticate, checkPermission } = deps;
+
+  initBillingService(BillingDisputeModel);
 
   // ─── POST / — Create billing dispute ───────────────────────────────────────
   router.post(
     '/',
     authenticate() as RequestHandler,
     checkPermission('billing_disputes', 'create') as RequestHandler,
-    ...validate(createDisputeValidation()),
+    ...validate(validateCreateDispute()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const { orderId, paymentId, disputeType, disputedAmount, clientStatement, ticketId } =
-        req.body as {
-          orderId: string;
-          paymentId: string;
-          disputeType: string;
-          disputedAmount: number;
-          clientStatement: string;
-          ticketId?: string;
-        };
+      const body = req.body as {
+        orderId: string; paymentId: string; disputeType: string;
+        disputedAmount: number; clientStatement: string; ticketId?: string;
+      };
 
-      const dispute = await BillingDisputeModel.create({
-        orderId,
-        paymentId,
-        disputeType,
-        disputedAmount,
-        clientStatement,
-        ticketId,
-        status: 'raised',
-      });
+      const dispute = await createDispute(body);
 
-      // BIL-INV-07: Critical audit log for all billing disputes
       await auditLog.logFromRequest(req, {
         action: 'create',
         resource: 'billing_dispute',
         resourceId: dispute._id.toString(),
-        description: `Billing dispute raised: ${disputeType}, ${disputedAmount} cents, orderId: ${orderId}`,
+        description: `Billing dispute raised: ${body.disputeType}, ${body.disputedAmount} cents, orderId: ${body.orderId}`,
         severity: 'critical',
       });
 
-      res.status(201).json({
-        status: 201,
-        data: dispute,
-      });
+      res.status(201).json({ status: 201, data: dispute });
     }),
   );
 
@@ -121,59 +71,27 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     '/',
     authenticate() as RequestHandler,
     checkPermission('billing_disputes', 'read') as RequestHandler,
-    ...validate([
-      queryValidator('page').optional().isInt({ min: 1 }).toInt(),
-      queryValidator('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-      queryValidator('status')
-        .optional()
-        .isIn(['raised', 'investigating', 'pending_approval', 'approved', 'rejected', 'completed']),
-      queryValidator('disputeType')
-        .optional()
-        .isIn(['overcharge', 'service_not_delivered', 'quality_issue', 'incorrect_amount', 'duplicate_charge', 'unauthorised']),
-    ]),
+    ...validate(validateListDisputes()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const {
-        page = 1,
-        limit = 20,
-        status,
-        disputeType,
-      } = req.query as {
-        page?: number;
-        limit?: number;
-        status?: string;
-        disputeType?: string;
+      const { page = 1, limit = 20, status, disputeType } = req.query as {
+        page?: number; limit?: number; status?: string; disputeType?: string;
       };
 
-      const filter: Record<string, unknown> = {};
-      if (status) filter.status = status;
-      if (disputeType) filter.disputeType = disputeType;
-
-      // Apply scope filter
-      if (authReq.scopeFilter && Object.keys(authReq.scopeFilter).length > 0) {
-        Object.assign(filter, authReq.scopeFilter);
-      }
+      const { disputes, total } = await listDisputes({
+        status, disputeType,
+        scopeFilter: authReq.scopeFilter,
+        page: Number(page), limit: Number(limit),
+      });
 
       const pageNum = Number(page);
       const limitNum = Number(limit);
-      const skip = (pageNum - 1) * limitNum;
-
-      const [disputes, total] = await Promise.all([
-        BillingDisputeModel.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limitNum)
-          .lean(),
-        BillingDisputeModel.countDocuments(filter),
-      ]);
 
       res.status(200).json({
         status: 200,
         data: disputes,
         pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total,
+          page: pageNum, limit: limitNum, total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,
@@ -187,27 +105,11 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     '/:id',
     authenticate() as RequestHandler,
     checkPermission('billing_disputes', 'read') as RequestHandler,
-    ...validate([
-      param('id').trim().notEmpty().isMongoId().withMessage('Dispute ID must be a valid ID'),
-    ]),
+    ...validate(validateDisputeId()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-
-      const query: Record<string, unknown> = { _id: id };
-      if (authReq.scopeFilter && Object.keys(authReq.scopeFilter).length > 0) {
-        Object.assign(query, authReq.scopeFilter);
-      }
-
-      const dispute = await BillingDisputeModel.findOne(query).lean();
-      if (!dispute) {
-        throw AppError.notFound('Billing dispute');
-      }
-
-      res.status(200).json({
-        status: 200,
-        data: dispute,
-      });
+      const dispute = await getDispute(req.params.id, authReq.scopeFilter);
+      res.status(200).json({ status: 200, data: dispute });
     }),
   );
 
@@ -216,64 +118,18 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     '/:id',
     authenticate() as RequestHandler,
     checkPermission('billing_disputes', 'update') as RequestHandler,
-    ...validate(updateDisputeValidation()),
+    ...validate(validateUpdateDispute()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
       const updates = req.body as {
-        status?: DisputeStatus;
-        staffAssessment?: string;
-        resolution?: string;
-        resolvedAmount?: number;
+        status?: DisputeStatus; staffAssessment?: string;
+        resolution?: string; resolvedAmount?: number;
       };
 
-      // Fix for B-3.34: Apply scopeFilter to prevent IDOR
-      const disputeQuery: Record<string, unknown> = { _id: id };
-      if (authReq.scopeFilter && Object.keys(authReq.scopeFilter).length > 0) {
-        Object.assign(disputeQuery, authReq.scopeFilter);
-      }
-      const dispute = await BillingDisputeModel.findOne(disputeQuery);
-      if (!dispute) {
-        throw AppError.notFound('Billing dispute');
-      }
+      const { dispute, changes } = await updateDispute(
+        req.params.id, updates, authReq.user.userId, authReq.scopeFilter,
+      );
 
-      const changes: Record<string, { from: unknown; to: unknown }> = {};
-
-      // Validate status transition
-      if (updates.status) {
-        const allowed = VALID_DISPUTE_TRANSITIONS[dispute.status];
-        if (!allowed.includes(updates.status)) {
-          throw AppError.badRequest(
-            `Invalid dispute status transition: ${dispute.status} -> ${updates.status}`,
-          );
-        }
-        changes.status = { from: dispute.status, to: updates.status };
-        dispute.status = updates.status;
-      }
-
-      if (updates.staffAssessment !== undefined) {
-        changes.staffAssessment = { from: dispute.staffAssessment, to: updates.staffAssessment };
-        dispute.staffAssessment = updates.staffAssessment;
-      }
-
-      if (updates.resolution !== undefined) {
-        changes.resolution = { from: dispute.resolution, to: updates.resolution };
-        dispute.resolution = updates.resolution as IBillingDisputeDocument['resolution'];
-      }
-
-      if (updates.resolvedAmount !== undefined) {
-        changes.resolvedAmount = { from: dispute.resolvedAmount, to: updates.resolvedAmount };
-        dispute.resolvedAmount = updates.resolvedAmount;
-      }
-
-      // Set approvedBy if being approved
-      if (updates.status === 'approved') {
-        dispute.approvedBy = authReq.user.userId as unknown as import('mongoose').Types.ObjectId;
-      }
-
-      await dispute.save();
-
-      // BIL-INV-07: Critical audit log
       await auditLog.logFromRequest(req, {
         action: 'status_change',
         resource: 'billing_dispute',
@@ -283,10 +139,7 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
         severity: 'critical',
       });
 
-      res.status(200).json({
-        status: 200,
-        data: dispute,
-      });
+      res.status(200).json({ status: 200, data: dispute });
     }),
   );
 
@@ -295,40 +148,20 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     '/:id',
     authenticate() as RequestHandler,
     checkPermission('billing_disputes', 'delete') as RequestHandler,
-    ...validate([
-      param('id').trim().notEmpty().isMongoId().withMessage('Dispute ID must be a valid ID'),
-    ]),
+    ...validate(validateDisputeId()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
+      const dispute = await softDeleteDispute(req.params.id, authReq.scopeFilter);
 
-      // Fix for B-3.35: Apply scopeFilter to prevent IDOR
-      const disputeQuery: Record<string, unknown> = { _id: id };
-      if (authReq.scopeFilter && Object.keys(authReq.scopeFilter).length > 0) {
-        Object.assign(disputeQuery, authReq.scopeFilter);
-      }
-      const dispute = await BillingDisputeModel.findOne(disputeQuery);
-      if (!dispute) {
-        throw AppError.notFound('Billing dispute');
-      }
-
-      dispute.isDeleted = true;
-      dispute.deletedAt = new Date();
-      await dispute.save();
-
-      // BIL-INV-07: Critical audit log
       await auditLog.logFromRequest(req, {
         action: 'delete',
         resource: 'billing_dispute',
         resourceId: dispute._id.toString(),
-        description: `Billing dispute soft-deleted`,
+        description: 'Billing dispute soft-deleted',
         severity: 'critical',
       });
 
-      res.status(200).json({
-        status: 200,
-        data: { message: 'Billing dispute deleted' },
-      });
+      res.status(200).json({ status: 200, data: { message: 'Billing dispute deleted' } });
     }),
   );
 

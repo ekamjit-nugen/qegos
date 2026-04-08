@@ -299,6 +299,55 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     },
   );
 
+  // DELETE /templates/:id — Soft-delete template (deactivate)
+  router.delete(
+    '/templates/:id',
+    checkPermission('broadcasts', 'delete') as never,
+    ...campaignIdValidation(),
+    async (req: Request, res: Response): Promise<void> => {
+      if (!handleValidation(req, res)) return;
+      const template = await templateService.updateTemplate(req.params.id, { isActive: false });
+      if (!template) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      res.json({ status: 200, data: { message: 'Template deactivated' } });
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONSENT ROUTES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // GET /consent — List consent records
+  router.get(
+    '/consent',
+    checkPermission('broadcasts', 'read') as never,
+    async (req: Request, res: Response): Promise<void> => {
+      const { contactId, channel, page = 1, limit = 20 } = req.query as {
+        contactId?: string; channel?: string; page?: number; limit?: number;
+      };
+      const filter: Record<string, unknown> = {};
+      if (contactId) filter.contactId = contactId;
+      if (channel) filter.channel = channel;
+
+      const pageNum = Number(page);
+      const limitNum = Number(limit);
+      const [records, total] = await Promise.all([
+        ConsentModel.find(filter).sort({ createdAt: -1 }).skip((pageNum - 1) * limitNum).limit(limitNum).lean(),
+        ConsentModel.countDocuments(filter),
+      ]);
+      res.json({ status: 200, data: records, pagination: { page: pageNum, limit: limitNum, total } });
+    },
+  );
+
+  // GET /consent/:contactId — Get consent for a specific contact
+  router.get(
+    '/consent/:contactId',
+    checkPermission('broadcasts', 'read') as never,
+    async (req: Request, res: Response): Promise<void> => {
+      const records = await ConsentModel.find({ contactId: req.params.contactId }).lean();
+      res.json({ status: 200, data: records });
+    },
+  );
+
   // ═══════════════════════════════════════════════════════════════════════════
   // OPT-OUT ROUTES
   // ═══════════════════════════════════════════════════════════════════════════

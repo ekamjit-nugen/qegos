@@ -18,7 +18,10 @@ export type AuditAction =
   | 'refund'
   | 'void'
   | 'payment_capture'
-  | 'config_change';
+  | 'config_change'
+  | 'approve'
+  | 'reject'
+  | 'execute';
 
 export type AuditSeverity = 'info' | 'warning' | 'critical';
 

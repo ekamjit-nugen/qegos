@@ -17,6 +17,10 @@ const config: Config = {
     '@nugen/chat-engine': '<rootDir>/packages/chat-engine/src',
     '@nugen/support-tickets': '<rootDir>/packages/support-tickets/src',
     '@nugen/whatsapp-connector': '<rootDir>/packages/whatsapp-connector/src',
+    '@nugen/data-lifecycle': '<rootDir>/packages/data-lifecycle/src',
+    '@nugen/xero-connector': '<rootDir>/packages/xero-connector/src',
+    '@nugen/notification-engine': '<rootDir>/packages/notification-engine/src',
+    '@nugen/analytics-engine': '<rootDir>/packages/analytics-engine/src',
   },
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',
@@ -29,6 +33,11 @@ const config: Config = {
   coverageReporters: ['text', 'lcov', 'clover'],
   clearMocks: true,
   restoreMocks: true,
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      diagnostics: false,
+    }],
+  },
 };
 
 export default config;
