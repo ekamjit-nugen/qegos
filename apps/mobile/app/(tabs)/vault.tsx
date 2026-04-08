@@ -5,11 +5,11 @@ import {
   Card,
   Chip,
   ProgressBar,
-  ActivityIndicator,
   useTheme,
 } from 'react-native-paper';
 import { useVaultDocuments, useVaultYears, useStorageUsage } from '@/hooks/useVault';
 import type { VaultDocument } from '@/types/vault';
+import { VaultSkeleton } from '@/components/ScreenSkeleton';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -108,7 +108,7 @@ export default function VaultScreen(): React.ReactNode {
       </View>
 
       {documentsQuery.isLoading ? (
-        <ActivityIndicator style={styles.loader} size="large" />
+        <VaultSkeleton />
       ) : (
         <FlatList
           data={documents}

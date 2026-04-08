@@ -4,7 +4,6 @@ import {
   Text,
   Card,
   Button,
-  ActivityIndicator,
   useTheme,
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
@@ -13,6 +12,7 @@ import { useMyOrders } from '@/hooks/useOrders';
 import { useVaultDocuments } from '@/hooks/useVault';
 import { useUpcomingAppointments } from '@/hooks/useAppointments';
 import { useUnreadCount } from '@/hooks/useChat';
+import { DashboardSkeleton } from '@/components/ScreenSkeleton';
 
 export default function DashboardScreen(): React.ReactNode {
   const theme = useTheme();
@@ -47,7 +47,7 @@ export default function DashboardScreen(): React.ReactNode {
       </Text>
 
       {isLoading ? (
-        <ActivityIndicator style={styles.loader} size="large" />
+        <DashboardSkeleton />
       ) : (
         <View style={styles.grid}>
           <Card style={styles.statCard} onPress={() => router.push('/(tabs)/orders')}>

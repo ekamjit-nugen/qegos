@@ -7,7 +7,7 @@ import {
   ProgressBar,
   Divider,
   List,
-  ActivityIndicator,
+  Button,
   Appbar,
   useTheme,
 } from 'react-native-paper';
@@ -15,6 +15,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useOrder } from '@/hooks/useOrders';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
 import type { OrderLineItem, OrderDocument } from '@/types/order';
+import { DetailSkeleton } from '@/components/ScreenSkeleton';
 
 export default function OrderDetailScreen(): React.ReactNode {
   const theme = useTheme();
@@ -25,17 +26,19 @@ export default function OrderDetailScreen(): React.ReactNode {
   const order = data?.data;
 
   if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <DetailSkeleton />;
   }
 
   if (isError || !order) {
     return (
       <View style={styles.center}>
-        <Text variant="bodyLarge">Failed to load order</Text>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>Failed to load order</Text>
+        <Text variant="bodyMedium" style={{ opacity: 0.6, marginBottom: 16, textAlign: 'center' }}>
+          This order may not exist or you may not have access.
+        </Text>
+        <Button mode="contained" onPress={() => router.back()}>
+          Go Back
+        </Button>
       </View>
     );
   }

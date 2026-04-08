@@ -5,13 +5,14 @@ import {
   Card,
   Chip,
   ProgressBar,
-  ActivityIndicator,
+  Button,
   useTheme,
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useMyOrders } from '@/hooks/useOrders';
 import type { Order } from '@/types/order';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
+import { ListSkeleton } from '@/components/ScreenSkeleton';
 
 export default function OrdersScreen(): React.ReactNode {
   const theme = useTheme();
@@ -73,17 +74,19 @@ export default function OrdersScreen(): React.ReactNode {
   }
 
   if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <ListSkeleton rows={6} />;
   }
 
   if (isError) {
     return (
       <View style={styles.center}>
-        <Text variant="bodyLarge">Failed to load orders</Text>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>Failed to load orders</Text>
+        <Text variant="bodyMedium" style={{ opacity: 0.6, marginBottom: 16, textAlign: 'center' }}>
+          Please check your connection and try again.
+        </Text>
+        <Button mode="contained" onPress={() => void 0}>
+          Retry
+        </Button>
       </View>
     );
   }

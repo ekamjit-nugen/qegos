@@ -4,12 +4,13 @@ import {
   Text,
   Card,
   Badge,
-  ActivityIndicator,
+  Button,
   useTheme,
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useConversations } from '@/hooks/useChat';
 import type { Conversation } from '@/types/chat';
+import { ChatSkeleton } from '@/components/ScreenSkeleton';
 
 export default function ChatScreen(): React.ReactNode {
   const theme = useTheme();
@@ -73,17 +74,19 @@ export default function ChatScreen(): React.ReactNode {
   }
 
   if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <ChatSkeleton />;
   }
 
   if (isError) {
     return (
       <View style={styles.center}>
-        <Text variant="bodyLarge">Failed to load conversations</Text>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>Failed to load conversations</Text>
+        <Text variant="bodyMedium" style={{ opacity: 0.6, marginBottom: 16, textAlign: 'center' }}>
+          Please check your connection and try again.
+        </Text>
+        <Button mode="contained" onPress={() => void 0}>
+          Retry
+        </Button>
       </View>
     );
   }

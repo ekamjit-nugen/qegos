@@ -10,11 +10,11 @@ import {
   Text,
   TextInput,
   IconButton,
-  ActivityIndicator,
   Appbar,
   Surface,
   useTheme,
 } from 'react-native-paper';
+import { ChatSkeleton } from '@/components/ScreenSkeleton';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/auth/useAuth';
 import { useConversationMessages, useSendMessage } from '@/hooks/useChat';
@@ -113,9 +113,7 @@ export default function ChatConversationScreen(): React.ReactNode {
       </Appbar.Header>
 
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" />
-        </View>
+        <ChatSkeleton />
       ) : (
         <FlatList
           ref={flatListRef}
