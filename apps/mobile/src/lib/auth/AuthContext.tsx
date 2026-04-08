@@ -1,0 +1,183 @@
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import { api } from '@/lib/api/client';
+import {
+  setAccessToken,
+  setRefreshToken,
+  getRefreshToken,
+  clearTokens,
+} from '@/lib/api/tokenStorage';
+import type { AuthUser } from '@/types/auth';
+import type { ApiResponse } from '@/types/api';
+
+interface OtpVerifyResult {
+  userExists: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+interface LoginTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface AuthContextValue {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithOtp: (mobile: string, otp: string) => Promise<void>;
+  sendOtp: (mobile: string) => Promise<void>;
+  verifyOtp: (mobile: string, otp: string) => Promise<OtpVerifyResult>;
+  register: (data: {
+    firstName: string;
+    lastName: string;
+    mobile: string;
+    otp: string;
+  }) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({
+  children,
+}: {
+  children: ReactNode;
+}): ReactNode {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchUser = useCallback(async (): Promise<void> => {
+    try {
+      const res = await api.get<ApiResponse<AuthUser>>('/users/me');
+      setUser(res.data.data);
+    } catch {
+      await clearTokens();
+      setUser(null);
+    }
+  }, []);
+
+  // Attempt session restore on mount
+  useEffect(() => {
+    const restore = async (): Promise<void> => {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const res = await api.post<ApiResponse<LoginTokens>>(
+          '/auth/refresh',
+          { refreshToken },
+        );
+        await setAccessToken(res.data.data.accessToken);
+        await setRefreshToken(res.data.data.refreshToken);
+        await fetchUser();
+      } catch {
+        await clearTokens();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void restore();
+  }, [fetchUser]);
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<void> => {
+      const res = await api.post<ApiResponse<LoginTokens>>(
+        '/auth/signin',
+        { email, password },
+      );
+      const data = res.data.data;
+      await setAccessToken(data.accessToken);
+      await setRefreshToken(data.refreshToken);
+      await fetchUser();
+    },
+    [fetchUser],
+  );
+
+  const sendOtp = useCallback(async (mobile: string): Promise<void> => {
+    await api.post('/auth/send-otp', { mobile });
+  }, []);
+
+  const verifyOtp = useCallback(
+    async (mobile: string, otp: string): Promise<OtpVerifyResult> => {
+      const res = await api.post<ApiResponse<OtpVerifyResult>>(
+        '/auth/verify-otp',
+        { mobile, otp },
+      );
+      return res.data.data;
+    },
+    [],
+  );
+
+  const loginWithOtp = useCallback(
+    async (mobile: string, otp: string): Promise<void> => {
+      const result = await verifyOtp(mobile, otp);
+      if (
+        !result.userExists ||
+        !result.accessToken ||
+        !result.refreshToken
+      ) {
+        throw new Error('User does not exist. Please register first.');
+      }
+      await setAccessToken(result.accessToken);
+      await setRefreshToken(result.refreshToken);
+      await fetchUser();
+    },
+    [verifyOtp, fetchUser],
+  );
+
+  const register = useCallback(
+    async (data: {
+      firstName: string;
+      lastName: string;
+      mobile: string;
+      otp: string;
+    }): Promise<void> => {
+      const res = await api.post<ApiResponse<LoginTokens>>(
+        '/auth/signup',
+        data,
+      );
+      const tokens = res.data.data;
+      await setAccessToken(tokens.accessToken);
+      await setRefreshToken(tokens.refreshToken);
+      await fetchUser();
+    },
+    [fetchUser],
+  );
+
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore logout errors
+    }
+    await clearTokens();
+    setUser(null);
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        loginWithOtp,
+        sendOtp,
+        verifyOtp,
+        register,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
