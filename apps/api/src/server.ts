@@ -249,6 +249,7 @@ async function bootstrap(): Promise<void> {
     xeroRedirectUri: config.XERO_REDIRECT_URI ?? `http://localhost:${config.PORT}/api/${config.API_VERSION}/xero/callback`,
     xeroScopes: DEFAULT_XERO_SCOPES,
     encryptionKey: config.ENCRYPTION_KEY,
+    webhookKey: config.XERO_WEBHOOK_KEY,
   };
 
   const {
@@ -697,7 +698,10 @@ async function bootstrap(): Promise<void> {
     analyticsReplicaUri: config.ANALYTICS_REPLICA_URI,
   });
 
-  const analyticsExportQueue = new Queue('analytics-export', { connection: redisConnectionOpts });
+  const analyticsExportQueue = new Queue('analytics-export', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const analyticsRouter = analyticsEngine.createAnalyticsRoutes({
     OrderModel: OrderModel as never,
@@ -850,7 +854,59 @@ async function bootstrap(): Promise<void> {
     password: config.REDIS_PASSWORD || undefined,
   };
 
-  const automationQueue = new Queue('lead-automation', { connection: redisConnectionOpts });
+  // ─── BullMQ Retry Hardening ──────────────────────────────────────────────
+  // Default job options: exponential backoff with 3 attempts.
+  // Jobs that exhaust retries are moved to the dead-letter queue for monitoring.
+  const defaultJobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential' as const,
+      delay: 5000, // 5s → 10s → 20s
+    },
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  };
+
+  // Dead-letter queue for permanently failed jobs across all queues
+  const deadLetterQueue = new Queue('dead-letter', { connection: redisConnectionOpts });
+
+  /**
+   * Move a failed job to the dead-letter queue after all retries are exhausted.
+   * Preserves original queue name, job name, data, and error for debugging.
+   */
+  async function moveToDeadLetter(
+    sourceQueue: string,
+    job: Job | undefined,
+    err: Error,
+  ): Promise<void> {
+    if (!job) return;
+
+    // Only move to DLQ if all attempts exhausted
+    const maxAttempts = (job.opts?.attempts ?? defaultJobOptions.attempts);
+    if (job.attemptsMade < maxAttempts) return;
+
+    await deadLetterQueue.add('dead-letter-entry', {
+      originalQueue: sourceQueue,
+      originalJobName: job.name,
+      originalJobData: job.data,
+      failedAt: new Date().toISOString(),
+      attemptsMade: job.attemptsMade,
+      error: err.message,
+      stackTrace: err.stack?.slice(0, 500),
+    }, {
+      removeOnComplete: 500,  // Keep more DLQ entries for audit
+      removeOnFail: 200,
+    });
+
+    console.warn( // eslint-disable-line no-console
+      `[DLQ] Job ${job.name} from ${sourceQueue} moved to dead-letter after ${job.attemptsMade} attempts: ${err.message}`,
+    );
+  }
+
+  const automationQueue = new Queue('lead-automation', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   // Register repeatable jobs
   const repeatableJobs: Array<{ name: string; pattern: string }> = [
@@ -865,8 +921,6 @@ async function bootstrap(): Promise<void> {
   for (const job of repeatableJobs) {
     await automationQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -904,11 +958,15 @@ async function bootstrap(): Promise<void> {
   );
 
   automationWorker.on('failed', (job, err) => {
-    console.warn(`[AUTOMATION] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[AUTOMATION] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('lead-automation', job, err);
   });
 
   // Phase 5: Broadcast queue jobs
-  const broadcastQueue = new Queue('broadcast-engine', { connection: redisConnectionOpts });
+  const broadcastQueue = new Queue('broadcast-engine', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const broadcastJobs: Array<{ name: string; pattern: string }> = [
     { name: 'triggerScheduled', pattern: '*/1 * * * *' },      // every 1 minute
@@ -921,8 +979,6 @@ async function bootstrap(): Promise<void> {
   for (const job of broadcastJobs) {
     await broadcastQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -963,11 +1019,15 @@ async function bootstrap(): Promise<void> {
   );
 
   broadcastWorker.on('failed', (job, err) => {
-    console.warn(`[BROADCAST] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[BROADCAST] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('broadcast-engine', job, err);
   });
 
   // Phase 6: Vault maintenance cron jobs
-  const vaultQueue = new Queue('vault-maintenance', { connection: redisConnectionOpts });
+  const vaultQueue = new Queue('vault-maintenance', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const vaultJobs: Array<{ name: string; pattern: string }> = [
     { name: 'hardDeleteExpired', pattern: '0 4 * * *' },       // daily at 4am
@@ -977,8 +1037,6 @@ async function bootstrap(): Promise<void> {
   for (const job of vaultJobs) {
     await vaultQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -998,11 +1056,15 @@ async function bootstrap(): Promise<void> {
   );
 
   vaultWorker.on('failed', (job, err) => {
-    console.warn(`[VAULT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[VAULT] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('vault-maintenance', job, err);
   });
 
   // Phase 7: Support ticket SLA cron jobs (TKT-INV-04: every 5 min)
-  const ticketQueue = new Queue('support-tickets', { connection: redisConnectionOpts });
+  const ticketQueue = new Queue('support-tickets', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const ticketJobs: Array<{ name: string; pattern: string }> = [
     { name: 'checkSlaBreaches', pattern: '*/5 * * * *' },      // every 5 minutes
@@ -1014,8 +1076,6 @@ async function bootstrap(): Promise<void> {
   for (const job of ticketJobs) {
     await ticketQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1041,11 +1101,15 @@ async function bootstrap(): Promise<void> {
   );
 
   ticketWorker.on('failed', (job, err) => {
-    console.warn(`[TICKETS] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[TICKETS] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('support-tickets', job, err);
   });
 
   // Privacy Act: Data lifecycle cron jobs
-  const privacyQueue = new Queue('data-lifecycle', { connection: redisConnectionOpts });
+  const privacyQueue = new Queue('data-lifecycle', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const privacyJobs: Array<{ name: string; pattern: string }> = [
     { name: 'enforceRetention', pattern: '0 2 * * 0' },          // weekly Sunday 2am
@@ -1055,8 +1119,6 @@ async function bootstrap(): Promise<void> {
   for (const job of privacyJobs) {
     await privacyQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1076,11 +1138,15 @@ async function bootstrap(): Promise<void> {
   );
 
   privacyWorker.on('failed', (job, err) => {
-    console.warn(`[PRIVACY] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[PRIVACY] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('data-lifecycle', job, err);
   });
 
   // Phase 2: Xero sync cron jobs
-  const xeroQueue = new Queue('xero-sync', { connection: redisConnectionOpts });
+  const xeroQueue = new Queue('xero-sync', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const xeroJobs: Array<{ name: string; pattern: string }> = [
     { name: 'retryFailedSyncs', pattern: '*/5 * * * *' },       // every 5 minutes
@@ -1090,8 +1156,6 @@ async function bootstrap(): Promise<void> {
   for (const job of xeroJobs) {
     await xeroQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1111,11 +1175,15 @@ async function bootstrap(): Promise<void> {
   );
 
   xeroWorker.on('failed', (job, err) => {
-    console.warn(`[XERO] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[XERO] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('xero-sync', job, err);
   });
 
   // Phase 8: Engagement engine cron jobs
-  const engagementQueue = new Queue('engagement-engine', { connection: redisConnectionOpts });
+  const engagementQueue = new Queue('engagement-engine', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const engagementJobs: Array<{ name: string; pattern: string }> = [
     { name: 'expireReferrals', pattern: '0 2 * * *' },            // daily at 2am
@@ -1127,8 +1195,6 @@ async function bootstrap(): Promise<void> {
   for (const job of engagementJobs) {
     await engagementQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1154,11 +1220,15 @@ async function bootstrap(): Promise<void> {
   );
 
   engagementWorker.on('failed', (job, err) => {
-    console.warn(`[ENGAGEMENT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[ENGAGEMENT] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('engagement-engine', job, err);
   });
 
   // Notification Engine: FCM token cleanup cron
-  const notificationQueue = new Queue('notification-engine', { connection: redisConnectionOpts });
+  const notificationQueue = new Queue('notification-engine', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const notificationJobs: Array<{ name: string; pattern: string }> = [
     { name: 'fcmTokenCleanup', pattern: '0 3 * * *' },         // daily at 3am — remove tokens not used in 30+ days
@@ -1167,8 +1237,6 @@ async function bootstrap(): Promise<void> {
   for (const job of notificationJobs) {
     await notificationQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1190,11 +1258,15 @@ async function bootstrap(): Promise<void> {
   );
 
   notificationWorker.on('failed', (job, err) => {
-    console.warn(`[NOTIFICATION] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[NOTIFICATION] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('notification-engine', job, err);
   });
 
   // Analytics Engine: executive summary pre-computation (ANA-INV-07) + export queue
-  const analyticsQueue = new Queue('analytics-engine', { connection: redisConnectionOpts });
+  const analyticsQueue = new Queue('analytics-engine', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const analyticsJobs: Array<{ name: string; pattern: string }> = [
     { name: 'computeExecutiveSummary', pattern: '*/5 * * * *' },  // every 5 minutes
@@ -1203,8 +1275,6 @@ async function bootstrap(): Promise<void> {
   for (const job of analyticsJobs) {
     await analyticsQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1235,11 +1305,15 @@ async function bootstrap(): Promise<void> {
   );
 
   analyticsWorker.on('failed', (job, err) => {
-    console.warn(`[ANALYTICS] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[ANALYTICS] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('analytics-engine', job, err);
   });
 
   // Appointment Scheduling: reminders (APT-INV-02) + no-show marking (APT-INV-03)
-  const appointmentQueue = new Queue('appointment-scheduling', { connection: redisConnectionOpts });
+  const appointmentQueue = new Queue('appointment-scheduling', {
+    connection: redisConnectionOpts,
+    defaultJobOptions,
+  });
 
   const appointmentJobs: Array<{ name: string; pattern: string }> = [
     { name: 'processAppointmentReminders', pattern: '*/5 * * * *' },  // every 5 minutes
@@ -1249,8 +1323,6 @@ async function bootstrap(): Promise<void> {
   for (const job of appointmentJobs) {
     await appointmentQueue.add(job.name, {}, {
       repeat: { pattern: job.pattern },
-      removeOnComplete: 100,
-      removeOnFail: 50,
     });
   }
 
@@ -1270,7 +1342,8 @@ async function bootstrap(): Promise<void> {
   );
 
   appointmentWorker.on('failed', (job, err) => {
-    console.warn(`[APPOINTMENT] Job ${job?.name} failed:`, err); // eslint-disable-line no-console
+    console.warn(`[APPOINTMENT] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    void moveToDeadLetter('appointment-scheduling', job, err);
   });
 
   // 8. Create HTTP server + Socket.io for real-time chat
@@ -1316,6 +1389,7 @@ async function bootstrap(): Promise<void> {
       await analyticsExportQueue.close();
       await appointmentWorker.close();
       await appointmentQueue.close();
+      await deadLetterQueue.close();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

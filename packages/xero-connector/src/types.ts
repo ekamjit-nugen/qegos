@@ -8,6 +8,8 @@ export interface XeroConnectorConfig {
   xeroRedirectUri: string;
   xeroScopes: string[];
   encryptionKey: string; // 32+ chars, for AES-256-GCM token encryption
+  /** Webhook signing key from Xero Developer Portal. Required for webhook endpoint. */
+  webhookKey?: string;
 }
 
 export const DEFAULT_XERO_SCOPES: string[] = [

@@ -74,6 +74,16 @@ export { retryFailedSyncs, flushOfflineQueue } from './services/retrySyncService
 export { encryptToken, decryptToken } from './services/tokenService';
 export { XeroOfflineError } from './services/xeroClient';
 
+// Webhook handling
+export { xeroWebhookVerify } from './middleware/xeroWebhookVerify';
+export {
+  processWebhookEvents,
+  initWebhookHandler,
+  type XeroWebhookEvent,
+  type XeroWebhookPayload,
+  type WebhookHandlerDeps,
+} from './services/webhookHandler';
+
 // Sync services (for event-driven triggering)
 export { syncContact, bulkSyncContacts } from './services/contactSync';
 export { createInvoice, voidInvoice, adjustInvoice, bulkSyncInvoices } from './services/invoiceSync';

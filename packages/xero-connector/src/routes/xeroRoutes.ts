@@ -34,6 +34,12 @@ import {
   retryFailedSyncs,
   flushOfflineQueue,
 } from '../services/retrySyncService';
+import { xeroWebhookVerify } from '../middleware/xeroWebhookVerify';
+import {
+  initWebhookHandler,
+  processWebhookEvents,
+  type XeroWebhookPayload,
+} from '../services/webhookHandler';
 import {
   validateConfigUpdate,
   validateSyncContact,
@@ -74,6 +80,56 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
   registerSyncExecutor('contact', async (entityId) => { await syncContact(entityId); });
   registerSyncExecutor('invoice', async (entityId) => { await createInvoice(entityId); });
   registerSyncExecutor('payment', async (entityId) => { await recordPayment(entityId); });
+
+  // Initialize webhook handler
+  initWebhookHandler({
+    XeroSyncLogModel,
+    XeroConfigModel,
+    UserModel: UserModel as never,
+    OrderModel: OrderModel as never,
+    PaymentModel: PaymentModel as never,
+    redisClient,
+    auditLog: { log: auditLog.log },
+  });
+
+  // ─── WEBHOOK: POST /webhooks — Xero real-time event delivery ─────────────
+  // Xero sends a POST with HMAC-SHA256 signature in x-xero-signature header.
+  // Must respond 200 within 5 seconds. Intent-to-receive (ITR) validation events
+  // have an empty events array — respond 200 to confirm key is correct.
+  if (config.webhookKey) {
+    router.post(
+      '/webhooks',
+      xeroWebhookVerify(config.webhookKey),
+      asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        const payload = req.body as XeroWebhookPayload;
+
+        // Intent-to-receive validation: empty events array
+        if (!payload.events || payload.events.length === 0) {
+          res.status(200).json({ status: 200, data: { message: 'ITR validated' } });
+          return;
+        }
+
+        // Fire-and-forget: respond 200 immediately, process async
+        res.status(200).json({ status: 200, data: { received: true } });
+
+        // Process events in background (after response is sent)
+        try {
+          const result = await processWebhookEvents(payload);
+          if (result.processed > 0) {
+            await auditLog.logFromRequest(req, {
+              action: 'create',
+              resource: 'xero_webhook',
+              resourceId: `seq:${payload.firstEventSequence}-${payload.lastEventSequence}`,
+              description: `Xero webhook: ${result.processed} processed, ${result.skipped} skipped, ${result.errors} errors`,
+              severity: 'low',
+            });
+          }
+        } catch (err: unknown) {
+          console.error('[XERO-WEBHOOK] Background processing error:', err); // eslint-disable-line no-console
+        }
+      }),
+    );
+  }
 
   // ─── 1. GET /connect — Initiate OAuth 2.0 flow ───────────────────────────
   router.get(

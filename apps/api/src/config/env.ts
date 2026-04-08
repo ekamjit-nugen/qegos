@@ -90,6 +90,7 @@ const envSchema = z.object({
   XERO_CLIENT_ID: z.string().optional(),
   XERO_CLIENT_SECRET: z.string().optional(),
   XERO_REDIRECT_URI: z.string().optional(),
+  XERO_WEBHOOK_KEY: z.string().optional(),
 
   // Zoho Sign (Document Signing)
   ZOHO_SIGN_CLIENT_ID: z.string().optional(),

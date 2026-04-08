@@ -52,6 +52,12 @@ export function createApp(): express.Express {
     express.raw({ type: 'application/json' }),
   );
 
+  // Xero webhook raw body parser — HMAC-SHA256 signature requires raw body
+  app.use(
+    `/api/${config.API_VERSION}/xero/webhooks`,
+    express.raw({ type: 'application/json' }),
+  );
+
   // --- Parsing ---
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -69,7 +75,7 @@ export function createApp(): express.Express {
   // Fix for S-3.6: CSRF protection for state-changing routes
   // Skip CSRF on webhook endpoints (they use signature verification)
   if (config.CSRF_SECRET) {
-    const webhookPaths = ['/payments/webhooks/', '/webhooks/zoho'];
+    const webhookPaths = ['/payments/webhooks/', '/webhooks/zoho', '/xero/webhooks'];
     app.use(`/api/${config.API_VERSION}`, (req: Request, res: Response, next: express.NextFunction): void => {
       // Skip CSRF for webhooks and safe HTTP methods
       if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
