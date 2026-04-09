@@ -1,0 +1,1483 @@
+openapi: 3.1.0
+info:
+  title: QEGOS API
+  description: |
+    Tax preparation, filing, and client management platform for the Australian market.
+
+    ## Authentication
+    All protected endpoints require a Bearer token in the Authorization header:
+    ```
+    Authorization: Bearer <accessToken>
+    ```
+    Tokens are obtained via `/api/v1/auth/signin` or `/api/v1/auth/verify-otp`.
+    Access tokens expire after 15 minutes; use `/api/v1/auth/refresh` to rotate.
+
+    ## Common Patterns
+    - **Pagination**: `?page=1&limit=20` (default limit: 20, max: 100)
+    - **Monetary values**: Always integer cents (AUD). E.g., `85000` = $850.00
+    - **Phone numbers**: E.164 format (`+61412345678`)
+    - **Dates**: ISO 8601 UTC (`2025-07-01T00:00:00.000Z`)
+    - **Soft delete**: Resources are soft-deleted; use `?includeDeleted=true` to include
+    - **Rate limiting**: 100 requests/minute per user on `/api/v1/*`
+
+    ## Error Responses
+    All errors follow:
+    ```json
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "Human-readable message",
+      "errors": [{ "field": "email", "message": "Email is required" }]
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Nugen Engineering
+    email: engineering@nugen.com.au
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:4000
+    description: Local development
+  - url: https://api.staging.qegos.com.au
+    description: Staging
+  - url: https://api.qegos.com.au
+    description: Production
+
+tags:
+  - name: Health
+    description: Health check endpoints (public)
+  - name: Auth
+    description: Authentication, OTP, MFA, sessions
+  - name: Users
+    description: User management and profiles
+  - name: RBAC
+    description: Roles, permissions, access control
+  - name: Leads
+    description: Lead lifecycle, scoring, conversion
+  - name: Orders
+    description: Order lifecycle, line items, assignments
+  - name: Payments
+    description: Payment processing, refunds, webhooks
+  - name: Analytics
+    description: Dashboard widgets, forecasting, exports
+  - name: Tickets
+    description: Support ticket lifecycle, SLA tracking
+  - name: Chat
+    description: Real-time messaging, conversations
+  - name: Broadcasts
+    description: Campaign management, templates, consent
+  - name: Notifications
+    description: Push, SMS, email, in-app notifications
+  - name: Xero
+    description: Xero accounting integration, sync
+  - name: WhatsApp
+    description: WhatsApp Business messaging
+  - name: Documents
+    description: Document vault, signing, uploads
+  - name: Audit
+    description: Immutable audit trail
+  - name: Tax Engine
+    description: Tax calculations, estimates, amendments
+  - name: Appointments
+    description: Scheduling, availability
+  - name: Referrals
+    description: Referral program, rewards
+  - name: Calendar
+    description: Tax deadline calendar
+  - name: Reviews
+    description: Client reviews, NPS, reputation
+  - name: Privacy
+    description: Data export, erasure (Privacy Act 1988)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from /auth/signin or /auth/verify-otp
+
+  schemas:
+    Error:
+      type: object
+      required: [status, code, message]
+      properties:
+        status:
+          type: integer
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: "Email is required"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        uptime:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    DeepHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/HealthResponse'
+        - type: object
+          properties:
+            services:
+              type: object
+              properties:
+                mongodb:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [connected, disconnected]
+                    latencyMs:
+                      type: number
+                redis:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [connected, disconnected]
+                    latencyMs:
+                      type: number
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Access token TTL in seconds
+          example: 900
+
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        mobile:
+          type: string
+          pattern: '^\+61\d{9}$'
+        userType:
+          type: integer
+          enum: [0, 1, 2]
+          description: "0=System, 1=Staff, 2=Client"
+        status:
+          type: integer
+          enum: [1, 2]
+          description: "1=Active, 2=Inactive"
+        roleId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Lead:
+      type: object
+      properties:
+        _id:
+          type: string
+        leadNumber:
+          type: string
+          example: QGS-L-0001
+        firstName:
+          type: string
+        lastName:
+          type: string
+        mobile:
+          type: string
+          pattern: '^\+61\d{9}$'
+        email:
+          type: string
+          format: email
+        source:
+          type: string
+          enum: [website, referral, google_ads, facebook, walk_in, phone, whatsapp, partner, other]
+        status:
+          type: integer
+          enum: [1, 2, 3, 4, 5, 6, 7, 8]
+          description: "1=New, 2=Contacted, 3=Qualified, 4=Proposal, 5=Negotiation, 6=Won, 7=Lost, 8=Dormant"
+        priority:
+          type: string
+          enum: [hot, warm, cold]
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        assignedTo:
+          type: string
+          nullable: true
+        estimatedValue:
+          type: integer
+          description: Value in cents
+        isConverted:
+          type: boolean
+        convertedOrderId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+        orderNumber:
+          type: string
+          example: QGS-O-0001
+        userId:
+          type: string
+        leadId:
+          type: string
+          nullable: true
+        financialYear:
+          type: string
+          example: "2025-2026"
+        status:
+          type: integer
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+          description: "1=Pending, 2=InProgress, 3=InfoGathering, 4=Preparing, 5=UnderReview, 6=Completed, 7=Lodged, 8=Assessed, 9=Cancelled"
+        lineItems:
+          type: array
+          items:
+            type: object
+            properties:
+              salesId:
+                type: string
+              title:
+                type: string
+              price:
+                type: integer
+                description: Price in cents
+              quantity:
+                type: integer
+              priceAtCreation:
+                type: integer
+                description: Immutable snapshot in cents
+        totalAmount:
+          type: integer
+          description: Total in cents (server-computed)
+        finalAmount:
+          type: integer
+          description: After discount in cents
+        processingBy:
+          type: string
+          nullable: true
+        completionPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        createdAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        _id:
+          type: string
+        paymentNumber:
+          type: string
+          example: QGS-PAY-0001
+        orderId:
+          type: string
+        userId:
+          type: string
+        gateway:
+          type: string
+          enum: [stripe, payzoo]
+        amount:
+          type: integer
+          description: Amount in cents
+        currency:
+          type: string
+          default: AUD
+        status:
+          type: string
+          enum: [pending, requires_capture, authorised, captured, succeeded, failed, cancelled, refund_pending, refunded, partially_refunded, disputed]
+        idempotencyKey:
+          type: string
+
+    ExecutiveSummary:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        revenue:
+          type: object
+          properties:
+            totalCents:
+              type: integer
+            monthOverMonth:
+              type: number
+              description: Percentage change
+            isEstimated:
+              type: boolean
+        pipeline:
+          type: object
+          properties:
+            totalLeads:
+              type: integer
+            conversionRate:
+              type: number
+            avgDaysToConvert:
+              type: integer
+        orders:
+          type: object
+          properties:
+            totalActive:
+              type: integer
+            completedThisMonth:
+              type: integer
+            avgCompletionPercent:
+              type: integer
+        churn:
+          type: object
+          properties:
+            atRiskCount:
+              type: integer
+        collection:
+          type: object
+          properties:
+            onTimeRate:
+              type: number
+            outstandingCents:
+              type: integer
+
+    RevenueForecast:
+      type: object
+      properties:
+        historical:
+          type: array
+          items:
+            type: object
+            properties:
+              period:
+                type: string
+              totalCents:
+                type: integer
+              count:
+                type: integer
+        forecast:
+          type: array
+          items:
+            type: object
+            properties:
+              quarter:
+                type: string
+                example: "2025-Q3"
+              predictedCents:
+                type: integer
+              lowerBoundCents:
+                type: integer
+              upperBoundCents:
+                type: integer
+        isEstimated:
+          type: boolean
+          description: True if < 12 months data (benchmark mode)
+        dataMonths:
+          type: integer
+
+    CollectionRate:
+      type: object
+      properties:
+        onTimeRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        avgDaysToPayment:
+          type: integer
+        outstandingReceivablesCents:
+          type: integer
+        totalInvoicedCents:
+          type: integer
+        totalCollectedCents:
+          type: integer
+
+    SupportTicket:
+      type: object
+      properties:
+        _id:
+          type: string
+        ticketNumber:
+          type: string
+          example: QGS-TKT-0001
+        userId:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        status:
+          type: string
+          enum: [open, in_progress, waiting_on_client, waiting_on_staff, escalated, resolved, closed]
+        subject:
+          type: string
+        slaDeadline:
+          type: string
+          format: date-time
+        slaBreached:
+          type: boolean
+
+    AuditLogEntry:
+      type: object
+      properties:
+        actor:
+          type: string
+        actorType:
+          type: string
+        action:
+          type: string
+          enum: [create, read, update, delete, status_change, assign, login, logout, export, refund, config_change]
+        resource:
+          type: string
+        resourceId:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        timestamp:
+          type: string
+          format: date-time
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    DateFromParam:
+      name: dateFrom
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        example: "2025-01-01"
+    DateToParam:
+      name: dateTo
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        example: "2025-12-31"
+
+paths:
+  # ── Health ────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Shallow health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/deep:
+    get:
+      tags: [Health]
+      summary: Deep health check with dependency status
+      operationId: getDeepHealth
+      responses:
+        '200':
+          description: All services healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeepHealthResponse'
+        '503':
+          description: One or more services degraded
+
+  # ── Auth ──────────────────────────────────────────────────────────────
+  /api/v1/auth/send-otp:
+    post:
+      tags: [Auth]
+      summary: Send OTP to mobile number
+      operationId: sendOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile]
+              properties:
+                mobile:
+                  type: string
+                  pattern: '^\+61\d{9}$'
+                  example: "+61412345678"
+      responses:
+        '200':
+          description: OTP sent successfully
+        '429':
+          description: Rate limit exceeded
+
+  /api/v1/auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify OTP and get tokens
+      operationId: verifyOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, otp]
+              properties:
+                mobile:
+                  type: string
+                otp:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+      responses:
+        '200':
+          description: OTP verified, tokens returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid or expired OTP
+
+  /api/v1/auth/signin:
+    post:
+      tags: [Auth]
+      summary: Sign in with email and password
+      operationId: signIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Login successful (or MFA challenge)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid credentials
+        '429':
+          description: Rate limited
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate access and refresh tokens
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid refresh token
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /api/v1/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password (authenticated)
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password changed
+        '401':
+          description: Current password incorrect
+
+  # ── Users ─────────────────────────────────────────────────────────────
+  /api/v1/users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      operationId: getMe
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/User'
+    put:
+      tags: [Users]
+      summary: Update own profile
+      operationId: updateMe
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Profile updated
+
+  /api/v1/users:
+    get:
+      tags: [Users]
+      summary: List users (paginated)
+      operationId: listUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: userType
+          in: query
+          schema:
+            type: integer
+            enum: [1, 2]
+      responses:
+        '200':
+          description: Paginated user list
+
+    post:
+      tags: [Users]
+      summary: Create user (admin only)
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName, email, mobile, userType, roleId]
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                mobile:
+                  type: string
+                  pattern: '^\+61\d{9}$'
+                userType:
+                  type: integer
+                  enum: [1, 2]
+                roleId:
+                  type: string
+      responses:
+        '201':
+          description: User created
+
+  # ── Leads ─────────────────────────────────────────────────────────────
+  /api/v1/leads:
+    post:
+      tags: [Leads]
+      summary: Create lead
+      operationId: createLead
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, mobile, source]
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                mobile:
+                  type: string
+                  pattern: '^\+61\d{9}$'
+                email:
+                  type: string
+                  format: email
+                source:
+                  type: string
+                  enum: [website, referral, google_ads, facebook, walk_in, phone, whatsapp, partner, other]
+                priority:
+                  type: string
+                  enum: [hot, warm, cold]
+                  default: warm
+      responses:
+        '201':
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/Lead'
+        '409':
+          description: Duplicate lead detected
+
+    get:
+      tags: [Leads]
+      summary: List leads (filtered, paginated)
+      operationId: listLeads
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: integer
+            enum: [1, 2, 3, 4, 5, 6, 7, 8]
+        - name: assignedTo
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [hot, warm, cold]
+      responses:
+        '200':
+          description: Paginated lead list
+
+  /api/v1/leads/{id}/convert:
+    post:
+      tags: [Leads]
+      summary: Convert lead to client + order
+      operationId: convertLead
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                financialYear:
+                  type: string
+                  example: "2025-2026"
+      responses:
+        '201':
+          description: Lead converted, order created
+        '409':
+          description: Lead already converted
+        '422':
+          description: Cannot convert lost/dormant lead
+
+  # ── Orders ────────────────────────────────────────────────────────────
+  /api/v1/orders:
+    post:
+      tags: [Orders]
+      summary: Create order
+      operationId: createOrder
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, financialYear, personalDetails, lineItems]
+              properties:
+                userId:
+                  type: string
+                financialYear:
+                  type: string
+                leadId:
+                  type: string
+                lineItems:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [salesId, title, price, quantity]
+                    properties:
+                      salesId:
+                        type: string
+                      title:
+                        type: string
+                      price:
+                        type: integer
+                        description: Price in cents
+                      quantity:
+                        type: integer
+                        minimum: 1
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+    get:
+      tags: [Orders]
+      summary: List orders (filtered, paginated)
+      operationId: listOrders
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: integer
+        - name: financialYear
+          in: query
+          schema:
+            type: string
+        - name: processingBy
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated order list
+
+  # ── Payments ──────────────────────────────────────────────────────────
+  /api/v1/payments/intent:
+    post:
+      tags: [Payments]
+      summary: Create payment intent
+      operationId: createPaymentIntent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, amount, gateway, idempotencyKey]
+              properties:
+                orderId:
+                  type: string
+                amount:
+                  type: integer
+                  description: Amount in cents
+                  minimum: 1
+                gateway:
+                  type: string
+                  enum: [stripe, payzoo]
+                idempotencyKey:
+                  type: string
+      responses:
+        '201':
+          description: Payment intent created
+        '409':
+          description: Duplicate payment (idempotency key reused)
+
+  /api/v1/payments/refund:
+    post:
+      tags: [Payments]
+      summary: Initiate refund
+      operationId: initiateRefund
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentId, amount, reason, idempotencyKey]
+              properties:
+                paymentId:
+                  type: string
+                amount:
+                  type: integer
+                  description: Refund amount in cents
+                reason:
+                  type: string
+                idempotencyKey:
+                  type: string
+      responses:
+        '200':
+          description: Refund initiated
+
+  # ── Analytics ─────────────────────────────────────────────────────────
+  /api/v1/analytics/executive-summary:
+    get:
+      tags: [Analytics]
+      summary: Pre-computed executive dashboard
+      operationId: getExecutiveSummary
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Executive summary data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/ExecutiveSummary'
+        '202':
+          description: Summary is being computed, try again shortly
+
+  /api/v1/analytics/revenue-forecast:
+    get:
+      tags: [Analytics]
+      summary: Revenue forecast with confidence intervals
+      operationId: getRevenueForecast
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Historical revenue and quarterly forecasts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/RevenueForecast'
+
+  /api/v1/analytics/clv:
+    post:
+      tags: [Analytics]
+      summary: Customer Lifetime Value rankings
+      operationId: getClv
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topN:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+                segment:
+                  type: string
+                dateFrom:
+                  type: string
+                  format: date
+                dateTo:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: CLV rankings
+
+  /api/v1/analytics/collection-rate:
+    get:
+      tags: [Analytics]
+      summary: Payment collection metrics
+      operationId: getCollectionRate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Collection rate data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/CollectionRate'
+
+  /api/v1/analytics/pipeline-health:
+    get:
+      tags: [Analytics]
+      summary: Lead pipeline funnel by stage
+      operationId: getPipelineHealth
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Pipeline stages with conversion rates
+
+  /api/v1/analytics/staff-benchmark:
+    get:
+      tags: [Analytics]
+      summary: Staff performance comparison
+      operationId: getStaffBenchmark
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Staff metrics across 4 dimensions
+
+  /api/v1/analytics/channel-roi:
+    post:
+      tags: [Analytics]
+      summary: Marketing channel ROI analysis
+      operationId: getChannelRoi
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dateFrom, dateTo]
+              properties:
+                dateFrom:
+                  type: string
+                  format: date
+                dateTo:
+                  type: string
+                  format: date
+                channels:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: ROI per channel
+
+  /api/v1/analytics/seasonal-trends:
+    get:
+      tags: [Analytics]
+      summary: Seasonal order/revenue trends with YoY
+      operationId: getSeasonalTrends
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [week, month]
+            default: month
+      responses:
+        '200':
+          description: Trend data with prior year comparison
+
+  /api/v1/analytics/churn-risk:
+    get:
+      tags: [Analytics]
+      summary: Clients at risk of not returning
+      operationId: getChurnRisk
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: financialYear
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{4}$'
+            example: "2025-2026"
+      responses:
+        '200':
+          description: At-risk client list
+
+  /api/v1/analytics/service-mix:
+    get:
+      tags: [Analytics]
+      summary: Revenue breakdown by service
+      operationId: getServiceMix
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Service mix with percentages
+
+  /api/v1/analytics/export:
+    post:
+      tags: [Analytics]
+      summary: Export analytics as PDF/XLSX (async)
+      operationId: exportAnalytics
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format, widgets]
+              properties:
+                format:
+                  type: string
+                  enum: [pdf, xlsx]
+                widgets:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    enum: [executive-summary, revenue-forecast, clv, staff-benchmark, channel-roi, seasonal-trends, churn-risk, service-mix, collection-rate, pipeline-health]
+                dateFrom:
+                  type: string
+                  format: date
+                dateTo:
+                  type: string
+                  format: date
+      responses:
+        '202':
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      jobId:
+                        type: string
+                      status:
+                        type: string
+                        enum: [queued]
+                      format:
+                        type: string
+                      widgets:
+                        type: array
+                        items:
+                          type: string
+
+  # ── Tickets ───────────────────────────────────────────────────────────
+  /api/v1/tickets:
+    post:
+      tags: [Tickets]
+      summary: Create support ticket
+      operationId: createTicket
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, subject, description]
+              properties:
+                category:
+                  type: string
+                subject:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [low, normal, high, urgent]
+                  default: normal
+                orderId:
+                  type: string
+      responses:
+        '201':
+          description: Ticket created
+
+    get:
+      tags: [Tickets]
+      summary: List tickets (filtered, paginated)
+      operationId: listTickets
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: slaBreached
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated ticket list
+
+  # ── Notifications ─────────────────────────────────────────────────────
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for current user
+      operationId: listNotifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: isRead
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Notification list
+
+  /api/v1/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      operationId: getUnreadCount
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+
+  # ── Audit Logs ────────────────────────────────────────────────────────
+  /api/v1/audit-logs:
+    post:
+      tags: [Audit]
+      summary: Query audit logs (paginated, filterable)
+      operationId: queryAuditLogs
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor:
+                  type: string
+                action:
+                  type: string
+                resource:
+                  type: string
+                severity:
+                  type: string
+                  enum: [info, warning, critical]
+                dateFrom:
+                  type: string
+                  format: date-time
+                dateTo:
+                  type: string
+                  format: date-time
+                search:
+                  type: string
+                page:
+                  type: integer
+                limit:
+                  type: integer
+      responses:
+        '200':
+          description: Paginated audit entries
+
+  /api/v1/audit-logs/stats:
+    get:
+      tags: [Audit]
+      summary: 30-day audit dashboard stats
+      operationId: getAuditStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Action counts, top actors, critical events
+
+security:
+  - BearerAuth: []

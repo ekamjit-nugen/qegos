@@ -7,6 +7,7 @@ import { globalErrorHandler } from '@nugen/error-handler';
 import { sanitize } from '@nugen/validator';
 import { createApiLimiter } from '@nugen/rate-limiter';
 import { getConfig } from './config/env';
+import { mountSwaggerDocs } from './config/swagger';
 
 /**
  * Create and configure the Express application.
@@ -116,6 +117,9 @@ export function createApp(): express.Express {
     });
     res.status(200).json({ status: 200, data: { csrfToken: token } });
   });
+
+  // --- API Documentation (Swagger UI) ---
+  mountSwaggerDocs(app);
 
   // --- Health check endpoints ---
 
