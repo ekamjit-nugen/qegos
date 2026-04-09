@@ -1,3 +1,5 @@
+'use client';
+
 import { Skeleton, Card, Space, Row, Col } from 'antd';
 
 /**

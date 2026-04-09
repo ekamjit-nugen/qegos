@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import * as multer from 'multer';
+import multer from 'multer';
 import { validationResult } from 'express-validator';
 import type { DocumentRouteDeps, AuthRequest, ZohoWebhookPayload } from './document.types';
 import { MAX_FILE_SIZE } from './document.types';

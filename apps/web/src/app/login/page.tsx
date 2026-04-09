@@ -2,11 +2,13 @@
 
 import { useCallback, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Tabs, Form, Input, Button, Typography, App } from 'antd';
-import { MobileOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
+import { Card, Tabs, Form, Input, Button, Typography, App, Table, Tag } from 'antd';
+import type { FormInstance } from 'antd';
+import { MobileOutlined, MailOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
 import { useAuth } from '@/lib/auth/useAuth';
 
 const { Title } = Typography;
+const DEFAULT_PASSWORD = 'Password1!';
 
 interface EmailFormValues {
   email: string;
@@ -21,7 +23,7 @@ interface OtpFormValues {
   otp: string;
 }
 
-function EmailLoginTab(): ReactNode {
+function EmailLoginTab({ form }: { form: FormInstance<EmailFormValues> }): ReactNode {
   const { login } = useAuth();
   const router = useRouter();
   const { message } = App.useApp();
@@ -43,7 +45,7 @@ function EmailLoginTab(): ReactNode {
   );
 
   return (
-    <Form<EmailFormValues> layout="vertical" onFinish={onFinish}>
+    <Form<EmailFormValues> form={form} layout="vertical" onFinish={onFinish}>
       <Form.Item
         name="email"
         label="Email"
@@ -102,11 +104,9 @@ function MobileLoginTab(): ReactNode {
       try {
         const result = await verifyOtp(mobile, values.otp);
         if (!result.userExists) {
-          // New user — redirect to register
           router.replace(`/register?mobile=${encodeURIComponent(mobile)}&otp=${encodeURIComponent(values.otp)}`);
           return;
         }
-        // Existing user — log in with OTP
         await loginWithOtp(mobile, values.otp);
         router.replace('/');
       } catch {
@@ -126,10 +126,7 @@ function MobileLoginTab(): ReactNode {
           label="Mobile Number"
           rules={[
             { required: true, message: 'Please enter your mobile number' },
-            {
-              pattern: /^\+61\d{9}$/,
-              message: 'Enter in format +61412345678',
-            },
+            { pattern: /^\+61\d{9}$/, message: 'Enter in format +61412345678' },
           ]}
         >
           <Input prefix={<MobileOutlined />} placeholder="+61412345678" />
@@ -168,7 +165,94 @@ function MobileLoginTab(): ReactNode {
   );
 }
 
+// ─── Dev Credentials ──────────────────────────────────────────────────────────
+
+const DEV_ACCOUNTS = [
+  { email: 'superadmin@qegos.com.au', role: 'Super Admin', color: 'red' },
+  { email: 'admin@qegos.com.au', role: 'Admin', color: 'volcano' },
+  { email: 'manager@qegos.com.au', role: 'Office Manager', color: 'orange' },
+  { email: 'senior@qegos.com.au', role: 'Senior Staff', color: 'gold' },
+  { email: 'staff1@qegos.com.au', role: 'Staff', color: 'lime' },
+  { email: 'staff2@qegos.com.au', role: 'Staff', color: 'lime' },
+  { email: 'john.doe@example.com', role: 'Client', color: 'blue' },
+  { email: 'jane.smith@example.com', role: 'Client', color: 'blue' },
+  { email: 'mike.chen@example.com', role: 'Client', color: 'blue' },
+  { email: 'student@example.com', role: 'Student', color: 'purple' },
+];
+
+function DevCredentials({
+  onSelect,
+}: {
+  onSelect: (email: string) => void;
+}): ReactNode {
+  const { message } = App.useApp();
+
+  const columns = [
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      render: (email: string) => (
+        <Button
+          type="link"
+          size="small"
+          icon={<LoginOutlined />}
+          onClick={() => {
+            onSelect(email);
+            message.success(`Filled: ${email}`);
+          }}
+          style={{ padding: 0, height: 'auto', fontSize: 12 }}
+        >
+          {email}
+        </Button>
+      ),
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role',
+      render: (role: string, record: { color: string }) => (
+        <Tag color={record.color}>{role}</Tag>
+      ),
+    },
+  ];
+
+  return (
+    <Card
+      size="small"
+      style={{ width: 400, marginTop: 16 }}
+      title={
+        <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+          Click a row to fill credentials
+        </Typography.Text>
+      }
+    >
+      <Table
+        dataSource={DEV_ACCOUNTS}
+        columns={columns}
+        rowKey="email"
+        size="small"
+        pagination={false}
+        style={{ fontSize: 12 }}
+      />
+    </Card>
+  );
+}
+
+// ─── Login Page ───────────────────────────────────────────────────────────────
+
 export default function LoginPage(): ReactNode {
+  const [emailForm] = Form.useForm<EmailFormValues>();
+  const [activeTab, setActiveTab] = useState('email');
+
+  const handleCredentialSelect = useCallback(
+    (email: string): void => {
+      setActiveTab('email');
+      emailForm.setFieldsValue({ email, password: DEFAULT_PASSWORD });
+    },
+    [emailForm],
+  );
+
   const tabItems = [
     {
       key: 'mobile',
@@ -178,7 +262,7 @@ export default function LoginPage(): ReactNode {
     {
       key: 'email',
       label: 'Email',
-      children: <EmailLoginTab />,
+      children: <EmailLoginTab form={emailForm} />,
     },
   ];
 
@@ -201,8 +285,17 @@ export default function LoginPage(): ReactNode {
             Client Portal
           </Title>
         </div>
-        <Tabs items={tabItems} centered />
+        <Tabs
+          items={tabItems}
+          centered
+          activeKey={activeTab}
+          onChange={setActiveTab}
+        />
       </Card>
+
+      {process.env.NODE_ENV !== 'production' && (
+        <DevCredentials onSelect={handleCredentialSelect} />
+      )}
     </div>
   );
 }

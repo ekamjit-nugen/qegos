@@ -91,8 +91,13 @@ async function seed(): Promise<void> {
     },
   });
 
-  // Notification engine models
-  const { NotificationModel } = notificationEngine.init(connection, {} as never, {} as never);
+  // Notification engine models — pass minimal config for seed
+  const { NotificationModel } = notificationEngine.init(
+    connection,
+    null as never,  // Redis not needed for seeding
+    {} as never,    // Config not needed for seeding
+    { UserModel: null as never },  // UserModel not needed for seeding
+  );
 
   // ─── Step 1: Seed roles ────────────────────────────────────────────────────
   log('Seeding roles...');
@@ -104,7 +109,8 @@ async function seed(): Promise<void> {
 
   // ─── Step 3: Seed users ────────────────────────────────────────────────────
   log('Seeding users...');
-  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, BCRYPT_ROUNDS);
+  // Pass plain password — the auth plugin's pre-save hook will bcrypt hash it
+  const passwordHash = DEFAULT_PASSWORD;
 
   // Fetch role IDs
   const roles = await RoleModel.find({});
@@ -287,7 +293,7 @@ async function seed(): Promise<void> {
       serviceInterest: salesItems.slice(0, 2).map((s) => s._id),
     },
     {
-      source: 'website' as const,
+      source: 'web_form' as const,
       firstName: 'Lisa',
       lastName: 'Nguyen',
       mobile: '+61422222222',
@@ -375,11 +381,11 @@ async function seed(): Promise<void> {
   const activityCount = await LeadActivityModel.countDocuments();
   if (activityCount === 0) {
     const activities = [
-      { leadId: leadIds[0], type: 'call', subject: 'Initial enquiry call', description: 'Client called about individual tax return. Has PAYG summary and deductions.', outcome: 'positive', sentiment: 'interested', callDuration: 12, callDirection: 'inbound', performedBy: staffId },
-      { leadId: leadIds[0], type: 'sms', subject: 'Follow-up SMS', description: 'Sent pricing info and booking link.', outcome: 'positive', performedBy: staffId },
-      { leadId: leadIds[1], type: 'email', subject: 'Web enquiry follow-up', description: 'Responded to website contact form about business tax returns.', outcome: 'neutral', performedBy: seniorId },
-      { leadId: leadIds[2], type: 'call', subject: 'Referral introduction', description: 'Referred by John Doe. Needs help with rental property deductions.', outcome: 'positive', sentiment: 'interested', callDuration: 18, callDirection: 'outbound', performedBy: staffId },
-      { leadId: leadIds[3], type: 'whatsapp', subject: 'WhatsApp follow-up', description: 'Sent message in Hindi about student tax return services.', outcome: 'no_answer', performedBy: staffId },
+      { leadId: leadIds[0], type: 'phone_call_inbound' as const, subject: 'Initial enquiry call', description: 'Client called about individual tax return. Has PAYG summary and deductions.', outcome: 'interested' as const, sentiment: 'positive' as const, callDuration: 12, callDirection: 'inbound' as const, performedBy: staffId },
+      { leadId: leadIds[0], type: 'sms_sent' as const, subject: 'Follow-up SMS', description: 'Sent pricing info and booking link.', outcome: 'interested' as const, performedBy: staffId },
+      { leadId: leadIds[1], type: 'email_sent' as const, subject: 'Web enquiry follow-up', description: 'Responded to website contact form about business tax returns.', outcome: 'no_answer' as const, performedBy: seniorId },
+      { leadId: leadIds[2], type: 'phone_call_outbound' as const, subject: 'Referral introduction', description: 'Referred by John Doe. Needs help with rental property deductions.', outcome: 'interested' as const, sentiment: 'positive' as const, callDuration: 18, callDirection: 'outbound' as const, performedBy: staffId },
+      { leadId: leadIds[3], type: 'whatsapp_sent' as const, subject: 'WhatsApp follow-up', description: 'Sent message in Hindi about student tax return services.', outcome: 'no_answer' as const, performedBy: staffId },
     ];
 
     for (const act of activities) {

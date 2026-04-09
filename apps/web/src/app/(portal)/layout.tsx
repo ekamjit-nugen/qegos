@@ -1,42 +1,174 @@
 'use client';
 
-import { useCallback, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import { Layout, Typography, Button, Space } from 'antd';
-import { LogoutOutlined } from '@ant-design/icons';
+import { useCallback, useState, type ReactNode } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Layout, Menu, Typography, Button, Avatar, theme } from 'antd';
+import {
+  HomeOutlined,
+  ShoppingCartOutlined,
+  CalendarOutlined,
+  MessageOutlined,
+  FolderOpenOutlined,
+  CalculatorOutlined,
+  BellOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '@/lib/auth/useAuth';
 import { ProtectedRoute } from '@/lib/auth/ProtectedRoute';
-import { fullName } from '@/lib/utils/format';
 
-const { Header, Content, Footer } = Layout;
+const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
+
+const NAV_ITEMS = [
+  { key: '/', icon: <HomeOutlined />, label: 'Dashboard' },
+  { key: '/orders', icon: <ShoppingCartOutlined />, label: 'My Orders' },
+  { key: '/appointments', icon: <CalendarOutlined />, label: 'Appointments' },
+  { key: '/chat', icon: <MessageOutlined />, label: 'Chat' },
+  { key: '/vault', icon: <FolderOpenOutlined />, label: 'Document Vault' },
+  { key: '/tax-summary', icon: <CalculatorOutlined />, label: 'Tax Summary' },
+  { key: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
+];
+
+function getInitials(firstName?: string, lastName?: string): string {
+  const f = firstName?.charAt(0)?.toUpperCase() ?? '';
+  const l = lastName?.charAt(0)?.toUpperCase() ?? '';
+  return f + l || '?';
+}
 
 function PortalShell({ children }: { children: ReactNode }): ReactNode {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const { token: t } = theme.useToken();
 
   const handleLogout = useCallback(async (): Promise<void> => {
     await logout();
     router.replace('/login');
   }, [logout, router]);
 
+  const selectedKey = NAV_ITEMS.find((item) =>
+    item.key === '/' ? pathname === '/' : pathname.startsWith(item.key),
+  )?.key ?? '/';
+
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header
+    <Layout style={{ minHeight: '100vh', background: '#f7f8fa' }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        trigger={null}
+        width={240}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           background: '#fff',
-          borderBottom: '1px solid #f0f0f0',
-          padding: '0 24px',
+          borderRight: '1px solid #f0f0f0',
+          overflow: 'auto',
+          height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 10,
         }}
       >
-        <Text strong style={{ fontSize: 18, color: '#1677ff' }}>
-          QEGOS
-        </Text>
-        <Space>
-          <Text>{fullName(user?.firstName, user?.lastName)}</Text>
+        {/* Logo */}
+        <div
+          style={{
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            padding: collapsed ? '0' : '0 24px',
+            borderBottom: '1px solid #f0f0f0',
+          }}
+        >
+          <Text
+            strong
+            style={{
+              color: t.colorPrimary,
+              fontSize: collapsed ? 18 : 20,
+              letterSpacing: 2,
+              fontWeight: 800,
+            }}
+          >
+            {collapsed ? 'Q' : 'QEGOS'}
+          </Text>
+        </div>
+
+        {/* Navigation */}
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          onClick={({ key }) => { router.push(key); }}
+          items={NAV_ITEMS}
+          style={{
+            border: 'none',
+            marginTop: 8,
+            fontSize: 14,
+          }}
+        />
+
+        {/* User card at bottom */}
+        {!collapsed && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '16px 20px',
+              borderTop: '1px solid #f0f0f0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar
+                size={36}
+                style={{
+                  background: t.colorPrimary,
+                  color: '#fff',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                {getInitials(user?.firstName, user?.lastName)}
+              </Avatar>
+              <div style={{ lineHeight: 1.3, flex: 1, minWidth: 0 }}>
+                <Text strong style={{ fontSize: 13, display: 'block' }} ellipsis>
+                  {user?.firstName ?? ''} {user?.lastName ?? ''}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  Client Portal
+                </Text>
+              </div>
+            </div>
+          </div>
+        )}
+      </Sider>
+
+      <Layout style={{ marginLeft: collapsed ? 80 : 240, transition: 'margin-left 0.2s' }}>
+        {/* Top header */}
+        <Header
+          style={{
+            padding: '0 24px',
+            background: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f0f0f0',
+            position: 'sticky',
+            top: 0,
+            zIndex: 9,
+            height: 56,
+          }}
+        >
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => { setCollapsed(!collapsed); }}
+            style={{ fontSize: 16 }}
+          />
           <Button
             type="text"
             icon={<LogoutOutlined />}
@@ -44,14 +176,13 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
           >
             Logout
           </Button>
-        </Space>
-      </Header>
-      <Content style={{ padding: 24, background: '#f5f5f5' }}>
-        {children}
-      </Content>
-      <Footer style={{ textAlign: 'center', color: '#999' }}>
-        QEGOS Client Portal
-      </Footer>
+        </Header>
+
+        {/* Content */}
+        <Content style={{ margin: 20, minHeight: 'calc(100vh - 96px)' }}>
+          {children}
+        </Content>
+      </Layout>
     </Layout>
   );
 }

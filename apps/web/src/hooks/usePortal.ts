@@ -21,8 +21,8 @@ export function useMyOrders(): ReturnType<typeof useQuery<Order[]>> {
   return useQuery({
     queryKey: ['portal', 'orders'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Order[]>>('/portal/orders');
-      return res.data.data;
+      const res = await api.get<ApiResponse<{ orders: Order[]; total: number }>>('/orders');
+      return res.data.data.orders ?? res.data.data as unknown as Order[];
     },
   });
 }
@@ -31,7 +31,7 @@ export function useOrder(id: string | undefined): ReturnType<typeof useQuery<Ord
   return useQuery({
     queryKey: ['portal', 'orders', id],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Order>>(`/portal/orders/${id}`);
+      const res = await api.get<ApiResponse<Order>>(`/orders/${id}`);
       return res.data.data;
     },
     enabled: !!id,
@@ -170,7 +170,7 @@ export function useConversations(): ReturnType<typeof useQuery<Conversation[]>> 
   return useQuery({
     queryKey: ['portal', 'conversations'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Conversation[]>>('/portal/chat/conversations');
+      const res = await api.get<ApiResponse<Conversation[]>>('/chat/conversations');
       return res.data.data;
     },
     // Real-time updates via Socket.io; fall back to 30s polling as safety net
@@ -185,7 +185,7 @@ export function useConversationMessages(
     queryKey: ['portal', 'conversations', id, 'messages'],
     queryFn: async () => {
       const res = await api.get<ApiResponse<ChatMessage[]>>(
-        `/portal/chat/conversations/${id}/messages`,
+        `/chat/conversations/${id}/messages`,
       );
       return res.data.data;
     },
@@ -206,7 +206,7 @@ export function useSendMessage() {
       content: string;
     }) => {
       const res = await api.post<ApiResponse<ChatMessage>>(
-        `/portal/chat/conversations/${conversationId}/messages`,
+        `/chat/conversations/${conversationId}/messages`,
         { content },
       );
       return res.data.data;
@@ -224,7 +224,7 @@ export function useMarkRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (conversationId: string) => {
-      await api.patch(`/portal/chat/conversations/${conversationId}/read`);
+      await api.patch(`/chat/conversations/${conversationId}/read`);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['portal', 'conversations'] });
@@ -237,7 +237,7 @@ export function useCreateConversation() {
   return useMutation({
     mutationFn: async (subject: string) => {
       const res = await api.post<ApiResponse<Conversation>>(
-        '/portal/chat/conversations',
+        '/chat/conversations',
         { subject },
       );
       return res.data.data;
@@ -257,7 +257,7 @@ export function useNotifications(page: number = 1): ReturnType<
     queryKey: ['portal', 'notifications', page],
     queryFn: async () => {
       const res = await api.get<PaginatedResponse<Notification>>(
-        `/portal/notifications?page=${page}&limit=20`,
+        `/notifications?page=${page}&limit=20`,
       );
       return res.data;
     },
@@ -268,10 +268,14 @@ export function useUnreadNotificationCount(): ReturnType<typeof useQuery<number>
   return useQuery({
     queryKey: ['portal', 'notifications', 'unread-count'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ count: number }>>(
-        '/portal/notifications/unread-count',
-      );
-      return res.data.data.count;
+      try {
+        const res = await api.get<ApiResponse<{ count: number }>>(
+          '/notifications/unread-count',
+        );
+        return res.data.data.count;
+      } catch {
+        return 0;
+      }
     },
     refetchInterval: 30_000,
   });
@@ -281,7 +285,7 @@ export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.patch(`/portal/notifications/${id}/read`);
+      await api.patch(`/notifications/${id}/read`);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['portal', 'notifications'] });
@@ -293,7 +297,7 @@ export function useMarkAllRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      await api.patch('/portal/notifications/read-all');
+      await api.patch('/notifications/read-all');
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['portal', 'notifications'] });
@@ -308,7 +312,7 @@ export function useNotificationPreferences(): ReturnType<
     queryKey: ['portal', 'notification-preferences'],
     queryFn: async () => {
       const res = await api.get<ApiResponse<NotificationPreferences>>(
-        '/portal/notifications/preferences',
+        '/notifications/preferences',
       );
       return res.data.data;
     },
@@ -320,7 +324,7 @@ export function useUpdateNotificationPreferences() {
   return useMutation({
     mutationFn: async (data: Partial<NotificationPreferences>) => {
       const res = await api.put<ApiResponse<NotificationPreferences>>(
-        '/portal/notifications/preferences',
+        '/notifications/preferences',
         data,
       );
       return res.data.data;
@@ -337,8 +341,12 @@ export function useUpcomingAppointments(): ReturnType<typeof useQuery<Appointmen
   return useQuery({
     queryKey: ['portal', 'appointments'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Appointment[]>>('/portal/appointments/upcoming');
-      return res.data.data;
+      try {
+        const res = await api.get<ApiResponse<Appointment[]>>('/appointments/upcoming');
+        return res.data.data;
+      } catch {
+        return [];
+      }
     },
   });
 }

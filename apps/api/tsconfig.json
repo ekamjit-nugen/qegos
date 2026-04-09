@@ -4,6 +4,15 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "composite": false,
+      "declaration": false,
+      "declarationMap": false,
+      "incremental": false
+    }
+  },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules", "__tests__", "src/**/__tests__"]
 }

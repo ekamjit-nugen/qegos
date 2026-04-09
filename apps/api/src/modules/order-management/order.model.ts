@@ -193,14 +193,15 @@ const orderSchema = new Schema<IOrderDocument2>(
     processingBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     completionPercent: { type: Number, default: 0, min: 0, max: 100 },
     scheduledAppointment: {
-      type: {
+      type: new Schema({
         date: { type: Date, required: true },
         timeSlot: { type: String, required: true },
         staffId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
         type: { type: String, enum: APPOINTMENT_TYPES, required: true },
         meetingLink: String,
         status: { type: String, enum: APPOINTMENT_STATUSES, default: 'scheduled' },
-      },
+      }, { _id: false }),
+      required: false,
     },
     eFileStatus: { type: String, enum: E_FILE_STATUSES },
     eFileReference: { type: String },

@@ -705,6 +705,20 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // ─── Redis connection opts (shared by all BullMQ queues) ─────────────────
+  const redisConnectionOpts = {
+    host: config.REDIS_HOST,
+    port: config.REDIS_PORT,
+    password: config.REDIS_PASSWORD || undefined,
+  };
+
+  const defaultJobOptions = {
+    attempts: 3,
+    backoff: { type: 'exponential' as const, delay: 5000 },
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 500 },
+  };
+
   // Analytics Engine — stateless init + routes
   const analyticsConfig = analyticsEngine.init({
     analyticsReplicaUri: config.ANALYTICS_REPLICA_URI,
@@ -860,24 +874,8 @@ async function bootstrap(): Promise<void> {
     smartAssignBulk: getWorkloadService()?.smartAssignBulk,
   });
 
-  const redisConnectionOpts = {
-    host: config.REDIS_HOST,
-    port: config.REDIS_PORT,
-    password: config.REDIS_PASSWORD || undefined,
-  };
-
   // ─── BullMQ Retry Hardening ──────────────────────────────────────────────
-  // Default job options: exponential backoff with 3 attempts.
-  // Jobs that exhaust retries are moved to the dead-letter queue for monitoring.
-  const defaultJobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential' as const,
-      delay: 5000, // 5s → 10s → 20s
-    },
-    removeOnComplete: 100,
-    removeOnFail: 50,
-  };
+  // redisConnectionOpts and defaultJobOptions defined above (before analytics queue)
 
   // Dead-letter queue for permanently failed jobs across all queues
   const deadLetterQueue = new Queue('dead-letter', { connection: redisConnectionOpts });

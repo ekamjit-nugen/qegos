@@ -63,7 +63,7 @@ export function refreshTokenValidation(): ValidationChain[] {
       .trim()
       .notEmpty()
       .withMessage('Refresh token is required'),
-    body('deviceId').trim().notEmpty().withMessage('Device ID is required'),
+    body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
 

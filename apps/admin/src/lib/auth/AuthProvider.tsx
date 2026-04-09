@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import axios from 'axios';
 import { api } from '@/lib/api/client';
 import {
   setAccessToken,
@@ -44,15 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
   // Attempt session restore on mount
   useEffect(() => {
     const restore = async (): Promise<void> => {
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) {
+      const rt = getRefreshToken();
+      if (!rt) {
         setIsLoading(false);
         return;
       }
       try {
-        const res = await api.post<{ status: number; data: { accessToken: string; refreshToken: string } }>(
-          '/auth/refresh',
-          { refreshToken },
+        // Use raw axios to avoid the interceptor adding a stale/null Bearer token
+        const res = await axios.post<{ status: number; data: { accessToken: string; refreshToken: string } }>(
+          `${api.defaults.baseURL}/auth/refresh`,
+          { refreshToken: rt },
         );
         setAccessToken(res.data.data.accessToken);
         setRefreshToken(res.data.data.refreshToken);
