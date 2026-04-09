@@ -25,7 +25,7 @@ export async function getStaffBenchmark(
 ): Promise<StaffBenchmarkEntry[]> {
   const { OrderModel, LeadActivityModel, ReviewAssignmentModel, SupportTicketModel, UserModel } = deps;
 
-  // Run 4 aggregations in parallel
+  // Run 4 aggregations in parallel (with early $project to minimize pipeline memory)
   const [ordersCompleted, leadsContacted, reviewTimes, ticketsResolved] = await Promise.all([
     // 1. Orders completed by processingBy staff
     OrderModel.aggregate([
@@ -37,6 +37,7 @@ export async function getStaffBenchmark(
           isDeleted: { $ne: true },
         },
       },
+      { $project: { processingBy: 1 } },
       {
         $group: {
           _id: '$processingBy',
@@ -53,6 +54,7 @@ export async function getStaffBenchmark(
           type: { $in: ['phone_call_outbound', 'phone_call_inbound', 'sms_sent', 'email_sent'] },
         },
       },
+      { $project: { performedBy: 1 } },
       {
         $group: {
           _id: '$performedBy',
@@ -70,6 +72,7 @@ export async function getStaffBenchmark(
           timeToReview: { $exists: true },
         },
       },
+      { $project: { reviewerId: 1, timeToReview: 1 } },
       {
         $group: {
           _id: '$reviewerId',
@@ -86,6 +89,7 @@ export async function getStaffBenchmark(
           resolvedAt: { $gte: dateRange.dateFrom, $lte: dateRange.dateTo },
         },
       },
+      { $project: { assignedTo: 1 } },
       {
         $group: {
           _id: '$assignedTo',

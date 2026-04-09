@@ -63,6 +63,7 @@ export async function getCollectionRate(
         isDeleted: { $ne: true },
       },
     },
+    { $project: { finalAmount: 1 } }, // Only need finalAmount for sum
     {
       $group: {
         _id: null,

@@ -20,6 +20,15 @@ export async function getServiceMix(
         isDeleted: { $ne: true },
       },
     },
+    // Early projection: only carry fields needed for unwind+group
+    {
+      $project: {
+        'lineItems.title': 1,
+        'lineItems.price': 1,
+        'lineItems.quantity': 1,
+        'lineItems.completionStatus': 1,
+      },
+    },
     { $unwind: '$lineItems' },
     {
       $match: {

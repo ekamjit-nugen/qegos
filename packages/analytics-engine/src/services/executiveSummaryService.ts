@@ -65,6 +65,7 @@ export async function computeExecutiveSummary(
     // Active orders (status 1-5)
     deps.OrderModel.aggregate([
       { $match: { status: { $in: [1, 2, 3, 4, 5] }, isDeleted: { $ne: true } } },
+      { $project: { completionPercent: 1 } }, // Only need completionPercent for $avg
       {
         $group: {
           _id: null,

@@ -26,6 +26,7 @@ export async function getSeasonalTrends(
         isDeleted: { $ne: true },
       },
     },
+    { $project: { createdAt: 1 } }, // Only need date for grouping
     {
       $group: {
         _id: { $dateToString: { format: dateFormat, date: '$createdAt' } },
@@ -65,6 +66,7 @@ export async function getSeasonalTrends(
         isDeleted: { $ne: true },
       },
     },
+    { $project: { createdAt: 1 } },
     {
       $group: {
         _id: { $dateToString: { format: dateFormat, date: '$createdAt' } },

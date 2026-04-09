@@ -22,6 +22,7 @@ export async function getPipelineHealth(
         isDeleted: { $ne: true },
       },
     },
+    { $project: { status: 1, estimatedValue: 1 } }, // Only need these fields
     {
       $group: {
         _id: '$status',
