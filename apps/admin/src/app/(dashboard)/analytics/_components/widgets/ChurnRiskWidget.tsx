@@ -1,10 +1,12 @@
 'use client';
 
-import { Card, Table, Tag, Spin, Empty } from 'antd';
+import { Table, Tag } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useChurnRisk } from '@/hooks/useAnalytics';
 import { formatCurrency } from '@/lib/utils/format';
+import { WidgetCard } from '../WidgetCard';
+import { useAnalyticsContext } from '../AnalyticsContext';
 import type { ChurnRiskEntry } from '@/types/analytics';
 
 const columns: ColumnsType<ChurnRiskEntry> = [
@@ -18,27 +20,37 @@ const columns: ColumnsType<ChurnRiskEntry> = [
     title: 'Last FY',
     dataIndex: 'lastFinancialYear',
     key: 'lastFinancialYear',
-    width: 100,
+    width: 95,
   },
   {
-    title: 'Days Inactive',
+    title: 'Paid',
+    dataIndex: 'totalPaidCents',
+    key: 'totalPaidCents',
+    width: 100,
+    render: (v: number) => formatCurrency(v),
+    sorter: (a, b) => a.totalPaidCents - b.totalPaidCents,
+  },
+  {
+    title: 'Inactive',
     dataIndex: 'daysSinceLastOrder',
     key: 'daysSinceLastOrder',
-    width: 110,
+    width: 90,
     render: (days: number) => (
       <Tag color={days > 365 ? 'red' : days > 180 ? 'orange' : 'default'}>
         {days}d
       </Tag>
     ),
     sorter: (a, b) => a.daysSinceLastOrder - b.daysSinceLastOrder,
+    defaultSortOrder: 'descend',
   },
 ];
 
 export function ChurnRiskWidget(): React.ReactNode {
-  const { data, isLoading } = useChurnRisk();
+  const { financialYear } = useAnalyticsContext();
+  const { data, isLoading, error, refetch } = useChurnRisk(financialYear);
 
   return (
-    <Card
+    <WidgetCard
       title={
         <span>
           <WarningOutlined style={{ color: '#ff4d4f' }} />
@@ -48,21 +60,21 @@ export function ChurnRiskWidget(): React.ReactNode {
           )}
         </span>
       }
-      style={{ minHeight: 350 }}
+      loading={isLoading}
+      error={error as Error | null}
+      onRetry={() => void refetch()}
+      empty={!data || data.length === 0}
+      emptyText="No at-risk clients"
+      minHeight={370}
     >
-      {isLoading ? (
-        <Spin />
-      ) : !data || data.length === 0 ? (
-        <Empty description="No at-risk clients" />
-      ) : (
-        <Table<ChurnRiskEntry>
-          columns={columns}
-          dataSource={data}
-          rowKey="userId"
-          size="small"
-          pagination={{ pageSize: 5, size: 'small' }}
-        />
-      )}
-    </Card>
+      <Table<ChurnRiskEntry>
+        columns={columns}
+        dataSource={data ?? []}
+        rowKey="userId"
+        size="small"
+        pagination={{ pageSize: 5, size: 'small', showSizeChanger: false }}
+        scroll={{ x: 400 }}
+      />
+    </WidgetCard>
   );
 }

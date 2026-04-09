@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { ApiResponse } from '@/types/api';
 import type {
@@ -16,15 +16,11 @@ import type {
   PipelineStageEntry,
 } from '@/types/analytics';
 
-/** Default date range: last 12 months */
-function defaultDateRange(): { dateFrom: string; dateTo: string } {
-  const now = new Date();
-  const oneYearAgo = new Date(now);
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  return {
-    dateFrom: oneYearAgo.toISOString().split('T')[0],
-    dateTo: now.toISOString().split('T')[0],
-  };
+// ─── Shared params ──────────────────────────────────────────────────
+
+interface DateRangeParams {
+  dateFrom: string;
+  dateTo: string;
 }
 
 /** Current Australian financial year (July-June) */
@@ -34,13 +30,17 @@ function currentFinancialYear(): string {
   return `${start}-${start + 1}`;
 }
 
-export function useExecutiveSummary() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Executive Summary ──────────────────────────────────────────────
+
+export function useExecutiveSummary(params?: DateRangeParams) {
+  const dateFrom = params?.dateFrom ?? '';
+  const dateTo = params?.dateTo ?? '';
   return useQuery({
-    queryKey: ['analytics', 'executive-summary'],
+    queryKey: ['analytics', 'executive-summary', dateFrom, dateTo],
     queryFn: async () => {
+      const qs = dateFrom ? `?dateFrom=${dateFrom}&dateTo=${dateTo}` : '';
       const res = await api.get<ApiResponse<ExecutiveSummaryResponse>>(
-        `/analytics/executive-summary?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/analytics/executive-summary${qs}`,
       );
       return res.data.data;
     },
@@ -48,19 +48,22 @@ export function useExecutiveSummary() {
   });
 }
 
-export function useRevenueForecast() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Revenue Forecast ───────────────────────────────────────────────
+
+export function useRevenueForecast(params: DateRangeParams) {
   return useQuery({
-    queryKey: ['analytics', 'revenue-forecast', dateFrom, dateTo],
+    queryKey: ['analytics', 'revenue-forecast', params.dateFrom, params.dateTo],
     queryFn: async () => {
       const res = await api.get<ApiResponse<RevenueForecastResponse>>(
-        `/analytics/revenue-forecast?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/analytics/revenue-forecast?dateFrom=${params.dateFrom}&dateTo=${params.dateTo}`,
       );
       return res.data.data;
     },
     staleTime: 5 * 60_000,
   });
 }
+
+// ─── CLV ────────────────────────────────────────────────────────────
 
 export function useClv(topN = 20) {
   return useQuery({
@@ -76,13 +79,14 @@ export function useClv(topN = 20) {
   });
 }
 
-export function useStaffBenchmark() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Staff Benchmark ────────────────────────────────────────────────
+
+export function useStaffBenchmark(params: DateRangeParams) {
   return useQuery({
-    queryKey: ['analytics', 'staff-benchmark', dateFrom, dateTo],
+    queryKey: ['analytics', 'staff-benchmark', params.dateFrom, params.dateTo],
     queryFn: async () => {
       const res = await api.get<ApiResponse<StaffBenchmarkEntry[]>>(
-        `/analytics/staff-benchmark?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/analytics/staff-benchmark?dateFrom=${params.dateFrom}&dateTo=${params.dateTo}`,
       );
       return res.data.data;
     },
@@ -90,14 +94,15 @@ export function useStaffBenchmark() {
   });
 }
 
-export function useChannelRoi() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Channel ROI ────────────────────────────────────────────────────
+
+export function useChannelRoi(params: DateRangeParams) {
   return useQuery({
-    queryKey: ['analytics', 'channel-roi', dateFrom, dateTo],
+    queryKey: ['analytics', 'channel-roi', params.dateFrom, params.dateTo],
     queryFn: async () => {
       const res = await api.post<ApiResponse<ChannelRoiEntry[]>>(
         '/analytics/channel-roi',
-        { dateFrom, dateTo },
+        { dateFrom: params.dateFrom, dateTo: params.dateTo },
       );
       return res.data.data;
     },
@@ -105,13 +110,14 @@ export function useChannelRoi() {
   });
 }
 
-export function useSeasonalTrends(granularity: 'week' | 'month' = 'month') {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Seasonal Trends ────────────────────────────────────────────────
+
+export function useSeasonalTrends(params: DateRangeParams, granularity: 'week' | 'month' = 'month') {
   return useQuery({
-    queryKey: ['analytics', 'seasonal-trends', dateFrom, dateTo, granularity],
+    queryKey: ['analytics', 'seasonal-trends', params.dateFrom, params.dateTo, granularity],
     queryFn: async () => {
       const res = await api.get<ApiResponse<SeasonalTrendEntry[]>>(
-        `/analytics/seasonal-trends?dateFrom=${dateFrom}&dateTo=${dateTo}&granularity=${granularity}`,
+        `/analytics/seasonal-trends?dateFrom=${params.dateFrom}&dateTo=${params.dateTo}&granularity=${granularity}`,
       );
       return res.data.data;
     },
@@ -119,8 +125,10 @@ export function useSeasonalTrends(granularity: 'week' | 'month' = 'month') {
   });
 }
 
-export function useChurnRisk() {
-  const fy = currentFinancialYear();
+// ─── Churn Risk ─────────────────────────────────────────────────────
+
+export function useChurnRisk(financialYear?: string) {
+  const fy = financialYear ?? currentFinancialYear();
   return useQuery({
     queryKey: ['analytics', 'churn-risk', fy],
     queryFn: async () => {
@@ -133,13 +141,14 @@ export function useChurnRisk() {
   });
 }
 
-export function useServiceMix() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Service Mix ────────────────────────────────────────────────────
+
+export function useServiceMix(params: DateRangeParams) {
   return useQuery({
-    queryKey: ['analytics', 'service-mix', dateFrom, dateTo],
+    queryKey: ['analytics', 'service-mix', params.dateFrom, params.dateTo],
     queryFn: async () => {
       const res = await api.get<ApiResponse<ServiceMixEntry[]>>(
-        `/analytics/service-mix?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/analytics/service-mix?dateFrom=${params.dateFrom}&dateTo=${params.dateTo}`,
       );
       return res.data.data;
     },
@@ -147,13 +156,14 @@ export function useServiceMix() {
   });
 }
 
-export function useCollectionRate() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Collection Rate ────────────────────────────────────────────────
+
+export function useCollectionRate(params: DateRangeParams) {
   return useQuery({
-    queryKey: ['analytics', 'collection-rate', dateFrom, dateTo],
+    queryKey: ['analytics', 'collection-rate', params.dateFrom, params.dateTo],
     queryFn: async () => {
       const res = await api.get<ApiResponse<CollectionRateResponse>>(
-        `/analytics/collection-rate?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/analytics/collection-rate?dateFrom=${params.dateFrom}&dateTo=${params.dateTo}`,
       );
       return res.data.data;
     },
@@ -161,16 +171,45 @@ export function useCollectionRate() {
   });
 }
 
-export function usePipelineHealth() {
-  const { dateFrom, dateTo } = defaultDateRange();
+// ─── Pipeline Health ────────────────────────────────────────────────
+
+export function usePipelineHealth(params: DateRangeParams) {
   return useQuery({
-    queryKey: ['analytics', 'pipeline-health', dateFrom, dateTo],
+    queryKey: ['analytics', 'pipeline-health', params.dateFrom, params.dateTo],
     queryFn: async () => {
       const res = await api.get<ApiResponse<PipelineStageEntry[]>>(
-        `/analytics/pipeline-health?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/analytics/pipeline-health?dateFrom=${params.dateFrom}&dateTo=${params.dateTo}`,
       );
       return res.data.data;
     },
     staleTime: 5 * 60_000,
+  });
+}
+
+// ─── Export ─────────────────────────────────────────────────────────
+
+export interface ExportParams {
+  format: 'pdf' | 'xlsx';
+  widgets: string[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface ExportJobResponse {
+  jobId: string;
+  status: 'queued';
+  format: 'pdf' | 'xlsx';
+  widgets: string[];
+}
+
+export function useExportAnalytics() {
+  return useMutation({
+    mutationFn: async (params: ExportParams) => {
+      const res = await api.post<ApiResponse<ExportJobResponse>>(
+        '/analytics/export',
+        params,
+      );
+      return res.data.data;
+    },
   });
 }

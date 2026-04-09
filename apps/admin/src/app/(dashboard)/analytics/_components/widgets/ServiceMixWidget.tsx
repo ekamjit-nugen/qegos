@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, Spin, Empty } from 'antd';
 import { PieChartOutlined } from '@ant-design/icons';
 import {
   ResponsiveContainer,
@@ -12,62 +11,64 @@ import {
 } from 'recharts';
 import { useServiceMix } from '@/hooks/useAnalytics';
 import { formatCurrency } from '@/lib/utils/format';
+import { WidgetCard } from '../WidgetCard';
+import { useAnalyticsContext } from '../AnalyticsContext';
 
-const COLORS = ['#1677ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1', '#13c2c2', '#eb2f96'];
+const COLORS = ['#1677ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1', '#13c2c2', '#eb2f96', '#fa541c'];
 
 export function ServiceMixWidget(): React.ReactNode {
-  const { data, isLoading } = useServiceMix();
+  const { filters } = useAnalyticsContext();
+  const { data, isLoading, error, refetch } = useServiceMix(filters);
 
-  if (isLoading) {
-    return (
-      <Card title={<span><PieChartOutlined /> Service Mix</span>} style={{ minHeight: 350 }}>
-        <Spin />
-      </Card>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <Card title={<span><PieChartOutlined /> Service Mix</span>} style={{ minHeight: 350 }}>
-        <Empty description="No service data" />
-      </Card>
-    );
-  }
-
-  const chartData = data.map((s) => ({
+  const chartData = (data ?? []).map((s) => ({
     name: s.serviceTitle,
     value: s.revenueCents / 100,
     percent: s.percentOfTotal,
+    orders: s.orderCount,
+    qty: s.quantity,
   }));
 
   return (
-    <Card
+    <WidgetCard
       title={<span><PieChartOutlined /><span style={{ marginLeft: 8 }}>Service Mix</span></span>}
-      style={{ minHeight: 350 }}
+      loading={isLoading}
+      error={error as Error | null}
+      onRetry={() => void refetch()}
+      empty={!data || data.length === 0}
+      emptyText="No service data"
+      minHeight={370}
     >
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
             data={chartData}
             cx="50%"
             cy="50%"
-            outerRadius={90}
-            innerRadius={50}
+            outerRadius={95}
+            innerRadius={55}
             dataKey="value"
             nameKey="name"
             label={({ name, percent }: { name: string; percent: number }) =>
-              `${name.slice(0, 15)} ${percent.toFixed(0)}%`
+              `${name.length > 18 ? name.slice(0, 16) + '...' : name} ${percent.toFixed(0)}%`
             }
-            labelLine={false}
+            labelLine={{ stroke: '#d9d9d9' }}
             fontSize={11}
           >
             {chartData.map((_entry, index) => (
               <Cell key={index} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip formatter={(v: number) => formatCurrency(v * 100)} />
+          <Tooltip
+            formatter={(v: number, name: string) => [formatCurrency(v * 100), name]}
+          />
+          <Legend
+            layout="vertical"
+            align="right"
+            verticalAlign="middle"
+            wrapperStyle={{ fontSize: 11, paddingLeft: 8 }}
+          />
         </PieChart>
       </ResponsiveContainer>
-    </Card>
+    </WidgetCard>
   );
 }
