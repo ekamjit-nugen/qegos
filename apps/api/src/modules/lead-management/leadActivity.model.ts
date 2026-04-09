@@ -79,6 +79,10 @@ const leadActivitySchema = new Schema<ILeadActivityDocument>(
 
 leadActivitySchema.index({ leadId: 1, createdAt: -1 });
 
+// Analytics: staffBenchmark filters by type+date, pipelineHealth filters status_change by date
+leadActivitySchema.index({ type: 1, createdAt: -1 });
+leadActivitySchema.index({ performedBy: 1, createdAt: -1 });
+
 /**
  * Factory function to create the LeadActivity model.
  */

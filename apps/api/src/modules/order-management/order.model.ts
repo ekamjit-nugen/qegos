@@ -226,6 +226,12 @@ orderSchema.index({ status: 1 });
 orderSchema.index({ financialYear: 1 });
 orderSchema.index({ orderNumber: 1 }, { unique: true });
 
+// Analytics / dashboard compound indexes
+orderSchema.index({ status: 1, isDeleted: 1, createdAt: -1 });
+orderSchema.index({ status: 1, isDeleted: 1, updatedAt: -1 });
+orderSchema.index({ userId: 1, financialYear: 1 });
+orderSchema.index({ processingBy: 1, status: 1, updatedAt: -1 });
+
 // ─── ORD-INV-03: Server-side total recalculation pre-save ───────────────────
 
 orderSchema.pre('save', function (next) {

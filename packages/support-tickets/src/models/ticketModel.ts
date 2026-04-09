@@ -130,6 +130,9 @@ supportTicketSchema.index({ slaBreached: 1, status: 1 });
 supportTicketSchema.index({ category: 1 });
 supportTicketSchema.index({ createdAt: -1 });
 
+// Analytics: staffBenchmark aggregates resolved tickets by assignedTo
+supportTicketSchema.index({ status: 1, resolvedAt: -1, assignedTo: 1 });
+
 // ─── Factory ────────────────────────────────────────────────────────────────
 
 export function createSupportTicketModel(

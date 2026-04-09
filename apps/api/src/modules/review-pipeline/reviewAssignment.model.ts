@@ -67,6 +67,9 @@ const reviewAssignmentSchema = new Schema<IReviewAssignmentDocument>(
 reviewAssignmentSchema.index({ reviewerId: 1, status: 1 });
 reviewAssignmentSchema.index({ preparerId: 1 });
 
+// Analytics: staffBenchmark aggregates approved reviews by reviewer with updatedAt filter
+reviewAssignmentSchema.index({ status: 1, updatedAt: -1, reviewerId: 1 });
+
 /**
  * Factory function to create the ReviewAssignment model.
  */

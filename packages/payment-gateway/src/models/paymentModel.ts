@@ -150,6 +150,11 @@ paymentSchema.index({ status: 1, createdAt: -1 });
 paymentSchema.index({ orderId: 1, status: 1 });
 paymentSchema.index({ userId: 1, createdAt: -1 });
 
+// Analytics covering indexes (avoid fetching full documents for aggregations)
+paymentSchema.index({ status: 1, createdAt: -1, amount: 1 });
+paymentSchema.index({ userId: 1, status: 1, amount: 1 });
+paymentSchema.index({ orderId: 1, status: 1, amount: 1 });
+
 /**
  * PAY-INV-07: Status transition validator.
  * Strictly one-directional transitions.

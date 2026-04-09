@@ -3,12 +3,25 @@ import { getConfig } from '../config/env';
 
 /**
  * Connect to MongoDB with proper options.
+ *
+ * Production tuning:
+ * - autoIndex disabled (indexes created via ensurePerformanceIndexes)
+ * - maxPoolSize sized for concurrent analytics + API queries
+ * - minPoolSize keeps warm connections for latency
+ * - socketTimeoutMS prevents hung connections
+ * - serverSelectionTimeoutMS fast failover
  */
 export async function connectDatabase(): Promise<typeof mongoose> {
   const config = getConfig();
+  const isProd = config.NODE_ENV === 'production';
 
   const connection = await mongoose.connect(config.MONGODB_URI, {
-    autoIndex: config.NODE_ENV !== 'production',
+    autoIndex: !isProd,
+    maxPoolSize: isProd ? 50 : 10,
+    minPoolSize: isProd ? 5 : 1,
+    socketTimeoutMS: 45000,
+    serverSelectionTimeoutMS: 5000,
+    heartbeatFrequencyMS: 10000,
   });
 
   mongoose.connection.on('error', (err) => {

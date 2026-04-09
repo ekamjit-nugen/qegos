@@ -51,6 +51,9 @@ taxYearSummarySchema.index({ userId: 1, financialYear: 1 }, { unique: true });
 // ATO status queries
 taxYearSummarySchema.index({ atoRefundStatus: 1 });
 
+// Analytics: churnRiskService does anti-join by financialYear → userId
+taxYearSummarySchema.index({ financialYear: 1, userId: 1 });
+
 // ─── Factory ────────────────────────────────────────────────────────────────
 
 export function createTaxYearSummaryModel(

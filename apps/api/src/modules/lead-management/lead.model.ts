@@ -139,6 +139,11 @@ leadSchema.index(
   { name: 'lead_text_search' },
 );
 
+// Analytics / dashboard compound indexes
+leadSchema.index({ status: 1, isDeleted: 1, createdAt: -1 });
+leadSchema.index({ assignedTo: 1, status: 1, isDeleted: 1 });
+leadSchema.index({ campaignId: 1, isDeleted: 1, isConverted: 1 });
+
 // ─── LM-INV-09: Mobile normalization pre-save ──────────────────────────────
 
 leadSchema.pre('save', function (next) {

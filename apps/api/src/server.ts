@@ -7,6 +7,7 @@ import * as paymentGateway from '@nugen/payment-gateway';
 import { initRateLimiter, createAuthLimiters } from '@nugen/rate-limiter';
 import { loadConfig, getConfig } from './config/env';
 import { connectDatabase, getConnection, disconnectDatabase } from './database/connection';
+import { ensurePerformanceIndexes } from './database/ensureIndexes';
 import { createRedisClient, disconnectRedis } from './database/redis';
 import { createApp, finalizeApp } from './app';
 import { createUserModel } from './modules/user/user.model';
@@ -416,6 +417,17 @@ async function bootstrap(): Promise<void> {
 
   // Seed Sales catalogue with Australian services (Phase 3)
   await seedSalesCatalogue(SalesModel);
+
+  // 5b. Ensure performance indexes (idempotent, non-blocking)
+  if (config.NODE_ENV === 'production') {
+    const indexResult = await ensurePerformanceIndexes(connection);
+    if (indexResult.created.length > 0) {
+      console.log(`[indexes] Created ${indexResult.created.length} indexes:`, indexResult.created); // eslint-disable-line no-console
+    }
+    if (indexResult.errors.length > 0) {
+      console.warn('[indexes] Failed to create some indexes:', indexResult.errors); // eslint-disable-line no-console
+    }
+  }
 
   // 6. Create routes
   const authRouter = auth.createAuthRoutes({
