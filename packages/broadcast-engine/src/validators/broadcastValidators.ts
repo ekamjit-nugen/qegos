@@ -103,6 +103,15 @@ export function previewCampaignValidation(): ReturnType<typeof param | typeof bo
   ];
 }
 
+export function previewMessageValidation(): ReturnType<typeof body>[] {
+  return [
+    body('channel').isIn(SINGLE_CHANNELS),
+    body('body').isString().isLength({ min: 1, max: 50000 }),
+    body('subject').optional().isString().trim().isLength({ max: 500 }),
+    body('mergeData').optional().isObject(),
+  ];
+}
+
 // ─── Template Validators ─────────────────────────────────────────────────────
 
 export function createTemplateValidation(): ReturnType<typeof body>[] {

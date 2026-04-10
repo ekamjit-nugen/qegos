@@ -35,6 +35,7 @@ export async function createMessages(
     recipientEmail?: string;
     channel: SingleChannel;
     abVariant?: string;
+    mergeData?: Record<string, string>;
   }>,
 ): Promise<number> {
   if (messages.length === 0) return 0;

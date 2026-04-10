@@ -15,6 +15,7 @@ import {
   NotificationOutlined,
   PhoneOutlined,
   ScheduleOutlined,
+  FormOutlined,
 } from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 
@@ -37,6 +38,7 @@ export const menuItems: MenuDataItem[] = [
     icon: <FileTextOutlined />,
     children: [
       { path: '/orders', name: 'Orders', icon: <FileTextOutlined /> },
+      { path: '/consent-forms', name: 'Consent Forms', icon: <FormOutlined /> },
       { path: '/appointments', name: 'Appointments', icon: <ScheduleOutlined /> },
       { path: '/reviews', name: 'Review Pipeline', icon: <AuditOutlined /> },
     ],
@@ -78,6 +80,7 @@ export const menuItems: MenuDataItem[] = [
     icon: <SettingOutlined />,
     children: [
       { path: '/users', name: 'Users', icon: <UserOutlined /> },
+      { path: '/form-mappings', name: 'Form Mappings', icon: <FormOutlined /> },
       { path: '/calendar', name: 'Tax Calendar', icon: <CalendarOutlined /> },
       { path: '/reputation', name: 'Reputation', icon: <StarOutlined /> },
     ],

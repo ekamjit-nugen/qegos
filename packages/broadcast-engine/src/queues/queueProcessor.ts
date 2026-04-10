@@ -101,8 +101,12 @@ export async function processChannelQueue(
       continue;
     }
 
-    // Render message (merge data would ideally be stored per-message or re-fetched)
-    const rendered = renderMessage(channel, body, {}, engineConfig, { subject });
+    // Render message with the per-recipient merge data captured at
+    // queue-creation time (audienceService → campaignService →
+    // messageModel.mergeData). Falls back to {} for legacy messages
+    // queued before this field existed.
+    const mergeData = (msg.mergeData ?? {}) as Record<string, string>;
+    const rendered = renderMessage(channel, body, mergeData, engineConfig, { subject });
 
     // Attempt send with retries
     let lastError = '';

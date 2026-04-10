@@ -36,6 +36,16 @@ import { createSalesModel, seedSalesCatalogue } from './modules/order-management
 import { createOrderRoutes, createSalesRoutes } from './modules/order-management/order.routes';
 import { createReviewAssignmentModel } from './modules/review-pipeline/reviewAssignment.model';
 import { createReviewRoutes } from './modules/review-pipeline/review.routes';
+
+// Form Mapping — dynamic client intake forms (authored per salesItem × FY)
+import { createFormMappingModel } from './modules/form-mapping/formMapping.model';
+import { createFormMappingVersionModel } from './modules/form-mapping/formMappingVersion.model';
+import { createFormMappingRoutes } from './modules/form-mapping/formMapping.routes';
+
+// Consent Form — client intake with AES-256-GCM field-level encryption
+import { createConsentFormModel } from './modules/consent-form/consentForm.model';
+import { createConsentFormRoutes } from './modules/consent-form/consentForm.routes';
+
 import { createCounterModel } from './database/counter.model';
 import { createAutomationHandlers } from './modules/lead-management/lead.automation';
 import { Queue, Worker, type Job } from 'bullmq';
@@ -176,6 +186,13 @@ async function bootstrap(): Promise<void> {
   const OrderModel = createOrderModel(connection);
   const SalesModel = createSalesModel(connection);
   const ReviewAssignmentModel = createReviewAssignmentModel(connection);
+
+  // Form Mapping models
+  const FormMappingModel = createFormMappingModel(connection);
+  const FormMappingVersionModel = createFormMappingVersionModel(connection);
+
+  // Consent Form model (sensitive fields encrypted with AES-256-GCM)
+  const ConsentFormModel = createConsentFormModel(connection);
 
   // Phase 5: Broadcast Engine
   const {
@@ -512,6 +529,23 @@ async function bootstrap(): Promise<void> {
     checkPermission: rbac.check,
   });
 
+  // Form Mapping routes
+  const formMappingRouter = createFormMappingRoutes({
+    FormMappingModel,
+    FormMappingVersionModel,
+    SalesModel: SalesModel as never,
+    connection,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  // Consent Form routes (AES-256-GCM encrypted submissions)
+  const consentFormRouter = createConsentFormRoutes({
+    ConsentFormModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
   // Phase 4: Tax engine routes
   const taxEngineRouter = createTaxEngineRoutes({
     TaxRuleConfigModel: TaxRuleConfigModelV2,
@@ -841,6 +875,8 @@ async function bootstrap(): Promise<void> {
     leadRouter,
     orderRouter,
     salesRouter,
+    formMappingRouter,
+    consentFormRouter,
     reviewRouter,
     taxEngineRouter,
     broadcastRouter,

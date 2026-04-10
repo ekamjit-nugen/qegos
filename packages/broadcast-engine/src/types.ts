@@ -194,6 +194,14 @@ export interface IBroadcastMessage {
   openedAt?: Date;
   clickedAt?: Date;
   abVariant?: string;
+  /**
+   * Per-recipient merge data, captured at audience-resolution time.
+   * Frozen at queue-creation so subsequent edits to the source
+   * Lead/User doc don't change what gets sent. Used by the queue
+   * processor to render `{{firstName}}` etc. before handing off
+   * to a provider.
+   */
+  mergeData?: Record<string, string>;
   createdAt: Date;
 }
 

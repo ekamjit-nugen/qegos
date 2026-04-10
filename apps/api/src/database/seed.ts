@@ -15,6 +15,9 @@ import { createLeadModel } from '../modules/lead-management/lead.model';
 import { createLeadActivityModel } from '../modules/lead-management/leadActivity.model';
 import { createOrderModel } from '../modules/order-management/order.model';
 import { createSalesModel, seedSalesCatalogue } from '../modules/order-management/sales.model';
+import { createFormMappingModel } from '../modules/form-mapping/formMapping.model';
+import { createFormMappingVersionModel } from '../modules/form-mapping/formMappingVersion.model';
+import { seedFormMappings } from '../modules/form-mapping/formMapping.seed';
 import * as rbac from '@nugen/rbac';
 import * as auth from '@nugen/auth';
 import * as chatEngine from '@nugen/chat-engine';
@@ -60,6 +63,8 @@ async function seed(): Promise<void> {
   const LeadActivityModel = createLeadActivityModel(connection);
   const OrderModel = createOrderModel(connection);
   const SalesModel = createSalesModel(connection);
+  const FormMappingModel = createFormMappingModel(connection);
+  const FormMappingVersionModel = createFormMappingVersionModel(connection);
 
   // Auth init for password hashing
   auth.init({
@@ -266,6 +271,23 @@ async function seed(): Promise<void> {
   }
 
   log(`  ${userIds.size} users ready.`);
+
+  // ─── Step 3.5: Seed form mappings (one per sales item, FY 2025-2026) ───
+  log('Seeding form mappings...');
+  const superAdminId = userIds.get('superadmin@qegos.com.au');
+  if (superAdminId) {
+    await seedFormMappings({
+      FormMappingModel,
+      FormMappingVersionModel,
+      SalesModel: SalesModel as never,
+      systemUserId: superAdminId,
+      financialYear: '2025-2026',
+    });
+    const count = await FormMappingModel.countDocuments({});
+    log(`  ${count} form mappings ready.`);
+  } else {
+    log('  Skipped form mappings (super admin user not found).');
+  }
 
   // ─── Step 4: Seed leads ────────────────────────────────────────────────────
   log('Seeding leads...');
@@ -535,8 +557,8 @@ async function seed(): Promise<void> {
         ticketNumber: 'QGS-TKT-0001',
         userId: clientJohn,
         orderId: orderIds[0],
-        category: 'billing',
-        priority: 'medium',
+        category: 'billing_query',
+        priority: 'normal',
         status: 'open',
         source: 'chat',
         subject: 'Invoice discrepancy',
@@ -551,7 +573,7 @@ async function seed(): Promise<void> {
       {
         ticketNumber: 'QGS-TKT-0002',
         userId: clientMike,
-        category: 'general',
+        category: 'technical_issue',
         priority: 'low',
         status: 'resolved',
         source: 'portal',
@@ -562,6 +584,7 @@ async function seed(): Promise<void> {
           { senderId: staffId, senderType: 'staff', content: 'I\'ve updated your language preference to Chinese. You should now receive notifications in Chinese.', createdAt: daysAgo(6) },
         ],
         assignedTo: staffId,
+        slaDeadline: daysAgo(5), // was due 5 days ago
         resolvedBy: staffId,
         resolvedAt: daysAgo(6),
       },
@@ -576,8 +599,8 @@ async function seed(): Promise<void> {
   if (notifCount === 0) {
     await NotificationModel.create([
       { recipientId: clientJohn, recipientType: 'client', type: 'order_status', title: 'Tax Return Assessed', body: 'Your FY2024-25 tax return has been assessed by the ATO. Your refund of $2,847 is on its way!', channels: ['push', 'email'], isRead: true, readAt: daysAgo(10), relatedResource: 'Order', relatedResourceId: orderIds[0] },
-      { recipientId: clientJane, recipientType: 'client', type: 'document_request', title: 'Documents Required', body: 'Please upload your PAYG summary and private health insurance statement for FY2025-26.', channels: ['push', 'sms'], isRead: false, relatedResource: 'Order', relatedResourceId: orderIds[1] },
-      { recipientId: clientMike, recipientType: 'client', type: 'appointment_reminder', title: 'Appointment Tomorrow', body: 'Reminder: You have a phone consultation scheduled for tomorrow at 2:00 PM AEST.', channels: ['push'], isRead: false },
+      { recipientId: clientJane, recipientType: 'client', type: 'follow_up_due', title: 'Documents Required', body: 'Please upload your PAYG summary and private health insurance statement for FY2025-26.', channels: ['push', 'sms'], isRead: false, relatedResource: 'Order', relatedResourceId: orderIds[1] },
+      { recipientId: clientMike, recipientType: 'client', type: 'deadline_reminder', title: 'Appointment Tomorrow', body: 'Reminder: You have a phone consultation scheduled for tomorrow at 2:00 PM AEST.', channels: ['push'], isRead: false },
       { recipientId: clientAlex, recipientType: 'client', type: 'payment_received', title: 'Payment Confirmed', body: 'We\'ve received your payment of $396.00 for the Student Tax Return package.', channels: ['email'], isRead: true, readAt: daysAgo(5) },
     ]);
     log('  4 notifications created.');

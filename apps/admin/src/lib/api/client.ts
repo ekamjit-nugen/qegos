@@ -16,12 +16,51 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+// ─── CSRF Token ────────────────────────────────────────────────────────────
+// The API enforces CSRF on every state-changing request. Fetch a token lazily
+// on the first mutation, cache it in memory, and attach it as X-CSRF-Token.
+
+let csrfToken: string | null = null;
+let csrfFetchPromise: Promise<string | null> | null = null;
+
+async function fetchCsrfToken(): Promise<string | null> {
+  if (csrfFetchPromise) return csrfFetchPromise;
+  csrfFetchPromise = axios
+    .get<{ status: number; data: { csrfToken?: string; csrfEnabled?: boolean } }>(
+      `${API_URL}/csrf-token`,
+      { withCredentials: true },
+    )
+    .then((res) => {
+      csrfToken = res.data.data.csrfToken ?? null;
+      return csrfToken;
+    })
+    .catch(() => null)
+    .finally(() => {
+      csrfFetchPromise = null;
+    });
+  return csrfFetchPromise;
+}
+
+function isMutatingMethod(method: string | undefined): boolean {
+  if (!method) return false;
+  const m = method.toUpperCase();
+  return m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS';
+}
+
 // ─── Request Interceptor ───────────────────────────────────────────────────
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (isMutatingMethod(config.method)) {
+    if (!csrfToken) {
+      await fetchCsrfToken();
+    }
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
+    }
   }
   return config;
 });
@@ -48,7 +87,26 @@ function processQueue(error: unknown, token: string | null): void {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+      _csrfRetry?: boolean;
+    };
+
+    // Retry once on CSRF_INVALID: cached token went stale, refetch and replay
+    const errData = error.response?.data as { code?: string } | undefined;
+    if (
+      error.response?.status === 403 &&
+      errData?.code === 'CSRF_INVALID' &&
+      !originalRequest._csrfRetry
+    ) {
+      originalRequest._csrfRetry = true;
+      csrfToken = null;
+      const fresh = await fetchCsrfToken();
+      if (fresh) {
+        originalRequest.headers['X-CSRF-Token'] = fresh;
+        return api(originalRequest);
+      }
+    }
 
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);

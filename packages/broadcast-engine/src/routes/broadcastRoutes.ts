@@ -12,6 +12,7 @@ import {
   listCampaignsValidation,
   campaignMessagesValidation,
   previewCampaignValidation,
+  previewMessageValidation,
   createTemplateValidation,
   updateTemplateValidation,
   listTemplatesValidation,
@@ -245,6 +246,26 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
         data: stats,
         disclaimer: 'Open tracking may be blocked by some email clients (Apple Mail Privacy Protection). Actual opens may be 30-50% higher.',
       });
+    },
+  );
+
+  // POST /preview — Standalone preview (no campaign required)
+  // Used by the admin template editor + new-campaign wizard so admins can
+  // see how a body will render against sample merge data before saving.
+  router.post(
+    '/preview',
+    checkPermission('broadcasts', 'read') as never,
+    ...previewMessageValidation(),
+    async (req: Request, res: Response): Promise<void> => {
+      if (!handleValidation(req, res)) return;
+      const { channel, body, subject, mergeData = {} } = req.body as {
+        channel: SingleChannel;
+        body: string;
+        subject?: string;
+        mergeData?: Record<string, string>;
+      };
+      const preview = campaignService.previewMessage(channel, body, mergeData, subject);
+      res.json({ status: 200, data: preview });
     },
   );
 

@@ -153,6 +153,8 @@ export function finalizeApp(
     leadRouter?: express.Router;
     orderRouter?: express.Router;
     salesRouter?: express.Router;
+    formMappingRouter?: express.Router;
+    consentFormRouter?: express.Router;
     reviewRouter?: express.Router;
     // Phase 4: Tax Engine
     taxEngineRouter?: express.Router;
@@ -222,6 +224,12 @@ export function finalizeApp(
   }
   if (routes.salesRouter) {
     app.use(`${prefix}/sales`, routes.salesRouter);
+  }
+  if (routes.formMappingRouter) {
+    app.use(`${prefix}/form-mappings`, routes.formMappingRouter);
+  }
+  if (routes.consentFormRouter) {
+    app.use(`${prefix}/consent-forms`, routes.consentFormRouter);
   }
   if (routes.reviewRouter) {
     app.use(`${prefix}/order-reviews`, routes.reviewRouter);

@@ -225,13 +225,17 @@ export async function sendCampaign(
 
     if (recipients.length === 0) continue;
 
-    // Create message docs for queue processing
+    // Create message docs for queue processing.
+    // mergeData is frozen here so per-recipient personalization
+    // ({{firstName}} etc.) survives all the way to the send loop
+    // even if the source Lead/User doc is edited mid-broadcast.
     const messageDocs = recipients.map((r) => ({
       recipientId: r.recipientId,
       recipientType: r.recipientType,
       recipientMobile: r.mobile,
       recipientEmail: r.email,
       channel: ch,
+      mergeData: r.mergeData,
     }));
 
     const count = await createMessages(campaign._id, messageDocs);

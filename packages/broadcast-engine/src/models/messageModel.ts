@@ -30,6 +30,9 @@ const broadcastMessageSchema = new Schema<IBroadcastMessageDocument>(
     openedAt: { type: Date },
     clickedAt: { type: Date },
     abVariant: { type: String },
+    // Per-recipient merge values frozen at queue-creation time so
+    // {{firstName}} etc. render with the actual recipient's data.
+    mergeData: { type: Schema.Types.Mixed, default: {} },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

@@ -11,6 +11,7 @@ import {
   FolderOpenOutlined,
   CalculatorOutlined,
   BellOutlined,
+  FileTextOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { key: '/chat', icon: <MessageOutlined />, label: 'Chat' },
   { key: '/vault', icon: <FolderOpenOutlined />, label: 'Document Vault' },
   { key: '/tax-summary', icon: <CalculatorOutlined />, label: 'Tax Summary' },
+  { key: '/consent-form', icon: <FileTextOutlined />, label: 'Consent Form' },
   { key: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
 ];
 

@@ -41,6 +41,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('audit_logs', ['read'], 'all'),
       perm('calendar', ['create', 'read', 'update', 'delete'], 'all'),
       perm('whatsapp_config', ['create', 'read', 'update', 'delete'], 'all'),
+      perm('form_mappings', ['create', 'read', 'update', 'delete'], 'all'),
+      perm('consent_forms', ['read'], 'all'),
     ],
   },
   {
@@ -66,6 +68,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('audit_logs', ['read'], 'all'),
       perm('calendar', ['create', 'read', 'update', 'delete'], 'all'),
       perm('whatsapp_config', ['create', 'read', 'update', 'delete'], 'all'),
+      perm('form_mappings', ['create', 'read', 'update', 'delete'], 'all'),
+      perm('consent_forms', ['read'], 'all'),
     ],
   },
   {
@@ -90,6 +94,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('system_config', ['read'], 'all'),
       perm('calendar', ['create', 'read', 'update', 'delete'], 'all'),
       perm('whatsapp_config', ['read'], 'all'),
+      perm('form_mappings', ['read'], 'all'),
+      perm('consent_forms', ['read'], 'all'),
     ],
   },
   {
@@ -109,6 +115,7 @@ export const defaultRoles: RoleSeed[] = [
       perm('chat', ['read', 'update'], 'assigned'),
       perm('referrals', ['read'], 'all'),
       perm('calendar', ['read'], 'all'),
+      perm('form_mappings', ['read'], 'all'),
     ],
   },
   {
@@ -126,6 +133,7 @@ export const defaultRoles: RoleSeed[] = [
       perm('reviews', ['read'], 'own'),
       perm('chat', ['read', 'update'], 'assigned'),
       perm('calendar', ['read'], 'all'),
+      perm('form_mappings', ['read'], 'all'),
     ],
   },
   {
@@ -141,6 +149,7 @@ export const defaultRoles: RoleSeed[] = [
       perm('chat', ['read', 'update'], 'own'),
       perm('referrals', ['read'], 'own'),
       perm('calendar', ['read'], 'own'),
+      perm('consent_forms', ['create', 'read'], 'own'),
     ],
   },
   {
@@ -156,6 +165,7 @@ export const defaultRoles: RoleSeed[] = [
       perm('chat', ['read', 'update'], 'own'),
       perm('referrals', ['read'], 'own'),
       perm('calendar', ['read'], 'own'),
+      perm('consent_forms', ['create', 'read'], 'own'),
     ],
   },
 ];

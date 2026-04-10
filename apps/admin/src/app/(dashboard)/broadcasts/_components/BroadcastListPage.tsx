@@ -1,28 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Tag, Select, Card, Row, Col } from 'antd';
+import { Table, Tag, Select, Card, Row, Col, Space, Button } from 'antd';
+import { PlusOutlined, FileTextOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCampaignList } from '@/hooks/useBroadcasts';
-import type { Campaign, CampaignListQuery } from '@/types/broadcast';
-import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_COLORS } from '@/types/broadcast';
+import type { Campaign, CampaignChannel, CampaignListQuery } from '@/types/broadcast';
+import {
+  CAMPAIGN_STATUS_LABELS,
+  CAMPAIGN_STATUS_COLORS,
+  CHANNEL_LABELS,
+  CHANNEL_COLORS,
+} from '@/types/broadcast';
 import { formatDate } from '@/lib/utils/format';
 
-const CHANNEL_LABELS: Record<string, string> = {
-  sms: 'SMS',
-  email: 'Email',
-  whatsapp: 'WhatsApp',
-  sms_email: 'SMS + Email',
-};
-
-const CHANNEL_COLORS: Record<string, string> = {
-  sms: 'cyan',
-  email: 'blue',
-  whatsapp: 'green',
-  sms_email: 'purple',
-};
-
 export function BroadcastListPage(): React.ReactNode {
+  const router = useRouter();
   const [filters, setFilters] = useState<CampaignListQuery>({ page: 1, limit: 20 });
   const { data, isLoading } = useCampaignList(filters);
 
@@ -31,12 +26,15 @@ export function BroadcastListPage(): React.ReactNode {
       title: 'Name',
       dataIndex: 'name',
       ellipsis: true,
+      render: (name: string, row) => (
+        <Link href={`/broadcasts/${row._id}`}>{name}</Link>
+      ),
     },
     {
       title: 'Channel',
       dataIndex: 'channel',
       width: 120,
-      render: (val: string) => (
+      render: (val: CampaignChannel) => (
         <Tag color={CHANNEL_COLORS[val]}>{CHANNEL_LABELS[val] ?? val}</Tag>
       ),
     },
@@ -94,8 +92,25 @@ export function BroadcastListPage(): React.ReactNode {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <h2 style={{ margin: 0 }}>Broadcast Campaigns</h2>
+        <Space>
+          <Link href="/broadcasts/templates">
+            <Button icon={<FileTextOutlined />}>Templates</Button>
+          </Link>
+          <Link href="/broadcasts/new">
+            <Button type="primary" icon={<PlusOutlined />}>
+              New Campaign
+            </Button>
+          </Link>
+        </Space>
       </div>
 
       <Card style={{ marginBottom: 16 }}>
@@ -126,6 +141,13 @@ export function BroadcastListPage(): React.ReactNode {
         dataSource={data?.data ?? []}
         rowKey="_id"
         loading={isLoading}
+        onRow={(row) => ({
+          onClick: (e) => {
+            if ((e.target as HTMLElement).closest('a')) return;
+            router.push(`/broadcasts/${row._id}`);
+          },
+          style: { cursor: 'pointer' },
+        })}
         pagination={{
           current: filters.page,
           pageSize: filters.limit,
