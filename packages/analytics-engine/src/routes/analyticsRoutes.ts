@@ -52,7 +52,7 @@ function handleValidation(req: Request, res: Response, next: NextFunction): void
 export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
   const router = Router();
   const auth = deps.authenticate();
-  const readPerm = deps.checkPermission('analytics_dashboard', 'read');
+  const readPerm = deps.checkPermission('analytics', 'read');
   const cacheTtl = deps.config.cacheTtlSeconds ?? DEFAULT_CACHE_TTL;
 
   // Helper to parse date range from query
@@ -272,7 +272,7 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
   router.post(
     '/export',
     auth, readPerm,
-    deps.checkPermission('analytics_dashboard', 'export'),
+    deps.checkPermission('analytics', 'export'),
     ...validateExport(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {

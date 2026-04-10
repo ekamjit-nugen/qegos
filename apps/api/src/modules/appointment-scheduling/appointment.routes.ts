@@ -82,7 +82,16 @@ export function createAppointmentRoutes(
         page: req.query.page ? Number(req.query.page) : undefined,
         limit: req.query.limit ? Number(req.query.limit) : undefined,
       });
-      res.json({ status: 200, data: result });
+      res.json({
+        status: 200,
+        data: result.appointments,
+        meta: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / result.limit),
+        },
+      });
     } catch (err) {
       res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
     }
