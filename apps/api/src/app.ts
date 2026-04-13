@@ -194,6 +194,9 @@ export function finalizeApp(
     referralRouter?: express.Router;
     calendarRouter?: express.Router;
     reputationRouter?: express.Router;
+    // Promo Code & Credits
+    promoCodeRouter?: express.Router;
+    creditRouter?: express.Router;
   },
   deepHealthCheck: (req: Request, res: Response) => Promise<void>,
 ): void {
@@ -324,6 +327,12 @@ export function finalizeApp(
   }
   if (routes.reputationRouter) {
     app.use(`${prefix}/reputation`, routes.reputationRouter);
+  }
+  if (routes.promoCodeRouter) {
+    app.use(`${prefix}/promo-codes`, routes.promoCodeRouter);
+  }
+  if (routes.creditRouter) {
+    app.use(`${prefix}/credits`, routes.creditRouter);
   }
 
   // 404 handler

@@ -14,9 +14,12 @@ import type { ColumnsType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
 import { useOrder } from '@/hooks/useOrders';
 import { useUploadOrderDocument, useSendForSignature, useGenerateSigningUri } from '@/hooks/useDocuments';
+import { usePaymentsByOrder, useRefundPayment } from '@/hooks/usePayments';
 import { OrderStatusTransition } from '../../_components/OrderStatusTransition';
 import type { OrderLineItem, OrderDocument, SigningStatus } from '@/types/order';
 import { SIGNING_STATUS_LABELS, SIGNING_STATUS_COLORS } from '@/types/order';
+import type { Payment } from '@/types/payment';
+import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from '@/types/payment';
 import { formatCurrency, formatDate, fullName } from '@/lib/utils/format';
 
 const { Text } = Typography;
@@ -36,6 +39,8 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
   const uploadMutation = useUploadOrderDocument();
   const sendForSignMutation = useSendForSignature();
   const generateUriMutation = useGenerateSigningUri();
+  const { data: paymentsData } = usePaymentsByOrder(id);
+  const refundMutation = useRefundPayment();
 
   // Upload modal state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -48,6 +53,13 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
   const [signClientEmail, setSignClientEmail] = useState('');
   const [signAdminName, setSignAdminName] = useState('');
   const [signAdminEmail, setSignAdminEmail] = useState('');
+
+  // Refund modal state
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [refundPaymentId, setRefundPaymentId] = useState('');
+  const [refundAmount, setRefundAmount] = useState<number>(0);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundMaxAmount, setRefundMaxAmount] = useState<number>(0);
 
   // ─── Upload handler ───────────────────────────────────────────────────
   const handleDocUpload: UploadProps['customRequest'] = useCallback(
@@ -414,6 +426,113 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
         </div>
       ),
     },
+    {
+      key: 'payments',
+      label: `Payments & Refunds`,
+      children: (
+        <div>
+          <Table<Payment>
+            columns={[
+              { title: 'Payment #', dataIndex: 'paymentNumber', key: 'paymentNumber' },
+              { title: 'Gateway', dataIndex: 'gateway', key: 'gateway', render: (g: string) => g.toUpperCase() },
+              { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => formatCurrency(v) },
+              { title: 'Refunded', dataIndex: 'refundedAmount', key: 'refundedAmount', render: (v: number) => v > 0 ? formatCurrency(v) : '-' },
+              {
+                title: 'Status', dataIndex: 'status', key: 'status',
+                render: (s: string) => <Tag color={PAYMENT_STATUS_COLORS[s as keyof typeof PAYMENT_STATUS_COLORS]}>{PAYMENT_STATUS_LABELS[s as keyof typeof PAYMENT_STATUS_LABELS] ?? s}</Tag>,
+              },
+              { title: 'Date', dataIndex: 'createdAt', key: 'createdAt', render: (v: string) => formatDate(v) },
+              {
+                title: 'Actions', key: 'actions',
+                render: (_: unknown, record: Payment) => {
+                  const refundable = ['succeeded', 'captured', 'partially_refunded'].includes(record.status);
+                  const remaining = record.amount - record.refundedAmount;
+                  if (!refundable || remaining <= 0) return null;
+                  return (
+                    <Button
+                      size="small"
+                      danger
+                      onClick={() => {
+                        setRefundPaymentId(record._id);
+                        setRefundMaxAmount(remaining);
+                        setRefundAmount(remaining);
+                        setRefundReason('');
+                        setRefundModalOpen(true);
+                      }}
+                    >
+                      Refund
+                    </Button>
+                  );
+                },
+              },
+            ]}
+            dataSource={paymentsData?.data ?? []}
+            rowKey="_id"
+            pagination={false}
+            locale={{ emptyText: <Empty description="No payments found" /> }}
+          />
+
+          {/* Refund Modal */}
+          <Modal
+            title="Issue Refund"
+            open={refundModalOpen}
+            onCancel={() => setRefundModalOpen(false)}
+            onOk={async () => {
+              if (!refundPaymentId || refundAmount <= 0 || !refundReason.trim()) {
+                message.error('Please fill in all fields');
+                return;
+              }
+              try {
+                await refundMutation.mutateAsync({
+                  paymentId: refundPaymentId,
+                  amount: refundAmount,
+                  reason: refundReason,
+                });
+                message.success('Refund processed successfully');
+                setRefundModalOpen(false);
+              } catch (err) {
+                const error = err as Error & { response?: { data?: { message?: string } } };
+                message.error(error.response?.data?.message ?? 'Refund failed');
+              }
+            }}
+            okText="Process Refund"
+            okButtonProps={{ danger: true, loading: refundMutation.isPending }}
+            destroyOnClose
+          >
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  Max refundable: {formatCurrency(refundMaxAmount)}
+                </Text>
+              </div>
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>Refund Amount (cents)</Text>
+                <Input
+                  type="number"
+                  value={refundAmount}
+                  onChange={(e) => {
+                    const val = Math.min(Number(e.target.value), refundMaxAmount);
+                    setRefundAmount(val);
+                  }}
+                  min={1}
+                  max={refundMaxAmount}
+                />
+                <Text type="secondary">{formatCurrency(refundAmount)}</Text>
+              </div>
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>Reason *</Text>
+                <Input.TextArea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Reason for refund..."
+                  rows={3}
+                />
+              </div>
+            </Space>
+          </Modal>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -449,6 +568,17 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Subtotal">{formatCurrency(order.totalAmount)}</Descriptions.Item>
               <Descriptions.Item label="Discount">{order.discountPercent}%</Descriptions.Item>
+              {order.discountAmount > 0 && (
+                <Descriptions.Item label="Discount Amount">-{formatCurrency(order.discountAmount)}</Descriptions.Item>
+              )}
+              {order.promoCode && (
+                <Descriptions.Item label="Promo Code">
+                  <Tag color="blue">{order.promoCode}</Tag>
+                </Descriptions.Item>
+              )}
+              {(order.creditApplied ?? 0) > 0 && (
+                <Descriptions.Item label="Credit Applied">-{formatCurrency(order.creditApplied)}</Descriptions.Item>
+              )}
               <Descriptions.Item label="Final">{formatCurrency(order.finalAmount)}</Descriptions.Item>
             </Descriptions>
           </Card>

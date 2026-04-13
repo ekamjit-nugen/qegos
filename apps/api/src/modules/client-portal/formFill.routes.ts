@@ -14,6 +14,8 @@ import type { IFormMappingDocument, IFormMappingVersionDocument } from '../form-
 import type { IOrderDocument2, ISalesDocument } from '../order-management/order.types';
 import { OrderStatus } from '../order-management/order.types';
 import type { ICounterDocument } from '../../database/counter.model';
+import type { PromoCodeServiceResult } from '../promo-code/promoCode.service';
+import type { CreditServiceResult } from '../credit/credit.service';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,8 @@ export interface FormFillRouteDeps {
   SalesModel: Model<ISalesDocument>;
   CounterModel: Model<ICounterDocument>;
   authenticate: () => import('express').RequestHandler;
+  promoCodeService?: PromoCodeServiceResult;
+  creditService?: CreditServiceResult;
 }
 
 // ─── Validators ────────────────────────────────────────────────────────────
@@ -45,6 +49,14 @@ const submitFormValidation = [
   body('personalDetails.email').optional().isEmail().withMessage('Valid email required'),
   body('personalDetails.mobile').optional().isString(),
   body('answers').isObject().withMessage('Form answers are required'),
+  body('promoCode').optional().isString().trim(),
+  body('useCredits').optional().isBoolean(),
+];
+
+const validatePromoValidation = [
+  body('code').isString().trim().notEmpty().withMessage('Promo code is required'),
+  body('orderAmount').isInt({ min: 0 }).withMessage('Order amount must be non-negative integer (cents)'),
+  body('salesItemId').optional().isMongoId(),
 ];
 
 // ─── Route Factory ─────────────────────────────────────────────────────────
@@ -57,6 +69,8 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
     OrderModel,
     SalesModel,
     CounterModel,
+    promoCodeService,
+    creditService,
   } = deps;
 
   // All routes require authentication
@@ -206,7 +220,10 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
       }
 
       try {
-        const { mappingId, versionNumber, financialYear, personalDetails, answers } = req.body as {
+        const {
+          mappingId, versionNumber, financialYear, personalDetails, answers,
+          promoCode: promoCodeInput, useCredits,
+        } = req.body as {
           mappingId: string;
           versionNumber: number;
           financialYear: string;
@@ -218,6 +235,8 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
             dateOfBirth?: string;
           };
           answers: Record<string, unknown>;
+          promoCode?: string;
+          useCredits?: boolean;
         };
 
         // 1. Validate form mapping exists and is published
@@ -250,7 +269,7 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
         const { generateOrderNumber } = await import('../order-management/order.model');
         const orderNumber = await generateOrderNumber(OrderModel, CounterModel);
 
-        // 4. Create the order
+        // 4. Create line items
         const lineItems = [{
           salesId: salesItem._id as Types.ObjectId,
           title: salesItem.title,
@@ -261,10 +280,40 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
         }];
 
         const totalAmount = salesItem.price;
-        const discountPercent = 0;
-        const discountAmount = 0;
-        const finalAmount = totalAmount;
+        let discountAmount = 0;
+        let discountPercent = 0;
+        let discountSource: string | undefined;
+        let promoCodeId: Types.ObjectId | undefined;
+        let promoCodeStr: string | undefined;
 
+        // 5. Apply promo code discount if provided
+        if (promoCodeInput && promoCodeService) {
+          const validation = await promoCodeService.validatePromoCode(
+            promoCodeInput,
+            userId,
+            totalAmount,
+            String(salesItem._id),
+          );
+          if (validation.valid) {
+            discountAmount = validation.calculatedDiscount;
+            discountSource = 'promo_code';
+            promoCodeId = validation.promoCodeId as unknown as Types.ObjectId;
+            promoCodeStr = promoCodeInput.toUpperCase();
+          }
+        }
+
+        const afterDiscount = totalAmount - discountAmount;
+
+        // 6. Apply credit balance if requested
+        let creditApplied = 0;
+        if (useCredits && creditService && afterDiscount > 0) {
+          const creditBalance = await creditService.getBalance(userId);
+          creditApplied = Math.min(creditBalance, afterDiscount);
+        }
+
+        const finalAmount = afterDiscount - creditApplied;
+
+        // 7. Create the order
         const order = await OrderModel.create({
           orderNumber,
           userId,
@@ -282,6 +331,10 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
           discountPercent,
           discountAmount,
           finalAmount,
+          discountSource,
+          promoCodeId,
+          promoCode: promoCodeStr,
+          creditApplied,
           formMappingId: mapping._id,
           formVersionNumber: versionNumber,
           formAnswers: answers,
@@ -292,6 +345,16 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
           isDeleted: false,
         });
 
+        // 8. Record promo code usage
+        if (promoCodeStr && promoCodeService && discountAmount > 0) {
+          await promoCodeService.applyPromoCode(promoCodeStr, userId, String(order._id), totalAmount);
+        }
+
+        // 9. Deduct credits if applied
+        if (creditApplied > 0 && creditService) {
+          await creditService.useCredit(userId, creditApplied, String(order._id));
+        }
+
         res.status(201).json({
           status: 201,
           data: {
@@ -300,9 +363,53 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
             financialYear: order.financialYear,
             status: order.status,
             totalAmount: order.totalAmount,
+            discountAmount: order.discountAmount,
+            creditApplied: order.creditApplied,
             finalAmount: order.finalAmount,
+            promoCode: promoCodeStr,
           },
         });
+      } catch (err) {
+        const error = err as Error & { statusCode?: number; code?: string };
+        res.status(error.statusCode ?? 500).json({
+          status: error.statusCode ?? 500,
+          code: error.code,
+          message: error.message,
+        });
+      }
+    },
+  );
+
+  // ── POST /validate-promo ──────────────────────────────────────────────
+  // Validate a promo code before submitting the order
+
+  router.post(
+    '/validate-promo',
+    ...validatePromoValidation,
+    async (req: Request, res: Response): Promise<void> => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(422).json({ status: 422, errors: errors.array() });
+        return;
+      }
+
+      if (!promoCodeService) {
+        res.status(501).json({ status: 501, message: 'Promo codes not enabled' });
+        return;
+      }
+
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.userId ?? authReq.user?._id ?? '';
+
+      try {
+        const { code, orderAmount, salesItemId } = req.body as {
+          code: string;
+          orderAmount: number;
+          salesItemId?: string;
+        };
+
+        const result = await promoCodeService.validatePromoCode(code, userId, orderAmount, salesItemId);
+        res.status(200).json({ status: 200, data: result });
       } catch (err) {
         const error = err as Error & { statusCode?: number; code?: string };
         res.status(error.statusCode ?? 500).json({

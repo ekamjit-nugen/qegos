@@ -17,6 +17,7 @@ import {
   PhoneOutlined,
   ScheduleOutlined,
   FormOutlined,
+  GiftOutlined,
 } from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 
@@ -60,6 +61,7 @@ export const menuItems: MenuDataItem[] = [
     children: [
       { path: '/payments', name: 'Payments', icon: <DollarOutlined /> },
       { path: '/billing-disputes', name: 'Billing Disputes', icon: <FileTextOutlined /> },
+      { path: '/promo-codes', name: 'Promo Codes', icon: <GiftOutlined /> },
       { path: '/xero', name: 'Xero Sync', icon: <DollarOutlined /> },
     ],
   },

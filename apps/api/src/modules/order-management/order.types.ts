@@ -196,6 +196,12 @@ export interface IOrder {
   discountPercent: number;
   discountAmount: number; // cents
   finalAmount: number; // cents
+  // Discount source tracking
+  discountSource?: 'promo_code' | 'referral' | 'manual' | 'credit';
+  promoCodeId?: Types.ObjectId;
+  promoCode?: string;
+  creditApplied: number; // cents — credit balance applied to this order
+  paymentStatus?: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
   processingBy?: Types.ObjectId;
   completionPercent: number;
   scheduledAppointment?: IScheduledAppointment;

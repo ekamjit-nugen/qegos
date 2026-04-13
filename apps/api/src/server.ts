@@ -90,6 +90,14 @@ import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
 import { createSettingModel, seedDefaultSettings } from './modules/settings/settings.model';
 import { createSettingsRoutes } from './modules/settings/settings.routes';
 
+// Promo Code & Credits
+import { createPromoCodeModel, createPromoCodeUsageModel } from './modules/promo-code/promoCode.model';
+import { createPromoCodeRoutes } from './modules/promo-code/promoCode.routes';
+import { createPromoCodeService } from './modules/promo-code/promoCode.service';
+import { createCreditTransactionModel } from './modules/credit/credit.model';
+import { createCreditRoutes } from './modules/credit/credit.routes';
+import { createCreditService } from './modules/credit/credit.service';
+
 // Phase 8: Engagement Modules
 import { createReferralModel, createReferralConfigModel } from './modules/referral-engine/referral.model';
 import { createReferralRoutes, expireStaleReferrals, expireCreditRewards } from './modules/referral-engine/referral.routes';
@@ -307,6 +315,11 @@ async function bootstrap(): Promise<void> {
   const TaxDeadlineModel = createTaxDeadlineModel(connection);
   const DeadlineReminderModel = createDeadlineReminderModel(connection);
   const ReputationReviewModel = createReviewModel(connection);
+
+  // Promo Code & Credit models
+  const PromoCodeModel = createPromoCodeModel(connection);
+  const PromoCodeUsageModel = createPromoCodeUsageModel(connection);
+  const CreditTransactionModel = createCreditTransactionModel(connection);
 
   // Settings
   const SettingModel = createSettingModel(connection);
@@ -641,6 +654,15 @@ async function bootstrap(): Promise<void> {
     SettingModel,
   });
 
+  // Promo Code & Credit services
+  const promoCodeService = createPromoCodeService({
+    PromoCodeModel,
+    PromoCodeUsageModel,
+  });
+  const creditServiceInstance = createCreditService({
+    CreditTransactionModel,
+  });
+
   // Client-facing Form Fill routes (mounted under /portal)
   const formFillRouter = createFormFillRoutes({
     FormMappingModel,
@@ -649,6 +671,8 @@ async function bootstrap(): Promise<void> {
     SalesModel: SalesModel as never,
     CounterModel: CounterModel as never,
     authenticate: auth.authenticate,
+    promoCodeService,
+    creditService: creditServiceInstance,
   });
   // Mount form fill routes under the portal prefix
   portalRouter.use(formFillRouter);
@@ -738,6 +762,22 @@ async function bootstrap(): Promise<void> {
     OrderModel: OrderModel as never,
     LeadModel: LeadModel as never,
     CounterModel: CounterModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    creditService: creditServiceInstance,
+  });
+
+  // Promo Code routes (admin CRUD)
+  const promoCodeRouter = createPromoCodeRoutes({
+    PromoCodeModel,
+    PromoCodeUsageModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  // Credit routes (client balance/transactions, admin lookup)
+  const creditRouter = createCreditRoutes({
+    CreditTransactionModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -936,6 +976,8 @@ async function bootstrap(): Promise<void> {
     referralRouter,
     calendarRouter,
     reputationRouter,
+    promoCodeRouter,
+    creditRouter,
     notificationRouter,
     analyticsRouter,
     appointmentRouter,

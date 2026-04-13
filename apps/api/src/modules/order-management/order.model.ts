@@ -203,6 +203,23 @@ const orderSchema = new Schema<IOrderDocument2>(
         message: 'finalAmount must be an integer (cents) — ORD-INV-04',
       },
     },
+    // Discount source tracking
+    discountSource: { type: String, enum: ['promo_code', 'referral', 'manual', 'credit'] },
+    promoCodeId: { type: Schema.Types.ObjectId, ref: 'PromoCode' },
+    promoCode: { type: String },
+    creditApplied: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: (v: number): boolean => Number.isInteger(v),
+        message: 'creditApplied must be an integer (cents)',
+      },
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'succeeded', 'failed', 'refunded', 'partially_refunded'],
+      default: 'pending',
+    },
     processingBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     completionPercent: { type: Number, default: 0, min: 0, max: 100 },
     scheduledAppointment: {
@@ -249,14 +266,17 @@ orderSchema.index({ processingBy: 1, status: 1, updatedAt: -1 });
 // ─── ORD-INV-03: Server-side total recalculation pre-save ───────────────────
 
 orderSchema.pre('save', function (next) {
-  if (this.isModified('lineItems') || this.isModified('discountPercent')) {
+  if (this.isModified('lineItems') || this.isModified('discountPercent') || this.isModified('creditApplied')) {
     const total = this.lineItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
     this.totalAmount = total;
     this.discountAmount = Math.round(total * (this.discountPercent / 100));
-    this.finalAmount = total - this.discountAmount;
+    const afterDiscount = total - this.discountAmount;
+    const creditUsed = Math.min(this.creditApplied ?? 0, afterDiscount);
+    this.creditApplied = creditUsed;
+    this.finalAmount = afterDiscount - creditUsed;
   }
   next();
 });

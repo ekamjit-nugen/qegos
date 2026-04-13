@@ -62,6 +62,8 @@ export interface FormFillSubmission {
     dateOfBirth?: string;
   };
   answers: Record<string, unknown>;
+  promoCode?: string;
+  useCredits?: boolean;
 }
 
 export interface FormFillResult {
@@ -70,5 +72,8 @@ export interface FormFillResult {
   financialYear: string;
   status: number;
   totalAmount: number;
+  discountAmount?: number;
+  creditApplied?: number;
   finalAmount: number;
+  promoCode?: string;
 }

@@ -98,6 +98,8 @@ export interface Order {
   discountPercent: number;
   discountAmount: number;
   finalAmount: number;
+  promoCode?: string;
+  creditApplied?: number;
   completionPercent: number;
   processingByName?: string;
   eFileStatus?: string;

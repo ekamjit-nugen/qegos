@@ -111,6 +111,11 @@ export interface Order {
   discountPercent: number;
   discountAmount: number; // cents
   finalAmount: number; // cents
+  discountSource?: 'promo_code' | 'referral' | 'manual' | 'credit';
+  promoCodeId?: string;
+  promoCode?: string;
+  creditApplied: number; // cents
+  paymentStatus?: string;
   processingBy?: string;
   processingByName?: string;
   completionPercent: number;

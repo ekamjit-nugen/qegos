@@ -2,6 +2,7 @@ import type { Model, Types } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
 import type { IReferralDocument, IReferralConfigDocument, ReferralRewardType } from './referral.types';
 import { DEFAULT_REFERRAL_CONFIG } from './referral.types';
+import type { CreditServiceResult } from '../credit/credit.service';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ let UserModel: Model<any>;
 let OrderModel: Model<any>;
 let LeadModel: Model<any>;
 let CounterModel: Model<any>;
+let creditService: CreditServiceResult | null = null;
 
 export function initReferralService(deps: {
   ReferralModel: Model<IReferralDocument>;
@@ -19,6 +21,7 @@ export function initReferralService(deps: {
   OrderModel: Model<any>;
   LeadModel: Model<any>;
   CounterModel: Model<any>;
+  creditService?: CreditServiceResult;
 }): void {
   ReferralModel = deps.ReferralModel;
   ReferralConfigModel = deps.ReferralConfigModel;
@@ -26,6 +29,7 @@ export function initReferralService(deps: {
   OrderModel = deps.OrderModel;
   LeadModel = deps.LeadModel;
   CounterModel = deps.CounterModel;
+  creditService = deps.creditService ?? null;
 }
 
 // ─── Config Helpers ─────────────────────────────────────────────────────────
@@ -184,6 +188,67 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
   });
 
   if (rewardedCount >= config.maxReferralsPerClient) return null;
+
+  // ─── Issue Rewards Based on Config ────────────────────────────────────────
+  const referrerId = String(referral.referrerId);
+  const refereeId = String(referral.refereeId);
+
+  if (config.rewardType === 'credit_balance' && creditService) {
+    // REF-INV-04: Credits expire after 12 months
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+    // Issue credit to referrer
+    if (config.referrerRewardValue > 0) {
+      await creditService.addCredit(
+        referrerId,
+        config.referrerRewardValue,
+        'referral_reward',
+        `Referral reward: ${referral.referralCode} (referrer)`,
+        referral._id.toString(),
+        expiresAt,
+      );
+    }
+
+    // Issue credit to referee
+    if (config.refereeRewardValue > 0) {
+      await creditService.addCredit(
+        refereeId,
+        config.refereeRewardValue,
+        'referral_reward',
+        `Referral reward: ${referral.referralCode} (referee)`,
+        referral._id.toString(),
+        expiresAt,
+      );
+    }
+  } else if (config.rewardType === 'flat_discount' && creditService) {
+    // Flat discount issued as credits (immediate use, 12-month expiry)
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+    if (config.referrerRewardValue > 0) {
+      await creditService.addCredit(
+        referrerId,
+        config.referrerRewardValue,
+        'referral_reward',
+        `Referral flat discount: ${referral.referralCode} (referrer)`,
+        referral._id.toString(),
+        expiresAt,
+      );
+    }
+
+    if (config.refereeRewardValue > 0) {
+      await creditService.addCredit(
+        refereeId,
+        config.refereeRewardValue,
+        'referral_reward',
+        `Referral flat discount: ${referral.referralCode} (referee)`,
+        referral._id.toString(),
+        expiresAt,
+      );
+    }
+  }
+  // discount_percent type: stored on referral for application at checkout (no credit issued)
 
   referral.status = 'rewarded';
   referral.referrerRewarded = true;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { Payment, PaymentListQuery } from '@/types/payment';
 import type { PaginatedResponse, ApiResponse } from '@/types/api';
@@ -39,5 +39,18 @@ export function usePaymentsByOrder(orderId: string | undefined) {
       return res.data;
     },
     enabled: !!orderId,
+  });
+}
+
+export function useRefundPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { paymentId: string; amount: number; reason: string }) => {
+      const res = await api.post<ApiResponse<unknown>>('/payments/refund', data);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+    },
   });
 }

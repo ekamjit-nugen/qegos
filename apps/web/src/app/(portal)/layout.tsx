@@ -13,6 +13,7 @@ import {
   BellOutlined,
   FileTextOutlined,
   FormOutlined,
+  WalletOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { key: '/vault', icon: <FolderOpenOutlined />, label: 'Document Vault' },
   { key: '/tax-summary', icon: <CalculatorOutlined />, label: 'Tax Summary' },
   { key: '/consent-form', icon: <FileTextOutlined />, label: 'Consent Form' },
+  { key: '/credits', icon: <WalletOutlined />, label: 'Credits' },
   { key: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
 ];
 

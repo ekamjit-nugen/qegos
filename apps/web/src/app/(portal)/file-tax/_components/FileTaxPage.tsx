@@ -28,8 +28,10 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '@/lib/auth/useAuth';
 import { useAvailableFormMappings, useSubmitFormFill } from '@/hooks/useFormFill';
+import { useCreditBalance, useValidatePromoCode } from '@/hooks/useCredits';
 import { formatCurrency } from '@/lib/utils/format';
 import type { AvailableFormMapping, FormMappingWidget } from '@/types/formMapping';
+import type { PromoCodeValidationResult } from '@/types/credit';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -173,10 +175,15 @@ export function FileTaxPage(): React.ReactNode {
   const { user } = useAuth();
   const { data: mappings, isLoading } = useAvailableFormMappings();
   const submitMutation = useSubmitFormFill();
+  const { data: creditData } = useCreditBalance();
+  const validatePromoMutation = useValidatePromoCode();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedMapping, setSelectedMapping] = useState<AvailableFormMapping | null>(null);
   const [formAnswers, setFormAnswers] = useState<Record<string, unknown>>({});
+  const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState<PromoCodeValidationResult | null>(null);
+  const [useCredits, setUseCredits] = useState(false);
   const [personalDetails, setPersonalDetails] = useState<{
     firstName: string;
     lastName: string;
@@ -244,6 +251,43 @@ export function FileTaxPage(): React.ReactNode {
       });
   }, [personalForm]);
 
+  // Validate promo code
+  const handleValidatePromo = useCallback(() => {
+    if (!promoCode.trim() || !selectedMapping) return;
+    validatePromoMutation.mutate(
+      {
+        code: promoCode,
+        orderAmount: selectedMapping.servicePrice,
+        salesItemId: selectedMapping.salesItemId,
+      },
+      {
+        onSuccess: (result) => {
+          setPromoResult(result);
+          if (!result.valid) {
+            void message.warning(result.message ?? 'Invalid promo code');
+          } else {
+            void message.success(`Promo code applied! Discount: ${formatCurrency(result.calculatedDiscount)}`);
+          }
+        },
+        onError: () => {
+          void message.error('Failed to validate promo code');
+        },
+      },
+    );
+  }, [promoCode, selectedMapping, validatePromoMutation]);
+
+  // Computed pricing
+  const pricing = useMemo(() => {
+    if (!selectedMapping) return { subtotal: 0, discount: 0, creditUsed: 0, total: 0 };
+    const subtotal = selectedMapping.servicePrice;
+    const discount = promoResult?.valid ? promoResult.calculatedDiscount : 0;
+    const afterDiscount = subtotal - discount;
+    const creditBalance = creditData?.balance ?? 0;
+    const creditUsed = useCredits ? Math.min(creditBalance, afterDiscount) : 0;
+    const total = afterDiscount - creditUsed;
+    return { subtotal, discount, creditUsed, total };
+  }, [selectedMapping, promoResult, useCredits, creditData]);
+
   // Step 3: Submit
   const handleSubmit = useCallback(() => {
     if (!selectedMapping) return;
@@ -255,6 +299,8 @@ export function FileTaxPage(): React.ReactNode {
         financialYear: selectedMapping.financialYear,
         personalDetails,
         answers: formAnswers,
+        promoCode: promoResult?.valid ? promoCode : undefined,
+        useCredits: useCredits && pricing.creditUsed > 0 ? true : undefined,
       },
       {
         onSuccess: (result) => {
@@ -269,7 +315,7 @@ export function FileTaxPage(): React.ReactNode {
         },
       },
     );
-  }, [selectedMapping, personalDetails, formAnswers, submitMutation]);
+  }, [selectedMapping, personalDetails, formAnswers, submitMutation, promoCode, promoResult, useCredits, pricing]);
 
   if (isLoading) {
     return (
@@ -422,10 +468,6 @@ export function FileTaxPage(): React.ReactNode {
             <Text>{selectedMapping.financialYear}</Text>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <Text strong>Price: </Text>
-            <Text>{formatCurrency(selectedMapping.servicePrice)}</Text>
-          </div>
-          <div style={{ marginBottom: 16 }}>
             <Text strong>Name: </Text>
             <Text>
               {personalDetails.firstName} {personalDetails.lastName}
@@ -437,17 +479,11 @@ export function FileTaxPage(): React.ReactNode {
               <Text>{personalDetails.email}</Text>
             </div>
           )}
-          {personalDetails.mobile && (
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Mobile: </Text>
-              <Text>{personalDetails.mobile}</Text>
-            </div>
-          )}
 
           <Card
             title="Form Answers"
             size="small"
-            style={{ marginTop: 16, marginBottom: 24 }}
+            style={{ marginTop: 16, marginBottom: 16 }}
           >
             {schemaFields.map((field) => {
               const val = formAnswers[field.key];
@@ -459,6 +495,91 @@ export function FileTaxPage(): React.ReactNode {
                 </div>
               );
             })}
+          </Card>
+
+          {/* Promo Code & Credits */}
+          <Card title="Discounts & Credits" size="small" style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 12 }}>
+              <Text strong style={{ display: 'block', marginBottom: 4 }}>Promo Code</Text>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Input
+                  placeholder="Enter promo code"
+                  value={promoCode}
+                  onChange={(e) => {
+                    setPromoCode(e.target.value.toUpperCase());
+                    setPromoResult(null);
+                  }}
+                  style={{ flex: 1, textTransform: 'uppercase' }}
+                />
+                <Button
+                  onClick={handleValidatePromo}
+                  loading={validatePromoMutation.isPending}
+                  disabled={!promoCode.trim()}
+                >
+                  Apply
+                </Button>
+              </div>
+              {promoResult && (
+                <Text
+                  type={promoResult.valid ? 'success' : 'danger'}
+                  style={{ display: 'block', marginTop: 4 }}
+                >
+                  {promoResult.valid
+                    ? `Discount: -${formatCurrency(promoResult.calculatedDiscount)}`
+                    : promoResult.message}
+                </Text>
+              )}
+            </div>
+
+            {(creditData?.balance ?? 0) > 0 && (
+              <div>
+                <Checkbox
+                  checked={useCredits}
+                  onChange={(e) => setUseCredits(e.target.checked)}
+                >
+                  Use credit balance ({formatCurrency(creditData?.balance ?? 0)} available)
+                </Checkbox>
+                {useCredits && pricing.creditUsed > 0 && (
+                  <Text type="success" style={{ display: 'block', marginTop: 4 }}>
+                    Credit applied: -{formatCurrency(pricing.creditUsed)}
+                  </Text>
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* Price Summary */}
+          <Card title="Price Summary" size="small" style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text>Subtotal</Text>
+              <Text>{formatCurrency(pricing.subtotal)}</Text>
+            </div>
+            {pricing.discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text type="success">Promo Discount</Text>
+                <Text type="success">-{formatCurrency(pricing.discount)}</Text>
+              </div>
+            )}
+            {pricing.creditUsed > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text type="success">Credit Applied</Text>
+                <Text type="success">-{formatCurrency(pricing.creditUsed)}</Text>
+              </div>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                borderTop: '1px solid #f0f0f0',
+                paddingTop: 8,
+                marginTop: 8,
+              }}
+            >
+              <Text strong style={{ fontSize: 16 }}>Total</Text>
+              <Text strong style={{ fontSize: 16, color: '#1677ff' }}>
+                {formatCurrency(pricing.total)}
+              </Text>
+            </div>
           </Card>
 
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
