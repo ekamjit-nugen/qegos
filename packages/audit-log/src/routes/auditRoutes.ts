@@ -14,58 +14,63 @@ export function createAuditRoutes(deps: AuditRouteDeps): Router {
   const router = Router();
   const { AuditLogModel, authenticate: auth, checkPermission: check } = deps;
 
-  // --- POST /audit-logs (query) ---
-  router.post(
-    '/',
+  // --- POST /audit-logs/query (query) ---
+  // Also mounted at POST / for backward compatibility
+  const queryMiddleware = [
     auth() as never,
     check('audit_logs', 'read') as never,
     ...validate([...pagination(), ...dateRange()]),
-    asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-      const skip = (page - 1) * limit;
+  ];
 
-      const {
-        actor, actorType, action, resource, resourceId, severity,
-        dateFrom, dateTo, search: searchTerm,
-      } = req.body as Record<string, string | undefined>;
+  const queryHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const body = req.body as Record<string, unknown>;
+    const page = parseInt(body.page as string) || parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(body.limit as string) || parseInt(req.query.limit as string) || 20, 100);
+    const skip = (page - 1) * limit;
 
-      const filter: Record<string, unknown> = {};
-      if (actor) { filter.actor = actor; }
-      if (actorType) { filter.actorType = actorType; }
-      if (action) { filter.action = action; }
-      if (resource) { filter.resource = resource; }
-      if (resourceId) { filter.resourceId = resourceId; }
-      if (severity) { filter.severity = severity; }
+    const {
+      actor, actorType, action, resource, resourceId, severity,
+      dateFrom, dateTo, search: searchTerm,
+    } = req.body as Record<string, string | undefined>;
 
-      if (dateFrom || dateTo) {
-        filter.timestamp = {};
-        if (dateFrom) { (filter.timestamp as Record<string, unknown>).$gte = new Date(dateFrom); }
-        if (dateTo) { (filter.timestamp as Record<string, unknown>).$lte = new Date(dateTo); }
-      }
+    const filter: Record<string, unknown> = {};
+    if (actor) { filter.actor = actor; }
+    if (actorType) { filter.actorType = actorType; }
+    if (action) { filter.action = action; }
+    if (resource) { filter.resource = resource; }
+    if (resourceId) { filter.resourceId = resourceId; }
+    if (severity) { filter.severity = severity; }
 
-      // FIX for Vegeta S-6: Use $text search with text index instead of $regex (prevents ReDoS)
-      if (searchTerm) {
-        filter.$text = { $search: searchTerm };
-      }
+    if (dateFrom || dateTo) {
+      filter.timestamp = {};
+      if (dateFrom) { (filter.timestamp as Record<string, unknown>).$gte = new Date(dateFrom); }
+      if (dateTo) { (filter.timestamp as Record<string, unknown>).$lte = new Date(dateTo); }
+    }
 
-      const [logs, total] = await Promise.all([
-        AuditLogModel.find(filter)
-          .sort({ timestamp: -1 })
-          .skip(skip)
-          .limit(limit)
-          .populate('actor', 'firstName lastName email')
-          .lean(),
-        AuditLogModel.countDocuments(filter),
-      ]);
+    // FIX for Vegeta S-6: Use $text search with text index instead of $regex (prevents ReDoS)
+    if (searchTerm) {
+      filter.$text = { $search: searchTerm };
+    }
 
-      res.status(200).json({
-        status: 200,
-        data: logs,
-        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
-      });
-    }),
-  );
+    const [logs, total] = await Promise.all([
+      AuditLogModel.find(filter)
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('actor', 'firstName lastName email')
+        .lean(),
+      AuditLogModel.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      status: 200,
+      data: logs,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  });
+
+  router.post('/', ...queryMiddleware, queryHandler);
+  router.post('/query', ...queryMiddleware, queryHandler);
 
   // --- POST /audit-logs/export ---
   router.post(

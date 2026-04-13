@@ -132,7 +132,11 @@ export async function issueTokenPair(
   }
 
   user.refreshTokens.push(newEntry);
-  await user.save();
+
+  // Use atomic updateOne to avoid Mongoose VersionError on concurrent refreshes.
+  // user.save() uses optimistic concurrency (__v check) which fails when two
+  // refresh requests race on the same document.
+  await user.updateOne({ $set: { refreshTokens: user.refreshTokens } });
 
   return { accessToken, refreshToken };
 }
@@ -162,7 +166,7 @@ export async function rotateRefreshToken(
   if (matchedIndex === -1) {
     // Replay attack detected — revoke ALL tokens (SEC-INV-04)
     user.refreshTokens = [];
-    await user.save();
+    await user.updateOne({ $set: { refreshTokens: [] } });
     return null;
   }
 
@@ -178,7 +182,7 @@ export async function rotateRefreshToken(
  */
 export async function revokeToken(user: IAuthDocument, deviceId: string): Promise<void> {
   user.refreshTokens = user.refreshTokens.filter((t) => t.deviceId !== deviceId);
-  await user.save();
+  await user.updateOne({ $set: { refreshTokens: user.refreshTokens } });
 }
 
 /**
@@ -186,5 +190,5 @@ export async function revokeToken(user: IAuthDocument, deviceId: string): Promis
  */
 export async function revokeAllTokens(user: IAuthDocument): Promise<void> {
   user.refreshTokens = [];
-  await user.save();
+  await user.updateOne({ $set: { refreshTokens: [] } });
 }

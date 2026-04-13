@@ -142,7 +142,7 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
           flexDirection: 'column',
         }}
       >
-        {/* Logo */}
+        {/* Logo — sticky top */}
         <div
           style={{
             height: 56,
@@ -186,7 +186,7 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
           />
         </div>
 
-        {/* User card at bottom */}
+        {/* User card — sticky bottom */}
         {!collapsed && (
           <div
             style={{

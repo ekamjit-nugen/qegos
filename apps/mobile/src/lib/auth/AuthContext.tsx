@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -63,8 +64,16 @@ export function AuthProvider({
     }
   }, []);
 
-  // Attempt session restore on mount
+  // Attempt session restore on mount.
+  // Guard with a ref to prevent double-execution from firing two
+  // concurrent refresh requests — the second would cause a VersionError
+  // or trigger replay-attack detection, clearing all sessions.
+  const restoreAttempted = useRef(false);
+
   useEffect(() => {
+    if (restoreAttempted.current) return;
+    restoreAttempted.current = true;
+
     const restore = async (): Promise<void> => {
       const refreshToken = await getRefreshToken();
       if (!refreshToken) {

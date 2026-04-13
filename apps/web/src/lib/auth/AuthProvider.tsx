@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -62,8 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     }
   }, []);
 
-  // Attempt session restore on mount
+  // Attempt session restore on mount.
+  // Guard with a ref to prevent React StrictMode (dev) from firing two
+  // concurrent refresh requests — the second would hit a Mongoose VersionError
+  // or trigger replay-attack detection, clearing all sessions.
+  const restoreAttempted = useRef(false);
+
   useEffect(() => {
+    if (restoreAttempted.current) return;
+    restoreAttempted.current = true;
+
     const restore = async (): Promise<void> => {
       const rt = getRefreshToken();
       if (!rt) {
