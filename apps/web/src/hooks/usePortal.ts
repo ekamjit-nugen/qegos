@@ -379,3 +379,17 @@ export function useUpcomingAppointments(): ReturnType<typeof useQuery<Appointmen
     },
   });
 }
+
+// ─── E-Sign Hooks ─────────────────────────────────────────────────────────
+
+export function useGenerateClientSigningUri() {
+  return useMutation({
+    mutationFn: async (params: { orderId: string; zohoRequestId: string; actionId: string }) => {
+      const res = await api.post<ApiResponse<{ signUrl: string }>>(
+        '/documents/generate-uri',
+        params,
+      );
+      return res.data.data;
+    },
+  });
+}

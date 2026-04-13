@@ -12,6 +12,7 @@ import {
   sendForSignValidation,
   generateUriValidation,
   listOrderDocumentsValidation,
+  signingStatusValidation,
 } from './document.validators';
 
 // ─── Multer (DOC-INV-03: 20MB limit, in-memory) ───────────────────────────
@@ -141,7 +142,7 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     },
   );
 
-  // 4. POST /create — Create Zoho Sign signing request
+  // 4. POST /create — Create Zoho Sign dual-signature signing request
   router.post(
     '/create',
     ...authStaff,
@@ -152,15 +153,17 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
         const result = await service.createSigningRequest({
           orderId: req.body.orderId as string,
           documentIndex: Number(req.body.documentIndex),
-          recipientName: req.body.recipientName as string,
-          recipientEmail: req.body.recipientEmail as string,
+          clientName: req.body.clientName as string,
+          clientEmail: req.body.clientEmail as string,
+          adminName: req.body.adminName as string,
+          adminEmail: req.body.adminEmail as string,
         });
         res.status(201).json({ status: 201, data: result });
       } catch (err) {
         const error = err as Error & { status?: number };
         res.status(error.status ?? 500).json({
           status: error.status ?? 500,
-          code: 'INTERNAL_ERROR',
+          code: error.status === 409 ? 'CONFLICT' : 'INTERNAL_ERROR',
           message: error.message,
         });
       }
@@ -203,6 +206,30 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
           orderId: req.body.orderId as string,
           zohoRequestId: req.body.zohoRequestId as string,
           actionId: req.body.actionId as string,
+        });
+        res.json({ status: 200, data: result });
+      } catch (err) {
+        const error = err as Error & { status?: number };
+        res.status(error.status ?? 500).json({
+          status: error.status ?? 500,
+          code: 'INTERNAL_ERROR',
+          message: error.message,
+        });
+      }
+    },
+  );
+
+  // 7. GET /signing-status/:orderId/:documentIndex — Get signing status
+  router.get(
+    '/signing-status/:orderId/:documentIndex',
+    ...auth,
+    ...signingStatusValidation,
+    async (req: Request, res: Response) => {
+      if (handleValidation(req, res)) return;
+      try {
+        const result = await service.getSigningStatus({
+          orderId: req.params.orderId,
+          documentIndex: Number(req.params.documentIndex),
         });
         res.json({ status: 200, data: result });
       } catch (err) {

@@ -1,14 +1,22 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Row, Col, Card, Descriptions, Tabs, Table, Tag, Progress, Spin, Empty, Badge, Button, Modal, Select, Space, Typography, Upload, message } from 'antd';
-import { CloudUploadOutlined, InboxOutlined } from '@ant-design/icons';
+import {
+  Row, Col, Card, Descriptions, Tabs, Table, Tag, Progress, Spin, Empty,
+  Badge, Button, Modal, Select, Space, Typography, Upload, Input, message,
+  Tooltip,
+} from 'antd';
+import {
+  CloudUploadOutlined, InboxOutlined, EditOutlined, CheckCircleOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
 import { useOrder } from '@/hooks/useOrders';
-import { useUploadOrderDocument } from '@/hooks/useDocuments';
+import { useUploadOrderDocument, useSendForSignature, useGenerateSigningUri } from '@/hooks/useDocuments';
 import { OrderStatusTransition } from '../../_components/OrderStatusTransition';
-import type { OrderLineItem, OrderDocument } from '@/types/order';
+import type { OrderLineItem, OrderDocument, SigningStatus } from '@/types/order';
+import { SIGNING_STATUS_LABELS, SIGNING_STATUS_COLORS } from '@/types/order';
 import { formatCurrency, formatDate, fullName } from '@/lib/utils/format';
 
 const { Text } = Typography;
@@ -26,9 +34,22 @@ const DOCUMENT_TYPES = [
 export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
   const { data: order, isLoading } = useOrder(id);
   const uploadMutation = useUploadOrderDocument();
+  const sendForSignMutation = useSendForSignature();
+  const generateUriMutation = useGenerateSigningUri();
+
+  // Upload modal state
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<string | undefined>();
 
+  // Send for Signature modal state
+  const [signModalOpen, setSignModalOpen] = useState(false);
+  const [signDocIndex, setSignDocIndex] = useState<number>(-1);
+  const [signClientName, setSignClientName] = useState('');
+  const [signClientEmail, setSignClientEmail] = useState('');
+  const [signAdminName, setSignAdminName] = useState('');
+  const [signAdminEmail, setSignAdminEmail] = useState('');
+
+  // ─── Upload handler ───────────────────────────────────────────────────
   const handleDocUpload: UploadProps['customRequest'] = useCallback(
     (options: { file: unknown; onSuccess?: (body: unknown) => void; onError?: (err: Error) => void }) => {
       const formData = new FormData();
@@ -56,9 +77,85 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
     [id, uploadDocType, uploadMutation],
   );
 
+  // ─── Send for Signature handler ───────────────────────────────────────
+  const handleOpenSignModal = useCallback(
+    (docIndex: number) => {
+      if (!order) return;
+      setSignDocIndex(docIndex);
+      setSignClientName(
+        fullName(order.personalDetails?.firstName, order.personalDetails?.lastName),
+      );
+      setSignClientEmail(order.personalDetails?.email ?? '');
+      setSignAdminName('');
+      setSignAdminEmail('');
+      setSignModalOpen(true);
+    },
+    [order],
+  );
+
+  const handleSendForSign = useCallback(() => {
+    if (!signClientEmail || !signAdminEmail || !signClientName || !signAdminName) {
+      void message.warning('All fields are required');
+      return;
+    }
+    sendForSignMutation.mutate(
+      {
+        orderId: id,
+        documentIndex: signDocIndex,
+        clientName: signClientName,
+        clientEmail: signClientEmail,
+        adminName: signAdminName,
+        adminEmail: signAdminEmail,
+      },
+      {
+        onSuccess: () => {
+          void message.success('Document sent for signature');
+          setSignModalOpen(false);
+        },
+        onError: () => {
+          void message.error('Failed to send for signature');
+        },
+      },
+    );
+  }, [
+    id, signDocIndex, signClientName, signClientEmail,
+    signAdminName, signAdminEmail, sendForSignMutation,
+  ]);
+
+  // ─── Counter-sign handler ─────────────────────────────────────────────
+  const handleCounterSign = useCallback(
+    (doc: OrderDocument) => {
+      if (!doc.zohoRequestId || !doc.adminActionId) {
+        void message.error('Missing signing info');
+        return;
+      }
+      generateUriMutation.mutate(
+        {
+          orderId: id,
+          zohoRequestId: doc.zohoRequestId,
+          actionId: doc.adminActionId,
+        },
+        {
+          onSuccess: (result) => {
+            if (result.signUrl) {
+              window.open(result.signUrl, '_blank');
+            } else {
+              void message.error('Signing URL not available');
+            }
+          },
+          onError: () => {
+            void message.error('Failed to get signing URL');
+          },
+        },
+      );
+    },
+    [id, generateUriMutation],
+  );
+
   if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
   if (!order) { return <Empty description="Order not found" />; }
 
+  // ─── Column definitions ───────────────────────────────────────────────
   const lineItemColumns: ColumnsType<OrderLineItem> = [
     { title: 'Service', dataIndex: 'title' },
     { title: 'Price', dataIndex: 'price', render: (v: number) => formatCurrency(v), width: 120 },
@@ -73,14 +170,75 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
   ];
 
   const documentColumns: ColumnsType<OrderDocument> = [
-    { title: 'File', dataIndex: 'fileName' },
-    { title: 'Type', dataIndex: 'documentType', render: (v: string) => v ?? '-' },
+    { title: 'File', dataIndex: 'fileName', ellipsis: true },
+    { title: 'Type', dataIndex: 'documentType', render: (v: string) => v ?? '-', width: 130 },
     {
-      title: 'Status',
+      title: 'Doc Status',
       dataIndex: 'status',
+      width: 100,
       render: (v: string) => (
         <Badge status={v === 'signed' ? 'success' : v === 'verified' ? 'processing' : 'default'} text={v} />
       ),
+    },
+    {
+      title: 'Signing',
+      key: 'signingStatus',
+      width: 160,
+      render: (_: unknown, record: OrderDocument) => {
+        const ss = (record.signingStatus ?? 'not_started') as SigningStatus;
+        return (
+          <Tooltip
+            title={
+              record.clientSignedAt
+                ? `Client signed: ${formatDate(record.clientSignedAt)}${record.adminSignedAt ? ` | Admin signed: ${formatDate(record.adminSignedAt)}` : ''}`
+                : undefined
+            }
+          >
+            <Tag color={SIGNING_STATUS_COLORS[ss]}>{SIGNING_STATUS_LABELS[ss]}</Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 180,
+      render: (_: unknown, record: OrderDocument, index: number) => {
+        const ss = (record.signingStatus ?? 'not_started') as SigningStatus;
+
+        return (
+          <Space size={4}>
+            {ss === 'not_started' && (
+              <Button
+                type="link"
+                size="small"
+                icon={<SendOutlined />}
+                onClick={() => { handleOpenSignModal(index); }}
+              >
+                Send for Sign
+              </Button>
+            )}
+
+            {(ss === 'client_signed' || ss === 'awaiting_admin') && (
+              <Button
+                type="primary"
+                size="small"
+                icon={<EditOutlined />}
+                loading={generateUriMutation.isPending}
+                onClick={() => { handleCounterSign(record); }}
+              >
+                Counter-Sign
+              </Button>
+            )}
+
+            {ss === 'completed' && (
+              <Tag icon={<CheckCircleOutlined />} color="success">
+                Complete
+              </Tag>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -155,6 +313,8 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
             pagination={false}
             size="small"
           />
+
+          {/* Upload Modal */}
           <Modal
             title="Upload Order Document"
             open={uploadOpen}
@@ -188,6 +348,68 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
               <p className="ant-upload-text">Click or drag a file to upload</p>
               <p className="ant-upload-hint">PDF or image files up to 20 MB</p>
             </Dragger>
+          </Modal>
+
+          {/* Send for Signature Modal */}
+          <Modal
+            title="Send Document for Signature"
+            open={signModalOpen}
+            onCancel={() => { setSignModalOpen(false); }}
+            onOk={handleSendForSign}
+            okText="Send for Signature"
+            okButtonProps={{ loading: sendForSignMutation.isPending }}
+            destroyOnClose
+          >
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Text type="secondary">
+                The client will sign first. Once they complete their signature, the admin/staff
+                member will be notified to counter-sign.
+              </Text>
+
+              <Card size="small" title="Client (Signs First)">
+                <Space direction="vertical" style={{ width: '100%' }} size="small">
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Name *</Text>
+                    <Input
+                      value={signClientName}
+                      onChange={(e) => { setSignClientName(e.target.value); }}
+                      placeholder="Client full name"
+                    />
+                  </div>
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Email *</Text>
+                    <Input
+                      value={signClientEmail}
+                      onChange={(e) => { setSignClientEmail(e.target.value); }}
+                      placeholder="Client email"
+                      type="email"
+                    />
+                  </div>
+                </Space>
+              </Card>
+
+              <Card size="small" title="Admin / Staff (Counter-Signs)">
+                <Space direction="vertical" style={{ width: '100%' }} size="small">
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Name *</Text>
+                    <Input
+                      value={signAdminName}
+                      onChange={(e) => { setSignAdminName(e.target.value); }}
+                      placeholder="Your full name"
+                    />
+                  </div>
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Email *</Text>
+                    <Input
+                      value={signAdminEmail}
+                      onChange={(e) => { setSignAdminEmail(e.target.value); }}
+                      placeholder="Your email"
+                      type="email"
+                    />
+                  </div>
+                </Space>
+              </Card>
+            </Space>
           </Modal>
         </div>
       ),

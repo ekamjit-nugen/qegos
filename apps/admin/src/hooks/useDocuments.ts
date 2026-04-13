@@ -37,3 +37,57 @@ export function useUploadOrderDocument() {
     },
   });
 }
+
+// ─── E-Sign Hooks ─────────────────────────────────────────────────────────
+
+interface CreateSigningParams {
+  orderId: string;
+  documentIndex: number;
+  clientName: string;
+  clientEmail: string;
+  adminName: string;
+  adminEmail: string;
+}
+
+interface CreateSigningResult {
+  zohoRequestId: string;
+  clientActionId: string;
+  adminActionId: string;
+}
+
+export function useSendForSignature() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: CreateSigningParams) => {
+      // Step 1: Create signing request with dual recipients
+      const createRes = await api.post<ApiResponse<CreateSigningResult>>(
+        '/documents/create',
+        params,
+      );
+      const { zohoRequestId } = createRes.data.data;
+
+      // Step 2: Submit for signatures (triggers email to client)
+      await api.post('/documents/send-for-sign', {
+        orderId: params.orderId,
+        zohoRequestId,
+      });
+
+      return createRes.data.data;
+    },
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ['orders', vars.orderId] });
+    },
+  });
+}
+
+export function useGenerateSigningUri() {
+  return useMutation({
+    mutationFn: async (params: { orderId: string; zohoRequestId: string; actionId: string }) => {
+      const res = await api.post<ApiResponse<{ signUrl: string }>>(
+        '/documents/generate-uri',
+        params,
+      );
+      return res.data.data;
+    },
+  });
+}

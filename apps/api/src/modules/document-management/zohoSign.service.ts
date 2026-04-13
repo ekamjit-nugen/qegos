@@ -71,7 +71,7 @@ export async function createSigningRequest(params: {
   fileName: string;
   fileBuffer: Buffer;
   recipients: ZohoSignRecipient[];
-}): Promise<{ requestId: string; actionId: string }> {
+}): Promise<{ requestId: string; actions: Array<{ actionId: string; recipientEmail: string }> }> {
   const token = await getAccessToken();
   const { FormData, Blob } = await import('node:buffer').then(() => ({
     FormData: globalThis.FormData,
@@ -90,6 +90,7 @@ export async function createSigningRequest(params: {
         recipient_email: r.recipient_email,
         action_type: r.action_type,
         verify_recipient: false,
+        ...(r.signing_order !== undefined ? { signing_order: r.signing_order } : {}),
       })),
     },
   };
@@ -108,7 +109,10 @@ export async function createSigningRequest(params: {
   const data = (await response.json()) as ZohoCreateResponse;
   return {
     requestId: data.requests.request_id,
-    actionId: data.requests.actions[0]?.action_id ?? '',
+    actions: data.requests.actions.map((a) => ({
+      actionId: a.action_id,
+      recipientEmail: a.recipient_email,
+    })),
   };
 }
 

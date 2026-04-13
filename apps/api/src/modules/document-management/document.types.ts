@@ -17,6 +17,10 @@ export type DocumentStatus = 'pending' | 'signed' | 'verified';
 
 export const DOCUMENT_STATUSES: DocumentStatus[] = ['pending', 'signed', 'verified'];
 
+export type SigningStatus = 'not_started' | 'awaiting_client' | 'client_signed' | 'awaiting_admin' | 'completed' | 'declined';
+
+export const SIGNING_STATUSES: SigningStatus[] = ['not_started', 'awaiting_client', 'client_signed', 'awaiting_admin', 'completed', 'declined'];
+
 // ─── Allowed File Types (DOC-INV-02: magic bytes validated) ────────────────
 
 export const ALLOWED_MIME_TYPES: Record<string, string> = {
@@ -44,6 +48,7 @@ export interface ZohoSignRecipient {
   recipient_name: string;
   recipient_email: string;
   action_type: 'sign' | 'view' | 'approve';
+  signing_order?: number;
 }
 
 export interface ZohoTokenResponse {
@@ -56,7 +61,7 @@ export interface ZohoCreateResponse {
   requests: {
     request_status: string;
     request_id: string;
-    actions: Array<{ action_id: string; recipient_email: string }>;
+    actions: Array<{ action_id: string; recipient_email: string; signing_order?: number }>;
   };
 }
 
@@ -65,7 +70,11 @@ export interface ZohoWebhookPayload {
     request_status: string;
     request_id: string;
     document_ids: Array<{ document_id: string }>;
-    actions: Array<{ action_id: string; action_status: string }>;
+    actions: Array<{ action_id: string; action_status: string; recipient_email: string }>;
+  };
+  notifications?: {
+    performed_by_email: string;
+    action_type: string;
   };
 }
 
@@ -79,6 +88,13 @@ export interface IOrderDocument {
   status: DocumentStatus;
   zohoRequestId?: string;
   docuSignEnvelopeId?: string;
+  signingStatus: SigningStatus;
+  clientActionId?: string;
+  adminActionId?: string;
+  clientSignedAt?: Date;
+  adminSignedAt?: Date;
+  clientEmail?: string;
+  adminEmail?: string;
 }
 
 // ─── Auth Request Extension ────────────────────────────────────────────────

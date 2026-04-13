@@ -26,10 +26,11 @@ export interface DocumentServiceResult {
   uploadDocument: (params: UploadParams) => Promise<{ fileUrl: string; documentIndex: number }>;
   uploadProof: (params: UploadProofParams) => Promise<{ fileUrl: string; documentIndex: number }>;
   listOrderDocuments: (params: ListParams) => Promise<OrderDocView[]>;
-  createSigningRequest: (params: CreateSignParams) => Promise<{ zohoRequestId: string; actionId: string }>;
+  createSigningRequest: (params: CreateSignParams) => Promise<{ zohoRequestId: string; clientActionId: string; adminActionId: string }>;
   sendForSignature: (orderId: string, zohoRequestId: string) => Promise<void>;
   generateEmbeddedUri: (params: GenerateUriParams) => Promise<{ signUrl: string }>;
   processZohoWebhook: (payload: import('./document.types').ZohoWebhookPayload) => Promise<void>;
+  getSigningStatus: (params: SigningStatusParams) => Promise<SigningStatusResult>;
 }
 
 interface UploadParams {
@@ -55,8 +56,24 @@ interface ListParams {
 interface CreateSignParams {
   orderId: string;
   documentIndex: number;
-  recipientName: string;
-  recipientEmail: string;
+  clientName: string;
+  clientEmail: string;
+  adminName: string;
+  adminEmail: string;
+}
+
+interface SigningStatusParams {
+  orderId: string;
+  documentIndex: number;
+}
+
+interface SigningStatusResult {
+  signingStatus: string;
+  zohoRequestId?: string;
+  clientEmail?: string;
+  adminEmail?: string;
+  clientSignedAt?: Date;
+  adminSignedAt?: Date;
 }
 
 interface GenerateUriParams {
@@ -73,6 +90,13 @@ interface OrderDocView {
   documentType?: string;
   status: string;
   zohoRequestId?: string;
+  signingStatus: string;
+  clientActionId?: string;
+  adminActionId?: string;
+  clientSignedAt?: Date;
+  adminSignedAt?: Date;
+  clientEmail?: string;
+  adminEmail?: string;
 }
 
 // ─── S3 Key Builder (DOC-INV-04) ──────────────────────────────────────────
@@ -218,6 +242,13 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       documentType?: string;
       status: string;
       zohoRequestId?: string;
+      signingStatus?: string;
+      clientActionId?: string;
+      adminActionId?: string;
+      clientSignedAt?: Date;
+      adminSignedAt?: Date;
+      clientEmail?: string;
+      adminEmail?: string;
     }>;
 
     // Generate presigned URLs (DOC-INV-05: 15-min expiry configured in file-storage)
@@ -230,6 +261,13 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
         documentType: doc.documentType,
         status: doc.status,
         zohoRequestId: doc.zohoRequestId,
+        signingStatus: doc.signingStatus ?? 'not_started',
+        clientActionId: doc.clientActionId,
+        adminActionId: doc.adminActionId,
+        clientSignedAt: doc.clientSignedAt,
+        adminSignedAt: doc.adminSignedAt,
+        clientEmail: doc.clientEmail,
+        adminEmail: doc.adminEmail,
       })),
     );
 
@@ -250,22 +288,28 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   }
 
   /**
-   * Create a Zoho Sign signing request for a document in an order.
+   * Create a Zoho Sign dual-signature request for a document in an order.
+   * Client signs first (signing_order 1), then admin countersigns (signing_order 2).
    */
-  async function createSigningRequest(params: CreateSignParams): Promise<{ zohoRequestId: string; actionId: string }> {
-    const { orderId, documentIndex, recipientName, recipientEmail } = params;
+  async function createSigningRequest(params: CreateSignParams): Promise<{ zohoRequestId: string; clientActionId: string; adminActionId: string }> {
+    const { orderId, documentIndex, clientName, clientEmail, adminName, adminEmail } = params;
 
     const order = await OrderModel.findById(orderId) as Record<string, unknown> | null;
     if (!order) {
       throw Object.assign(new Error('Order not found'), { status: 404 });
     }
 
-    const documents = (order.documents ?? []) as Array<{ fileName: string; fileUrl: string }>;
+    const documents = (order.documents ?? []) as Array<{ fileName: string; fileUrl: string; signingStatus?: string }>;
     if (documentIndex < 0 || documentIndex >= documents.length) {
       throw Object.assign(new Error('Document not found at specified index'), { status: 404 });
     }
 
     const doc = documents[documentIndex];
+
+    // Prevent duplicate signing requests
+    if (doc.signingStatus && doc.signingStatus !== 'not_started') {
+      throw Object.assign(new Error('A signing request already exists for this document'), { status: 409 });
+    }
 
     // Download from S3 to get buffer for Zoho
     const { GetObjectCommand: _GetObjectCommand, S3Client: _S3Client } = await import('@aws-sdk/client-s3');
@@ -274,24 +318,60 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     const response = await fetch(presignedUrl);
     const fileBuffer = Buffer.from(await response.arrayBuffer());
 
-    // Create Zoho signing request
+    // Create Zoho signing request with dual recipients
     const result = await zohoSign.createSigningRequest({
       fileName: doc.fileName,
       fileBuffer,
-      recipients: [{
-        recipient_name: recipientName,
-        recipient_email: recipientEmail,
-        action_type: 'sign',
-      }],
+      recipients: [
+        {
+          recipient_name: clientName,
+          recipient_email: clientEmail,
+          action_type: 'sign',
+          signing_order: 1,
+        },
+        {
+          recipient_name: adminName,
+          recipient_email: adminEmail,
+          action_type: 'sign',
+          signing_order: 2,
+        },
+      ],
     });
 
-    // Store zohoRequestId on the document subdoc
+    // Match action IDs to recipients by email
+    const clientAction = result.actions.find((a) => a.recipientEmail === clientEmail);
+    const adminAction = result.actions.find((a) => a.recipientEmail === adminEmail);
+
+    const clientActionId = clientAction?.actionId ?? '';
+    const adminActionId = adminAction?.actionId ?? '';
+
+    // Store zohoRequestId and dual-signature tracking fields on the document subdoc
     await OrderModel.findOneAndUpdate(
       { _id: orderId },
-      { $set: { [`documents.${documentIndex}.zohoRequestId`]: result.requestId } },
+      {
+        $set: {
+          [`documents.${documentIndex}.zohoRequestId`]: result.requestId,
+          [`documents.${documentIndex}.clientActionId`]: clientActionId,
+          [`documents.${documentIndex}.adminActionId`]: adminActionId,
+          [`documents.${documentIndex}.clientEmail`]: clientEmail,
+          [`documents.${documentIndex}.adminEmail`]: adminEmail,
+          [`documents.${documentIndex}.signingStatus`]: 'awaiting_client',
+        },
+      },
     );
 
-    return { zohoRequestId: result.requestId, actionId: result.actionId };
+    // Audit log
+    await auditLog.log({
+      action: 'document.signingRequest.created',
+      orderId,
+      documentIndex,
+      zohoRequestId: result.requestId,
+      clientEmail,
+      adminEmail,
+      message: `Dual-signature request created for order ${orderId} document ${documentIndex}`,
+    });
+
+    return { zohoRequestId: result.requestId, clientActionId, adminActionId };
   }
 
   /**
@@ -330,13 +410,11 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   }
 
   /**
-   * Process Zoho Sign webhook. Idempotent — skips if already signed.
-   * On SIGN_COMPLETE: downloads signed PDF, re-uploads to S3, updates status.
+   * Process Zoho Sign webhook. Idempotent — skips if already completed/signed.
+   * Handles dual-signature flow: client signs first, then admin countersigns.
    */
   async function processZohoWebhook(payload: import('./document.types').ZohoWebhookPayload): Promise<void> {
-    const { request_id, request_status, document_ids } = payload.requests;
-
-    if (request_status !== 'completed') return;
+    const { request_id, request_status, document_ids, actions } = payload.requests;
 
     // Find the order with this zohoRequestId
     const order = await OrderModel.findOne({
@@ -350,25 +428,125 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       status: string;
       fileUrl: string;
       fileName: string;
+      signingStatus?: string;
+      clientActionId?: string;
+      adminActionId?: string;
+      clientEmail?: string;
+      adminEmail?: string;
     }>;
 
     const docIndex = documents.findIndex((d) => d.zohoRequestId === request_id);
     if (docIndex === -1) return;
 
-    // Idempotent: skip if already signed
-    if (documents[docIndex].status === 'signed') return;
+    const doc = documents[docIndex];
 
-    // Download signed PDF from Zoho and re-upload to S3
-    if (document_ids.length > 0) {
-      const signedPdf = await zohoSign.getSignedDocument(request_id, document_ids[0].document_id);
-      await uploadToS3(signedPdf, documents[docIndex].fileUrl, 'application/pdf');
+    // Idempotent: skip if already completed or signed
+    if (doc.signingStatus === 'completed' || doc.status === 'signed') return;
+
+    // Handle declined actions
+    const declinedAction = actions.find((a) => a.action_status === 'declined');
+    if (declinedAction) {
+      await OrderModel.findOneAndUpdate(
+        { 'documents.zohoRequestId': request_id },
+        { $set: { [`documents.${docIndex}.signingStatus`]: 'declined' } },
+      );
+      return;
     }
 
-    // Update document status to 'signed'
-    await OrderModel.findOneAndUpdate(
-      { 'documents.zohoRequestId': request_id },
-      { $set: { [`documents.${docIndex}.status`]: 'signed' } },
-    );
+    // Handle request completed — both parties signed
+    if (request_status === 'completed') {
+      // Download signed PDF from Zoho and re-upload to S3
+      if (document_ids.length > 0) {
+        const signedPdf = await zohoSign.getSignedDocument(request_id, document_ids[0].document_id);
+        await uploadToS3(signedPdf, doc.fileUrl, 'application/pdf');
+      }
+
+      await OrderModel.findOneAndUpdate(
+        { 'documents.zohoRequestId': request_id },
+        {
+          $set: {
+            [`documents.${docIndex}.signingStatus`]: 'completed',
+            [`documents.${docIndex}.adminSignedAt`]: new Date(),
+            [`documents.${docIndex}.status`]: 'signed',
+          },
+        },
+      );
+      return;
+    }
+
+    // Handle per-action signing events
+    for (const action of actions) {
+      if (action.action_status !== 'signed') continue;
+
+      // Client signed
+      if (action.action_id === doc.clientActionId) {
+        await OrderModel.findOneAndUpdate(
+          { 'documents.zohoRequestId': request_id },
+          {
+            $set: {
+              [`documents.${docIndex}.signingStatus`]: 'client_signed',
+              [`documents.${docIndex}.clientSignedAt`]: new Date(),
+            },
+          },
+        );
+      }
+
+      // Admin signed
+      if (action.action_id === doc.adminActionId) {
+        // Download signed PDF from Zoho and re-upload to S3
+        if (document_ids.length > 0) {
+          const signedPdf = await zohoSign.getSignedDocument(request_id, document_ids[0].document_id);
+          await uploadToS3(signedPdf, doc.fileUrl, 'application/pdf');
+        }
+
+        await OrderModel.findOneAndUpdate(
+          { 'documents.zohoRequestId': request_id },
+          {
+            $set: {
+              [`documents.${docIndex}.signingStatus`]: 'completed',
+              [`documents.${docIndex}.adminSignedAt`]: new Date(),
+              [`documents.${docIndex}.status`]: 'signed',
+            },
+          },
+        );
+      }
+    }
+  }
+
+  /**
+   * Get the signing status for a specific document in an order.
+   */
+  async function getSigningStatus(params: SigningStatusParams): Promise<SigningStatusResult> {
+    const { orderId, documentIndex } = params;
+
+    const order = await OrderModel.findById(orderId).lean() as Record<string, unknown> | null;
+    if (!order) {
+      throw Object.assign(new Error('Order not found'), { status: 404 });
+    }
+
+    const documents = (order.documents ?? []) as Array<{
+      signingStatus?: string;
+      zohoRequestId?: string;
+      clientEmail?: string;
+      adminEmail?: string;
+      clientSignedAt?: Date;
+      adminSignedAt?: Date;
+    }>;
+
+    if (documentIndex < 0 || documentIndex >= documents.length) {
+      throw Object.assign(new Error('Document not found at specified index'), { status: 404 });
+    }
+
+    const doc = documents[documentIndex];
+
+    return {
+      signingStatus: doc.signingStatus ?? 'not_started',
+      zohoRequestId: doc.zohoRequestId,
+      clientEmail: doc.clientEmail,
+      adminEmail: doc.adminEmail,
+      clientSignedAt: doc.clientSignedAt,
+      adminSignedAt: doc.adminSignedAt,
+    };
   }
 
   return {
@@ -379,5 +557,6 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     sendForSignature,
     generateEmbeddedUri,
     processZohoWebhook,
+    getSigningStatus,
   };
 }

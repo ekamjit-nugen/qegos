@@ -9,6 +9,7 @@ import {
   APPOINTMENT_STATUSES,
   ORDER_TYPES,
   LINE_ITEM_COMPLETION_STATUSES,
+  SIGNING_STATUSES,
 } from './order.types';
 import type { ICounterDocument } from '../../database/counter.model';
 import { getNextSequence } from '../../database/counter.model';
@@ -162,6 +163,14 @@ const orderSchema = new Schema<IOrderDocument2>(
         status: { type: String, enum: ['pending', 'signed', 'verified'], default: 'pending' },
         zohoRequestId: String,
         docuSignEnvelopeId: String,
+        // Dual-signature tracking
+        signingStatus: { type: String, enum: SIGNING_STATUSES, default: 'not_started' },
+        clientActionId: String,
+        adminActionId: String,
+        clientSignedAt: { type: Date },
+        adminSignedAt: { type: Date },
+        clientEmail: { type: String, lowercase: true, trim: true },
+        adminEmail: { type: String, lowercase: true, trim: true },
       },
     ],
     lineItems: [lineItemSchema],

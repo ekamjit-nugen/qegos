@@ -28,14 +28,22 @@ export const createSigningValidation = [
   body('documentIndex')
     .isInt({ min: 0 })
     .withMessage('documentIndex must be a non-negative integer'),
-  body('recipientName')
+  body('clientName')
     .isString()
     .trim()
     .notEmpty()
-    .withMessage('recipientName is required'),
-  body('recipientEmail')
+    .withMessage('clientName is required'),
+  body('clientEmail')
     .isEmail()
-    .withMessage('recipientEmail must be a valid email'),
+    .withMessage('clientEmail must be a valid email'),
+  body('adminName')
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage('adminName is required'),
+  body('adminEmail')
+    .isEmail()
+    .withMessage('adminEmail must be a valid email'),
 ];
 
 /**
@@ -72,4 +80,11 @@ export const generateUriValidation = [
  */
 export const listOrderDocumentsValidation = [
   param('orderId').isMongoId().withMessage('orderId must be a valid ObjectId'),
+];
+
+export const signingStatusValidation = [
+  param('orderId').isMongoId().withMessage('orderId must be a valid ObjectId'),
+  param('documentIndex')
+    .isInt({ min: 0 })
+    .withMessage('documentIndex must be a non-negative integer'),
 ];

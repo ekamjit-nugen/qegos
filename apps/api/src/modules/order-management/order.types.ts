@@ -123,6 +123,16 @@ export interface IDeductionDetails {
   incomeProtection?: boolean;
 }
 
+export const SIGNING_STATUSES = [
+  'not_started',
+  'awaiting_client',
+  'client_signed',
+  'awaiting_admin',
+  'completed',
+  'declined',
+] as const;
+export type SigningStatus = (typeof SIGNING_STATUSES)[number];
+
 export interface IOrderDocument {
   documentId?: Types.ObjectId;
   fileName: string;
@@ -131,6 +141,14 @@ export interface IOrderDocument {
   status: 'pending' | 'signed' | 'verified';
   zohoRequestId?: string;
   docuSignEnvelopeId?: string;
+  // Dual-signature tracking
+  signingStatus: SigningStatus;
+  clientActionId?: string;
+  adminActionId?: string;
+  clientSignedAt?: Date;
+  adminSignedAt?: Date;
+  clientEmail?: string;
+  adminEmail?: string;
 }
 
 export interface ILineItem {
