@@ -10,6 +10,7 @@ import {
   CalendarOutlined,
   StarOutlined,
   FolderOpenOutlined,
+  CloudServerOutlined,
   AuditOutlined,
   UserOutlined,
   NotificationOutlined,
@@ -66,6 +67,11 @@ export const menuItems: MenuDataItem[] = [
     path: '/documents',
     name: 'Documents',
     icon: <FolderOpenOutlined />,
+  },
+  {
+    path: '/vault',
+    name: 'Client Vault',
+    icon: <CloudServerOutlined />,
   },
   {
     name: 'Reports',

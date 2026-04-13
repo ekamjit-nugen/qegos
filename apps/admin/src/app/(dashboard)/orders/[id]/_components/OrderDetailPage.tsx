@@ -1,14 +1,60 @@
 'use client';
 
-import { Row, Col, Card, Descriptions, Tabs, Table, Tag, Progress, Spin, Empty, Badge } from 'antd';
+import { useCallback, useState } from 'react';
+import { Row, Col, Card, Descriptions, Tabs, Table, Tag, Progress, Spin, Empty, Badge, Button, Modal, Select, Space, Typography, Upload, message } from 'antd';
+import { CloudUploadOutlined, InboxOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { UploadProps } from 'antd';
 import { useOrder } from '@/hooks/useOrders';
+import { useUploadOrderDocument } from '@/hooks/useDocuments';
 import { OrderStatusTransition } from '../../_components/OrderStatusTransition';
 import type { OrderLineItem, OrderDocument } from '@/types/order';
 import { formatCurrency, formatDate, fullName } from '@/lib/utils/format';
 
+const { Text } = Typography;
+const { Dragger } = Upload;
+
+const DOCUMENT_TYPES = [
+  { value: 'tax_return', label: 'Tax Return' },
+  { value: 'payment_summary', label: 'Payment Summary' },
+  { value: 'identity', label: 'Identity Document' },
+  { value: 'consent_form', label: 'Consent Form' },
+  { value: 'notice_of_assessment', label: 'Notice of Assessment' },
+  { value: 'other', label: 'Other' },
+];
+
 export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
   const { data: order, isLoading } = useOrder(id);
+  const uploadMutation = useUploadOrderDocument();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<string | undefined>();
+
+  const handleDocUpload: UploadProps['customRequest'] = useCallback(
+    (options: { file: unknown; onSuccess?: (body: unknown) => void; onError?: (err: Error) => void }) => {
+      const formData = new FormData();
+      formData.append('file', options.file as File);
+      formData.append('orderId', id);
+      if (uploadDocType) {
+        formData.append('documentType', uploadDocType);
+      }
+      uploadMutation.mutate(
+        { orderId: id, formData },
+        {
+          onSuccess: () => {
+            void message.success('Document uploaded successfully');
+            options.onSuccess?.({});
+            setUploadOpen(false);
+            setUploadDocType(undefined);
+          },
+          onError: () => {
+            void message.error('Upload failed');
+            options.onError?.(new Error('Upload failed'));
+          },
+        },
+      );
+    },
+    [id, uploadDocType, uploadMutation],
+  );
 
   if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
   if (!order) { return <Empty description="Order not found" />; }
@@ -91,13 +137,59 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
       key: 'documents',
       label: `Documents (${order.documents.length})`,
       children: (
-        <Table<OrderDocument>
-          columns={documentColumns}
-          dataSource={order.documents}
-          rowKey={(r) => r.documentId ?? r.fileName}
-          pagination={false}
-          size="small"
-        />
+        <div>
+          <div style={{ marginBottom: 12, textAlign: 'right' }}>
+            <Button
+              type="primary"
+              icon={<CloudUploadOutlined />}
+              size="small"
+              onClick={() => { setUploadOpen(true); }}
+            >
+              Upload Document
+            </Button>
+          </div>
+          <Table<OrderDocument>
+            columns={documentColumns}
+            dataSource={order.documents}
+            rowKey={(r) => r.documentId ?? r.fileName}
+            pagination={false}
+            size="small"
+          />
+          <Modal
+            title="Upload Order Document"
+            open={uploadOpen}
+            onCancel={() => { setUploadOpen(false); setUploadDocType(undefined); }}
+            footer={null}
+            destroyOnClose
+          >
+            <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  Document Type (optional)
+                </Text>
+                <Select
+                  value={uploadDocType}
+                  onChange={setUploadDocType}
+                  options={DOCUMENT_TYPES}
+                  style={{ width: '100%' }}
+                  placeholder="Select document type"
+                  allowClear
+                />
+              </div>
+            </Space>
+            <Dragger
+              customRequest={handleDocUpload as UploadProps['customRequest']}
+              showUploadList={false}
+              accept=".pdf,.jpg,.jpeg,.png,.heic,.tif,.tiff"
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">Click or drag a file to upload</p>
+              <p className="ant-upload-hint">PDF or image files up to 20 MB</p>
+            </Dragger>
+          </Modal>
+        </div>
       ),
     },
   ];

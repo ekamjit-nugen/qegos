@@ -1,8 +1,15 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
+import multer from 'multer';
 import { validationResult } from 'express-validator';
 import type { Types } from 'mongoose';
 import type { FileStorageRouteDeps } from '@nugen/file-storage';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '@nugen/file-storage';
+
+// ─── Multer (20MB limit, in-memory for virus scan before S3) ──────────────
+const uploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE },
+});
 import {
   uploadDocumentValidation,
   updateDocumentValidation,
@@ -74,6 +81,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
   router.post(
     '/vault/upload',
+    uploadMiddleware.single('file'),
     ...uploadDocumentValidation,
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
       if (!handleValidation(req, res)) return;
@@ -151,6 +159,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
   router.post(
     '/vault/bulk-upload',
+    uploadMiddleware.array('files', 10),
     async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthRequest;
       const user = authReq.user!;
@@ -522,6 +531,165 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
         status: 200,
         data: { modified, total: updates.length },
       });
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN VAULT ENDPOINTS — staff access to client vaults
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const adminGuard = deps.checkPermission('portal', 'manage') as import('express').RequestHandler;
+
+  // ── GET /vault/admin/users/:userId/documents ─────────────────────────
+
+  router.get(
+    '/vault/admin/users/:userId/documents',
+    adminGuard,
+    ...listDocumentsValidation,
+    async (req: Request, res: Response): Promise<void> => {
+      if (!handleValidation(req, res)) return;
+      const { userId } = req.params;
+      const { financialYear, category, page, limit } = req.query as Record<string, string | undefined>;
+
+      const result = await listDocuments(
+        userId,
+        financialYear,
+        category,
+        page ? Number(page) : 1,
+        limit ? Number(limit) : 20,
+      );
+
+      // Audit log staff access
+      const authReq = req as AuthRequest;
+      if (deps.auditLog?.log) {
+        void deps.auditLog.log({
+          userId: authReq.user!.userId,
+          action: 'read',
+          resource: 'vault_documents',
+          resourceId: userId,
+          description: `Staff viewed client vault documents`,
+        });
+      }
+
+      res.status(200).json({ status: 200, ...result });
+    },
+  );
+
+  // ── GET /vault/admin/users/:userId/documents/:docId ──────────────────
+
+  router.get(
+    '/vault/admin/users/:userId/documents/:docId',
+    adminGuard,
+    async (req: Request, res: Response): Promise<void> => {
+      const { userId, docId } = req.params;
+      const result = await getDocument(
+        docId as unknown as Types.ObjectId,
+        userId,
+      );
+
+      if (!result) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND', message: 'Document not found' });
+        return;
+      }
+
+      res.status(200).json({ status: 200, data: result });
+    },
+  );
+
+  // ── GET /vault/admin/users/:userId/storage ───────────────────────────
+
+  router.get(
+    '/vault/admin/users/:userId/storage',
+    adminGuard,
+    async (req: Request, res: Response): Promise<void> => {
+      const { userId } = req.params;
+      const usage = await getStorageUsage(userId);
+      res.status(200).json({ status: 200, data: usage });
+    },
+  );
+
+  // ── POST /vault/admin/users/:userId/upload ───────────────────────────
+
+  router.post(
+    '/vault/admin/users/:userId/upload',
+    adminGuard,
+    uploadMiddleware.single('file'),
+    ...uploadDocumentValidation,
+    async (req: Request, res: Response): Promise<void> => {
+      if (!handleValidation(req, res)) return;
+      const authReq = req as AuthRequest;
+      const { userId } = req.params;
+
+      const file = (req as Request & { file?: Express.Multer.File }).file;
+      if (!file) {
+        res.status(400).json({ status: 400, code: 'NO_FILE', message: 'No file uploaded' });
+        return;
+      }
+
+      if (!ALLOWED_MIME_TYPES[file.mimetype]) {
+        res.status(400).json({
+          status: 400,
+          code: 'INVALID_FILE_TYPE',
+          message: `Allowed types: ${Object.values(ALLOWED_MIME_TYPES).join(', ')}`,
+        });
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        res.status(400).json({
+          status: 400,
+          code: 'FILE_TOO_LARGE',
+          message: `Max file size: ${MAX_FILE_SIZE / 1_048_576}MB`,
+        });
+        return;
+      }
+
+      const body = req.body as UploadDocumentBody;
+
+      try {
+        const result = await uploadDocument({
+          userId,
+          financialYear: body.financialYear,
+          category: body.category as import('@nugen/file-storage').VaultDocumentCategory,
+          fileName: file.originalname,
+          mimeType: file.mimetype,
+          buffer: file.buffer,
+          uploadedBy: 'staff',
+          uploadedByUserId: authReq.user!.userId,
+          description: body.description,
+          tags: body.tags,
+        });
+
+        // Audit log staff upload
+        if (deps.auditLog?.log) {
+          void deps.auditLog.log({
+            userId: authReq.user!.userId,
+            action: 'create',
+            resource: 'vault_documents',
+            resourceId: userId,
+            description: `Staff uploaded "${file.originalname}" to client vault`,
+          });
+        }
+
+        res.status(201).json({
+          status: 201,
+          data: { document: result.document },
+          ...(result.duplicateWarning && {
+            warning: {
+              code: 'DUPLICATE_FILE',
+              message: `Duplicate file detected`,
+              existingFile: result.duplicateWarning.existingFile,
+            },
+          }),
+        });
+      } catch (err) {
+        const error = err as Error & { statusCode?: number; code?: string };
+        res.status(error.statusCode ?? 500).json({
+          status: error.statusCode ?? 500,
+          code: error.code ?? 'UPLOAD_ERROR',
+          message: error.message,
+        });
+      }
     },
   );
 

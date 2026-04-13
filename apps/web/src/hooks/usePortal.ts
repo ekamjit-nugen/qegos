@@ -97,7 +97,7 @@ export function useUploadDocument() {
   return useMutation({
     mutationFn: async (formData: FormData) => {
       const res = await api.post<ApiResponse<VaultDocument>>(
-        '/portal/vault/documents',
+        '/portal/vault/upload',
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } },
       );
@@ -109,7 +109,20 @@ export function useUploadDocument() {
   });
 }
 
-export function useDeleteDocument() {
+export function useVaultDocument(id: string | undefined) {
+  return useQuery({
+    queryKey: ['portal', 'vault', 'document', id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<{ document: VaultDocument; downloadUrl: string }>>(
+        `/portal/vault/documents/${id}`,
+      );
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useArchiveDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -121,11 +134,11 @@ export function useDeleteDocument() {
   });
 }
 
-export function useArchiveDocument() {
+export function useRestoreDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
-      await api.patch(`/portal/vault/documents/${id}/archive`, { archive });
+    mutationFn: async (id: string) => {
+      await api.post(`/portal/vault/documents/${id}/restore`);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['portal', 'vault'] });
