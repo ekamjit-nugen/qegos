@@ -88,8 +88,11 @@ export function useStaffList() {
   return useQuery({
     queryKey: ['users', 'staff'],
     queryFn: async () => {
-      const res = await api.get<PaginatedResponse<User>>('/users?userType=3&limit=100');
-      return res.data.data ?? [];
+      // Fetch all non-client users (userType 0-4: super_admin, admin, office_manager, senior_staff, staff)
+      const res = await api.get<PaginatedResponse<User>>('/users?limit=100');
+      const allUsers = res.data.data ?? [];
+      // Filter to staff-level users (userType 0-4, excluding clients/students)
+      return allUsers.filter((u) => u.userType !== undefined && u.userType <= 4);
     },
   });
 }

@@ -27,6 +27,8 @@ export function useLogActivity() {
       description: string;
       outcome?: string;
       sentiment?: string;
+      callDuration?: number;
+      callDirection?: string;
     }) => {
       const res = await api.post<ApiResponse<LeadActivity>>('/leads/activities', data);
       return res.data.data;

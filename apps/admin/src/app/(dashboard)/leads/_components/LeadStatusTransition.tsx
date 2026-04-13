@@ -8,25 +8,25 @@ import {
   LEAD_STATUS_COLORS,
   LEAD_STATUS_TRANSITIONS,
   LeadStatus,
+  LOST_REASONS,
+  LOST_REASON_LABELS,
 } from '@/types/lead';
 
 interface LeadStatusTransitionProps {
   leadId: string;
   currentStatus: number;
+  onConvert?: () => void;
 }
 
-const LOST_REASONS = [
-  { value: 'too_expensive', label: 'Too Expensive' },
-  { value: 'went_elsewhere', label: 'Went Elsewhere' },
-  { value: 'not_ready', label: 'Not Ready' },
-  { value: 'no_response', label: 'No Response' },
-  { value: 'duplicate', label: 'Duplicate Lead' },
-  { value: 'other', label: 'Other' },
-];
+const LOST_REASON_OPTIONS = LOST_REASONS.map((r) => ({
+  value: r,
+  label: LOST_REASON_LABELS[r] ?? r,
+}));
 
 export function LeadStatusTransition({
   leadId,
   currentStatus,
+  onConvert,
 }: LeadStatusTransitionProps): React.ReactNode {
   const [showLostModal, setShowLostModal] = useState(false);
   const [form] = Form.useForm();
@@ -38,6 +38,15 @@ export function LeadStatusTransition({
   const handleTransition = async (newStatus: number): Promise<void> => {
     if (newStatus === LeadStatus.Lost) {
       setShowLostModal(true);
+      return;
+    }
+    if (newStatus === LeadStatus.Won) {
+      // Won is terminal — only reachable via conversion
+      if (onConvert) {
+        onConvert();
+      } else {
+        message.info('Use "Convert to Client" to mark this lead as Won');
+      }
       return;
     }
     try {
@@ -83,9 +92,9 @@ export function LeadStatusTransition({
               type={status === LeadStatus.Won ? 'primary' : 'default'}
               danger={status === LeadStatus.Lost}
               loading={transition.isPending}
-              onClick={() => handleTransition(status)}
+              onClick={() => { void handleTransition(status); }}
             >
-              {LEAD_STATUS_LABELS[status]}
+              {status === LeadStatus.Won ? 'Convert & Win' : LEAD_STATUS_LABELS[status]}
             </Button>
           ))}
         </Space>
@@ -100,7 +109,7 @@ export function LeadStatusTransition({
       >
         <Form form={form} layout="vertical">
           <Form.Item name="lostReason" label="Reason" rules={[{ required: true }]}>
-            <Select options={LOST_REASONS} />
+            <Select options={LOST_REASON_OPTIONS} />
           </Form.Item>
           <Form.Item name="lostReasonNote" label="Notes">
             <Input.TextArea rows={3} />
