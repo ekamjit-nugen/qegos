@@ -17,3 +17,10 @@ body {
 .ant-pro-layout .ant-pro-sider-logo h1 {
   font-weight: 700;
 }
+
+/* Make sidebar content flex so menu scrolls and user card stays pinned */
+.ant-layout-sider > .ant-layout-sider-children {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}

@@ -131,19 +131,22 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
         style={{
           background: '#fff',
           borderRight: '1px solid #f0f0f0',
-          overflow: 'auto',
+          overflow: 'hidden',
           height: '100vh',
           position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
           zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {/* Logo */}
         <div
           style={{
             height: 56,
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'flex-start',
@@ -167,30 +170,30 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
           )}
         </div>
 
-        {/* Navigation */}
-        <Menu
-          mode="inline"
-          selectedKeys={selectedKeys}
-          openKeys={collapsed ? [] : openKeys}
-          onOpenChange={(keys) => { setOpenKeys(keys); }}
-          items={antMenuItems}
-          style={{
-            border: 'none',
-            marginTop: 4,
-            fontSize: 13,
-          }}
-        />
+        {/* Navigation — scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+          <Menu
+            mode="inline"
+            selectedKeys={selectedKeys}
+            openKeys={collapsed ? [] : openKeys}
+            onOpenChange={(keys) => { setOpenKeys(keys); }}
+            items={antMenuItems}
+            style={{
+              border: 'none',
+              marginTop: 4,
+              fontSize: 13,
+            }}
+          />
+        </div>
 
         {/* User card at bottom */}
         {!collapsed && (
           <div
             style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
+              flexShrink: 0,
               padding: '14px 16px',
               borderTop: '1px solid #f0f0f0',
+              background: '#fff',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

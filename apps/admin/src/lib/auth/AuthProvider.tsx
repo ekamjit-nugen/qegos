@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -42,8 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     }
   }, []);
 
-  // Attempt session restore on mount
+  // Attempt session restore on mount.
+  // Guard with a ref so React Strict Mode's double-effect doesn't fire two
+  // concurrent refresh requests — the second would trigger replay detection
+  // and revoke all sessions.
+  const restoreAttempted = useRef(false);
   useEffect(() => {
+    if (restoreAttempted.current) return;
+    restoreAttempted.current = true;
+
     const restore = async (): Promise<void> => {
       const rt = getRefreshToken();
       if (!rt) {
@@ -55,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
         const res = await axios.post<{ status: number; data: { accessToken: string; refreshToken: string } }>(
           `${api.defaults.baseURL}/auth/refresh`,
           { refreshToken: rt },
+          { withCredentials: true },
         );
         setAccessToken(res.data.data.accessToken);
         setRefreshToken(res.data.data.refreshToken);
