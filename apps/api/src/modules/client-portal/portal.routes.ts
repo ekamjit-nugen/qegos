@@ -60,7 +60,11 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
   initPortalService(deps.VaultDocumentModel, deps.TaxYearSummaryModel);
 
   // All routes require authentication
-  router.use(deps.authenticate);
+  // deps.authenticate may be a factory (() => RequestHandler) or a direct RequestHandler
+  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+    : deps.authenticate;
+  router.use(authMiddleware);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // VAULT ENDPOINTS (9)
@@ -106,14 +110,14 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
       try {
         const result = await uploadDocument({
-          userId: user._id,
+          userId: user.userId,
           financialYear: body.financialYear,
           category: body.category as import('@nugen/file-storage').VaultDocumentCategory,
           fileName: file.originalname,
           mimeType: file.mimetype,
           buffer: file.buffer,
-          uploadedBy: user.role === 'client' ? 'client' : 'staff',
-          uploadedByUserId: user._id,
+          uploadedBy: user.userType >= 5 ? 'client' : 'staff',
+          uploadedByUserId: user.userId,
           description: body.description,
           tags: body.tags,
         });
@@ -172,14 +176,14 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
           }
 
           const result = await uploadDocument({
-            userId: user._id,
+            userId: user.userId,
             financialYear: body.financialYear,
             category: body.category as import('@nugen/file-storage').VaultDocumentCategory,
             fileName: file.originalname,
             mimeType: file.mimetype,
             buffer: file.buffer,
-            uploadedBy: user.role === 'client' ? 'client' : 'staff',
-            uploadedByUserId: user._id,
+            uploadedBy: user.userType >= 5 ? 'client' : 'staff',
+            uploadedByUserId: user.userId,
             description: body.description,
             tags: body.tags,
           });
@@ -214,7 +218,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       const query = req.query as { financialYear?: string; category?: string; page?: string; limit?: string };
 
       const result = await listDocuments({
-        userId: user._id,
+        userId: user.userId,
         financialYear: query.financialYear,
         category: query.category as import('@nugen/file-storage').VaultDocumentCategory | undefined,
         page: query.page ? parseInt(query.page, 10) : undefined,
@@ -236,7 +240,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
       const result = await getDocument(
         req.params.id as unknown as Types.ObjectId,
-        user._id,
+        user.userId,
       );
 
       if (!result) {
@@ -245,9 +249,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       }
 
       // CPV-INV-08: Audit log if staff accessing client vault
-      if (user.role !== 'client') {
+      if (user.userType < 5) {
         await deps.auditLog.log({
-          actor: user._id,
+          actor: user.userId,
           action: 'vault.document.access',
           resource: 'VaultDocument',
           resourceId: req.params.id,
@@ -271,7 +275,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
       const doc = await updateDocument(
         req.params.id as unknown as Types.ObjectId,
-        user._id,
+        user.userId,
         req.body as { category?: import('@nugen/file-storage').VaultDocumentCategory; description?: string; tags?: string[] },
       );
 
@@ -295,7 +299,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
       const doc = await archiveDocument(
         req.params.id as unknown as Types.ObjectId,
-        user._id,
+        user.userId,
       );
 
       if (!doc) {
@@ -318,7 +322,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
       const doc = await restoreDocument(
         req.params.id as unknown as Types.ObjectId,
-        user._id,
+        user.userId,
       );
 
       if (!doc) {
@@ -336,7 +340,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/years',
     async (req: Request, res: Response): Promise<void> => {
       const user = (req as AuthRequest).user!;
-      const years = await listFinancialYears(user._id);
+      const years = await listFinancialYears(user.userId);
       res.status(200).json({ status: 200, data: { years } });
     },
   );
@@ -347,7 +351,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/storage',
     async (req: Request, res: Response): Promise<void> => {
       const user = (req as AuthRequest).user!;
-      const usage = await getStorageUsage(user._id);
+      const usage = await getStorageUsage(user.userId);
       res.status(200).json({ status: 200, data: usage });
     },
   );
@@ -361,7 +365,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       if (!handleValidation(req, res)) return;
       const user = (req as AuthRequest).user!;
 
-      const prefill = await getPrefillData(user._id, req.params.financialYear);
+      const prefill = await getPrefillData(user.userId, req.params.financialYear);
 
       if (!prefill) {
         res.status(200).json({
@@ -401,7 +405,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/tax-summaries',
     async (req: Request, res: Response): Promise<void> => {
       const user = (req as AuthRequest).user!;
-      const summaries = await listTaxSummaries(user._id);
+      const summaries = await listTaxSummaries(user.userId);
       res.status(200).json({ status: 200, data: { summaries } });
     },
   );
@@ -415,7 +419,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       if (!handleValidation(req, res)) return;
       const user = (req as AuthRequest).user!;
 
-      const comparison = await getYoYComparison(user._id, req.params.year);
+      const comparison = await getYoYComparison(user.userId, req.params.year);
 
       if (!comparison) {
         res.status(404).json({
@@ -443,7 +447,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       if (!handleValidation(req, res)) return;
       const user = (req as AuthRequest).user!;
 
-      const status = await getAtoStatus(user._id, req.params.year);
+      const status = await getAtoStatus(user.userId, req.params.year);
 
       if (!status) {
         res.status(404).json({

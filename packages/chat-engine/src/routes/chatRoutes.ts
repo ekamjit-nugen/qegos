@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import type { Types } from 'mongoose';
+import mongoose, { type Types } from 'mongoose';
 import type { ChatEngineRouteDeps } from '../types';
 import {
   createConversationValidation,
@@ -29,7 +29,7 @@ import {
 import { initTfnRedaction } from '../services/tfnRedaction';
 
 interface AuthRequest extends Request {
-  user?: { _id: Types.ObjectId; role: string };
+  user?: { userId: string; userType: number; roleId: string };
 }
 
 function handleValidation(req: Request, res: Response): boolean {
@@ -48,7 +48,12 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
   initChatService(deps.ConversationModel, deps.MessageModel, deps.CannedResponseModel);
   initTfnRedaction(deps.config.encryptionKey);
 
-  router.use(deps.authenticate);
+  // deps.authenticate may be a factory (() => RequestHandler) or a direct RequestHandler.
+  // Handle both patterns for compatibility.
+  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+    : deps.authenticate;
+  router.use(authMiddleware);
 
   // ── POST /chat/conversations ──────────────────────────────────────────
 
@@ -60,7 +65,7 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
       const user = (req as AuthRequest).user!;
 
       const conv = await findOrCreateConversation(
-        user._id,
+        new mongoose.Types.ObjectId(user.userId),
         req.body.staffId as unknown as Types.ObjectId | undefined,
         req.body.orderId as unknown as Types.ObjectId | undefined,
         req.body.subject,
@@ -81,10 +86,11 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
       const q = req.query as Record<string, string>;
 
       const filters: Record<string, unknown> = {};
-      if (user.role === 'client') {
-        filters.userId = user._id;
-      } else if (user.role !== 'admin' && user.role !== 'super_admin') {
-        filters.staffId = user._id;
+      // userType: 0=super_admin, 1=admin — see all; 5=client, 6=student — own only; others=staff
+      if (user.userType >= 5) {
+        filters.userId = user.userId;
+      } else if (user.userType > 1) {
+        filters.staffId = user.userId;
       }
       if (q.status) filters.status = q.status;
 
@@ -128,8 +134,8 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
 
       const message = await sendMessage({
         conversationId: req.body.conversationId as unknown as Types.ObjectId,
-        senderId: user._id,
-        senderType: user.role === 'client' ? 'client' : 'staff',
+        senderId: new mongoose.Types.ObjectId(user.userId),
+        senderType: user.userType >= 5 ? 'client' : 'staff',
         type: req.body.type,
         content: req.body.content,
         fileUrl: req.body.fileUrl,
@@ -201,7 +207,7 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
       }
 
       await deps.auditLog.log({
-        actor: user._id,
+        actor: user.userId,
         action: 'chat.conversation.transferred',
         resource: 'ChatConversation',
         resourceId: conv._id,
@@ -219,7 +225,7 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     '/unread-count',
     async (req: Request, res: Response): Promise<void> => {
       const user = (req as AuthRequest).user!;
-      const count = await getUnreadCount(user._id, user.role);
+      const count = await getUnreadCount(new mongoose.Types.ObjectId(user.userId), user.userType >= 5 ? 'client' : 'staff');
       res.status(200).json({ status: 200, data: { unreadCount: count } });
     },
   );
@@ -234,7 +240,7 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
       const q = req.query as Record<string, string>;
 
       const responses = await listCannedResponses(
-        user._id,
+        new mongoose.Types.ObjectId(user.userId),
         q.category as never,
       );
 
@@ -254,7 +260,7 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
 
       const response = await createCannedResponse({
         ...req.body,
-        createdBy: user._id,
+        createdBy: user.userId,
       });
 
       res.status(201).json({ status: 201, data: { response } });

@@ -52,10 +52,15 @@ export function useVaultDocuments(
           params.set(key, String(value));
         }
       }
-      const res = await api.get<PaginatedResponse<VaultDocument>>(
+      const res = await api.get<{ status: number; data: { documents: VaultDocument[]; total: number; page: number; pages: number } }>(
         `/portal/vault/documents?${params.toString()}`,
       );
-      return res.data;
+      const { documents, total, page, pages } = res.data.data;
+      return {
+        status: res.data.status,
+        data: documents,
+        meta: { page, limit: 20, total, totalPages: pages },
+      } as PaginatedResponse<VaultDocument>;
     },
     placeholderData: (prev) => prev,
   });
@@ -65,8 +70,8 @@ export function useVaultYears(): ReturnType<typeof useQuery<VaultYear[]>> {
   return useQuery({
     queryKey: ['portal', 'vault', 'years'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<VaultYear[]>>('/portal/vault/years');
-      return res.data.data;
+      const res = await api.get<ApiResponse<{ years: VaultYear[] }>>('/portal/vault/years');
+      return res.data.data.years;
     },
   });
 }
@@ -75,8 +80,14 @@ export function useStorageUsage(): ReturnType<typeof useQuery<StorageUsage>> {
   return useQuery({
     queryKey: ['portal', 'vault', 'storage'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<StorageUsage>>('/portal/vault/storage');
-      return res.data.data;
+      const res = await api.get<ApiResponse<{ used: number; quota: number; breakdown: unknown[] }>>('/portal/vault/storage');
+      const { used, quota } = res.data.data;
+      return {
+        used,
+        limit: quota,
+        percentage: quota > 0 ? Math.round((used / quota) * 100) : 0,
+        documents: 0,
+      } satisfies StorageUsage;
     },
   });
 }
@@ -128,8 +139,8 @@ export function useTaxSummaries(): ReturnType<typeof useQuery<TaxYearSummary[]>>
   return useQuery({
     queryKey: ['portal', 'tax-summaries'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<TaxYearSummary[]>>('/portal/tax-summaries');
-      return res.data.data;
+      const res = await api.get<ApiResponse<{ summaries: TaxYearSummary[] }>>('/portal/tax-summaries');
+      return res.data.data.summaries;
     },
   });
 }
@@ -170,8 +181,8 @@ export function useConversations(): ReturnType<typeof useQuery<Conversation[]>> 
   return useQuery({
     queryKey: ['portal', 'conversations'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Conversation[]>>('/chat/conversations');
-      return res.data.data;
+      const res = await api.get<ApiResponse<{ conversations: Conversation[]; total: number }>>('/chat/conversations');
+      return res.data.data.conversations;
     },
     // Real-time updates via Socket.io; fall back to 30s polling as safety net
     refetchInterval: 30_000,
@@ -184,10 +195,10 @@ export function useConversationMessages(
   return useQuery({
     queryKey: ['portal', 'conversations', id, 'messages'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<ChatMessage[]>>(
+      const res = await api.get<ApiResponse<{ messages: ChatMessage[]; total: number }>>(
         `/chat/conversations/${id}/messages`,
       );
-      return res.data.data;
+      return res.data.data.messages;
     },
     enabled: !!id,
     // Real-time updates via Socket.io; fall back to 30s polling as safety net
@@ -256,10 +267,15 @@ export function useNotifications(page: number = 1): ReturnType<
   return useQuery({
     queryKey: ['portal', 'notifications', page],
     queryFn: async () => {
-      const res = await api.get<PaginatedResponse<Notification>>(
+      const res = await api.get<{ status: number; data: { notifications: Notification[]; total: number } }>(
         `/notifications?page=${page}&limit=20`,
       );
-      return res.data;
+      const { notifications, total } = res.data.data;
+      return {
+        status: res.data.status,
+        data: notifications,
+        meta: { page, limit: 20, total, totalPages: Math.ceil(total / 20) },
+      } as PaginatedResponse<Notification>;
     },
   });
 }

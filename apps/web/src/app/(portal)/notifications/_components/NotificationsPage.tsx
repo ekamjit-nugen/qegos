@@ -189,7 +189,7 @@ export function NotificationsPage(): React.ReactNode {
                 <Title level={5} style={{ marginTop: 16, marginBottom: 12 }}>
                   Channel Preferences
                 </Title>
-                {Object.entries(preferences.channels).map(([channel, enabled]) => (
+                {Object.entries(preferences.channels ?? {}).map(([channel, enabled]) => (
                   <div
                     key={channel}
                     style={{

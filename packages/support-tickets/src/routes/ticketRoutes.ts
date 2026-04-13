@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import type { Types } from 'mongoose';
+import mongoose, { type Types } from 'mongoose';
 import type { SupportTicketsRouteDeps } from '../types';
 import {
   createTicketValidation,
@@ -32,7 +32,7 @@ import { initSlaEngine } from '../services/slaEngine';
 import { setCounterModel } from '../models/ticketModel';
 
 interface AuthRequest extends Request {
-  user?: { _id: Types.ObjectId; role: string };
+  user?: { userId: string; userType: number; roleId: string };
 }
 
 function handleValidation(req: Request, res: Response): boolean {
@@ -52,7 +52,11 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
   initSlaEngine(deps.config);
   setCounterModel(deps.CounterModel as never);
 
-  router.use(deps.authenticate);
+  // deps.authenticate may be a factory (() => RequestHandler) or a direct RequestHandler
+  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+    : deps.authenticate;
+  router.use(authMiddleware);
 
   // ── POST /tickets ─────────────────────────────────────────────────────
 
@@ -64,13 +68,13 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       const user = (req as AuthRequest).user!;
 
       const ticket = await createTicket({
-        userId: user._id,
+        userId: user.userId,
         ...req.body,
       });
 
       // TKT-INV-07: Audit log
       await deps.auditLog.log({
-        actor: user._id,
+        actor: user.userId,
         action: 'ticket.created',
         resource: 'SupportTicket',
         resourceId: ticket._id,
@@ -102,7 +106,7 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       if (q.limit) params.limit = parseInt(q.limit, 10);
 
       // Clients only see own tickets
-      if (user.role === 'client') params.userId = user._id;
+      if (user.userType >= 5) params.userId = user.userId;
 
       const result = await listTickets(params as never);
       res.status(200).json({ status: 200, data: result });
@@ -119,7 +123,7 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       const user = (req as AuthRequest).user!;
 
       // TKT-INV-03: Filter internal messages for clients
-      const filterInternal = user.role === 'client';
+      const filterInternal = user.userType >= 5;
       const ticket = await getTicket(
         req.params.id as unknown as Types.ObjectId,
         { filterInternal },
@@ -157,7 +161,7 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
 
         // TKT-INV-07: Audit log on every status change
         await deps.auditLog.log({
-          actor: user._id,
+          actor: user.userId,
           action: 'ticket.status_changed',
           resource: 'SupportTicket',
           resourceId: ticket._id,
@@ -198,7 +202,7 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       }
 
       await deps.auditLog.log({
-        actor: user._id,
+        actor: user.userId,
         action: 'ticket.assigned',
         resource: 'SupportTicket',
         resourceId: ticket._id,
@@ -222,11 +226,11 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       const ticket = await addMessage(
         req.params.id as unknown as Types.ObjectId,
         {
-          senderId: user._id,
-          senderType: user.role === 'client' ? 'client' : 'staff',
+          senderId: new mongoose.Types.ObjectId(user.userId),
+          senderType: user.userType >= 5 ? 'client' : 'staff',
           content: req.body.content,
           attachments: req.body.attachments,
-          isInternal: user.role !== 'client' ? req.body.isInternal : false,
+          isInternal: user.userType < 5 ? req.body.isInternal : false,
         },
       );
 
@@ -262,7 +266,7 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
 
       // TKT-INV-07: Escalation = severity warning
       await deps.auditLog.log({
-        actor: user._id,
+        actor: user.userId,
         action: 'ticket.escalated',
         resource: 'SupportTicket',
         resourceId: ticket._id,
@@ -297,7 +301,7 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
         }
 
         await deps.auditLog.log({
-          actor: user._id,
+          actor: user.userId,
           action: 'ticket.resolved',
           resource: 'SupportTicket',
           resourceId: ticket._id,

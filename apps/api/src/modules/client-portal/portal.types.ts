@@ -5,8 +5,9 @@ import type { AtoRefundStatus } from '@nugen/file-storage';
 // ─── Authenticated Request ──────────────────────────────────────────────────
 
 export interface AuthUser {
-  _id: Types.ObjectId;
-  role: string;
+  userId: string;
+  userType: number;
+  roleId: string;
 }
 
 export interface AuthRequest extends Request {

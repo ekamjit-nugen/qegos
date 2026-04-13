@@ -55,7 +55,7 @@ export function createAppointmentRoutes(
   appointmentRouter.post('/', ...authCreate, ...createAppointmentValidation(), async (req: Request, res: Response) => {
     if (handleValidation(req, res)) return;
     try {
-      const actorId = (req as unknown as { user?: { _id?: string } }).user?._id ?? '';
+      const actorId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
       const appointment = await service.createAppointment(req.body as Record<string, unknown>, actorId);
       res.status(201).json({ status: 201, data: appointment });
     } catch (err) {
@@ -100,7 +100,7 @@ export function createAppointmentRoutes(
   // 3. GET /upcoming — Upcoming for current user (BEFORE /:id)
   appointmentRouter.get('/upcoming', ...auth, async (req: Request, res: Response) => {
     try {
-      const userId = (req as unknown as { user?: { _id?: string } }).user?._id ?? '';
+      const userId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
       const appointments = await service.getUpcomingAppointments(userId);
       res.json({ status: 200, data: appointments });
     } catch (err) {

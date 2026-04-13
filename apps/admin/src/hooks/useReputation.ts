@@ -13,7 +13,7 @@ export function useReviewList_Rep(filters: ReviewListQuery_Rep) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== '') { params.set(key, String(value)); }
       }
-      const res = await api.get<PaginatedResponse<Review>>(`/reputation/reviews?${params.toString()}`);
+      const res = await api.get<PaginatedResponse<Review>>(`/reputation?${params.toString()}`);
       return res.data;
     },
     placeholderData: (prev) => prev,
@@ -45,7 +45,7 @@ export function useRespondToReview() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, response }: { id: string; response: string }) => {
-      const res = await api.post<ApiResponse<Review>>(`/reputation/reviews/${id}/respond`, { response });
+      const res = await api.put<ApiResponse<Review>>(`/reputation/${id}/respond`, { response });
       return res.data.data;
     },
     onSuccess: (_data, vars) => {

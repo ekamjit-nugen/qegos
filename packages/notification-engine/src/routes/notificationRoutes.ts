@@ -38,8 +38,7 @@ export function createNotificationRoutes(deps: NotificationRouteDeps): Router {
   // ─── 1. GET / — List notifications for current user ───────────────────────
   router.get(
     '/',
-    validateListNotifications(),
-    validate,
+    ...validate(validateListNotifications()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { userId } = (req as AuthenticatedRequest).user;
       const { isRead, type, page, limit } = req.query as Record<string, string>;
@@ -89,8 +88,7 @@ export function createNotificationRoutes(deps: NotificationRouteDeps): Router {
   // ─── 4. PUT /preferences — Update notification preferences ────────────────
   router.put(
     '/preferences',
-    validateUpdatePreferences(),
-    validate,
+    ...validate(validateUpdatePreferences()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { userId } = (req as AuthenticatedRequest).user;
       const updated = await upsertPreferences(userId, req.body as Record<string, unknown>);
@@ -128,8 +126,7 @@ export function createNotificationRoutes(deps: NotificationRouteDeps): Router {
   router.post(
     '/send',
     checkPermission('notifications', 'create'),
-    validateSendNotification(),
-    validate,
+    ...validate(validateSendNotification()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const params = req.body as SendNotificationParams;
       const result = await send(params);
@@ -153,8 +150,7 @@ export function createNotificationRoutes(deps: NotificationRouteDeps): Router {
   // ─── 7. PATCH /:id/read — Mark single as read ────────────────────────────
   router.patch(
     '/:id/read',
-    validateMarkRead(),
-    validate,
+    ...validate(validateMarkRead()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { userId } = (req as AuthenticatedRequest).user;
       const notification = await markAsRead(req.params.id, userId);

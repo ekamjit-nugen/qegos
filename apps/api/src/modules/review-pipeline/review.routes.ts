@@ -55,7 +55,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.post(
     '/submit',
     auth() as never,
-    check('order-reviews', 'create') as never,
+    check('reviews', 'create') as never,
     ...validate(submitForReviewValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
@@ -76,11 +76,43 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
     }),
   );
 
+  // GET /order-reviews — List reviews (paginated, filterable)
+  router.get(
+    '/',
+    auth() as never,
+    check('reviews', 'read') as never,
+    asyncHandler(async (req: Request, res: Response): Promise<void> => {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const skip = (page - 1) * limit;
+
+      const filter: Record<string, unknown> = {};
+      if (req.query.status) { filter.status = req.query.status; }
+      if (req.query.reviewerId) { filter.reviewerId = req.query.reviewerId; }
+      if (req.query.preparerId) { filter.preparerId = req.query.preparerId; }
+
+      const [data, total] = await Promise.all([
+        ReviewAssignmentModel.find(filter)
+          .sort({ updatedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        ReviewAssignmentModel.countDocuments(filter),
+      ]);
+
+      res.status(200).json({
+        status: 200,
+        data,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }),
+  );
+
   // 2. GET /order-reviews/pending — My pending reviews
   router.get(
     '/pending',
     auth() as never,
-    check('order-reviews', 'read') as never,
+    check('reviews', 'read') as never,
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const reviews = await service.getPendingReviews(authReq.user.userId);
@@ -92,7 +124,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.get(
     '/stats',
     auth() as never,
-    check('order-reviews', 'read') as never,
+    check('reviews', 'read') as never,
     asyncHandler(async (_req: Request, res: Response): Promise<void> => {
       const stats = await service.getStats();
       res.status(200).json({ status: 200, data: stats });
@@ -104,7 +136,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.get(
     '/:orderId',
     auth() as never,
-    check('order-reviews', 'read') as never,
+    check('reviews', 'read') as never,
     ...validate([param('orderId').isMongoId().withMessage('Invalid order ID')]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const review = await service.getReviewDetail(req.params.orderId);
@@ -116,7 +148,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.patch(
     '/:orderId/start',
     auth() as never,
-    check('order-reviews', 'update') as never,
+    check('reviews', 'update') as never,
     ...validate(startReviewValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
@@ -129,7 +161,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.patch(
     '/:orderId/approve',
     auth() as never,
-    check('order-reviews', 'update') as never,
+    check('reviews', 'update') as never,
     ...validate(approveReviewValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
@@ -154,7 +186,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.patch(
     '/:orderId/request-changes',
     auth() as never,
-    check('order-reviews', 'update') as never,
+    check('reviews', 'update') as never,
     ...validate(requestChangesValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
@@ -187,7 +219,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.patch(
     '/:orderId/reject',
     auth() as never,
-    check('order-reviews', 'update') as never,
+    check('reviews', 'update') as never,
     ...validate(rejectReviewValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
@@ -216,7 +248,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.patch(
     '/:orderId/checklist',
     auth() as never,
-    check('order-reviews', 'update') as never,
+    check('reviews', 'update') as never,
     ...validate(updateChecklistValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
@@ -236,7 +268,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   router.post(
     '/:orderId/resolve-change',
     auth() as never,
-    check('order-reviews', 'update') as never,
+    check('reviews', 'update') as never,
     ...validate(resolveChangeValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;

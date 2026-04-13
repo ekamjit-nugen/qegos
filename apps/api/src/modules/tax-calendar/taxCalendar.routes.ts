@@ -57,7 +57,7 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
   router.get(
     '/deadlines',
     authenticate() as RequestHandler,
-    checkPermission('tax_calendar', 'read') as RequestHandler,
+    checkPermission('calendar', 'read') as RequestHandler,
     ...validate(validateListParams()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { page = 1, limit = 20, financialYear, type, applicableTo, isActive } = req.query as {
@@ -90,7 +90,7 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
   router.post(
     '/deadlines',
     authenticate() as RequestHandler,
-    checkPermission('tax_calendar', 'create') as RequestHandler,
+    checkPermission('calendar', 'create') as RequestHandler,
     ...validate(validateCreateDeadline()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const deadline = await createDeadline(req.body);
@@ -111,7 +111,7 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
   router.put(
     '/deadlines/:id',
     authenticate() as RequestHandler,
-    checkPermission('tax_calendar', 'update') as RequestHandler,
+    checkPermission('calendar', 'update') as RequestHandler,
     ...validate(validateUpdateDeadline()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const deadline = await updateDeadline(req.params.id, req.body);
@@ -132,7 +132,7 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
   router.post(
     '/seed',
     authenticate() as RequestHandler,
-    checkPermission('tax_calendar', 'create') as RequestHandler,
+    checkPermission('calendar', 'create') as RequestHandler,
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { financialYear } = req.body as { financialYear: string };
       if (!financialYear || !/^\d{4}-\d{4}$/.test(financialYear)) {
@@ -162,7 +162,7 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
   router.post(
     '/process-reminders',
     authenticate() as RequestHandler,
-    checkPermission('tax_calendar', 'update') as RequestHandler,
+    checkPermission('calendar', 'update') as RequestHandler,
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const sentCount = await processReminders();
 

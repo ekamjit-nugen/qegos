@@ -26,14 +26,16 @@ export function init(
 }
 
 /**
- * Seed default roles. Uses $setOnInsert to not overwrite existing roles.
- * For permission updates on existing deployments, use a migration script.
+ * Seed default roles.
+ * - New roles: inserted via upsert.
+ * - Existing roles: permissions are synced to the latest seed definition
+ *   so that newly added resources/actions are always present in dev/test.
  */
 export async function seedRoles(RoleModel: Model<IRoleDocument>): Promise<void> {
   for (const role of defaultRoles) {
     await RoleModel.updateOne(
       { name: role.name },
-      { $setOnInsert: role },
+      { $set: { permissions: role.permissions }, $setOnInsert: { displayName: role.displayName, isSystem: role.isSystem } },
       { upsert: true },
     );
   }

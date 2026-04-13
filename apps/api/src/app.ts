@@ -239,6 +239,7 @@ export function finalizeApp(
   }
   if (routes.reviewRouter) {
     app.use(`${prefix}/order-reviews`, routes.reviewRouter);
+    app.use(`${prefix}/reviews`, routes.reviewRouter);
   }
 
   // Phase 4: Tax Engine
@@ -312,9 +313,10 @@ export function finalizeApp(
   }
   if (routes.calendarRouter) {
     app.use(`${prefix}/calendar`, routes.calendarRouter);
+    app.use(`${prefix}/tax-calendar`, routes.calendarRouter);
   }
   if (routes.reputationRouter) {
-    app.use(`${prefix}/reviews`, routes.reputationRouter);
+    app.use(`${prefix}/reputation`, routes.reputationRouter);
   }
 
   // 404 handler
