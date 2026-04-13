@@ -188,6 +188,8 @@ export function finalizeApp(
     // Document Management & Signing
     documentRouter?: express.Router;
     zohoWebhookRouter?: express.Router;
+    // Settings
+    settingsRouter?: express.Router;
     // Phase 8: Engagement Modules
     referralRouter?: express.Router;
     calendarRouter?: express.Router;
@@ -305,6 +307,11 @@ export function finalizeApp(
   }
   if (routes.zohoWebhookRouter) {
     app.use(`${prefix}/webhooks`, routes.zohoWebhookRouter);
+  }
+
+  // Settings
+  if (routes.settingsRouter) {
+    app.use(`${prefix}/settings`, routes.settingsRouter);
   }
 
   // Phase 8: Engagement Modules

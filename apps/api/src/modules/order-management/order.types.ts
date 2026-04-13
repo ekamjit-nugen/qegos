@@ -178,6 +178,10 @@ export interface IOrder {
   userId: Types.ObjectId;
   leadId?: Types.ObjectId;
   financialYear: string;
+  // Form mapping reference (client-submitted tax filing form)
+  formMappingId?: Types.ObjectId;
+  formVersionNumber?: number;
+  formAnswers?: Record<string, unknown>;
   status: OrderStatus;
   personalDetails: IPersonalDetails;
   maritalStatus?: string;

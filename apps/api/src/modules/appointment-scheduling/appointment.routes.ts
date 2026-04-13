@@ -38,6 +38,7 @@ export function createAppointmentRoutes(
     OrderModel: deps.OrderModel,
     UserModel: deps.UserModel,
     notificationSend: deps.notificationSend,
+    getSetting: deps.getSetting,
   });
   _service = service;
 

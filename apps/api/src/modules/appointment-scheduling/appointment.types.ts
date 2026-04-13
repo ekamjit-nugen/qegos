@@ -111,6 +111,8 @@ export interface AppointmentRouteDeps {
   authenticate: () => import('express').RequestHandler;
   checkPermission: (resource: string, action: string) => import('express').RequestHandler;
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;
+  /** Optional: provide a function to read platform settings (e.g. slot duration) */
+  getSetting?: (key: string) => Promise<unknown>;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

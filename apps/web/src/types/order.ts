@@ -103,6 +103,14 @@ export interface Order {
   eFileStatus?: string;
   eFileReference?: string;
   noaReceived?: boolean;
+  scheduledAppointment?: {
+    date: string;
+    timeSlot: string;
+    staffId: string;
+    type: string;
+    meetingLink?: string;
+    status: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

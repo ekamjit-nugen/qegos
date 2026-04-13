@@ -89,6 +89,7 @@ export const menuItems: MenuDataItem[] = [
       { path: '/form-mappings', name: 'Form Mappings', icon: <FormOutlined /> },
       { path: '/calendar', name: 'Tax Calendar', icon: <CalendarOutlined /> },
       { path: '/reputation', name: 'Reputation', icon: <StarOutlined /> },
+      { path: '/settings', name: 'Settings', icon: <SettingOutlined /> },
     ],
   },
 ];

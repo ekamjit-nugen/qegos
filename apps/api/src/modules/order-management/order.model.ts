@@ -82,6 +82,10 @@ const orderSchema = new Schema<IOrderDocument2>(
     },
     leadId: { type: Schema.Types.ObjectId, ref: 'Lead', index: true },
     financialYear: { type: String, required: [true, 'Financial year is required'] },
+    // Form mapping reference (client-submitted tax filing form)
+    formMappingId: { type: Schema.Types.ObjectId, ref: 'FormMapping' },
+    formVersionNumber: { type: Number },
+    formAnswers: { type: Schema.Types.Mixed },
     status: {
       type: Number,
       required: true,

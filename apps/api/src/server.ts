@@ -56,6 +56,8 @@ import * as broadcastEngine from '@nugen/broadcast-engine';
 // Phase 6: Client Portal & Vault
 import * as fileStorage from '@nugen/file-storage';
 import { createPortalRoutes } from './modules/client-portal/portal.routes';
+import { createFormFillRoutes } from './modules/client-portal/formFill.routes';
+import { createAppointmentBookingRoutes } from './modules/client-portal/appointmentBooking.routes';
 import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
 import { reconcileStorageUsage } from '@nugen/file-storage';
 
@@ -83,6 +85,10 @@ import { createDocumentRoutes, createZohoWebhookRoute } from './modules/document
 // Phase 2: Xero Integration
 import * as xeroConnector from '@nugen/xero-connector';
 import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
+
+// Settings
+import { createSettingModel, seedDefaultSettings } from './modules/settings/settings.model';
+import { createSettingsRoutes } from './modules/settings/settings.routes';
 
 // Phase 8: Engagement Modules
 import { createReferralModel, createReferralConfigModel } from './modules/referral-engine/referral.model';
@@ -301,6 +307,10 @@ async function bootstrap(): Promise<void> {
   const TaxDeadlineModel = createTaxDeadlineModel(connection);
   const DeadlineReminderModel = createDeadlineReminderModel(connection);
   const ReputationReviewModel = createReviewModel(connection);
+
+  // Settings
+  const SettingModel = createSettingModel(connection);
+  await seedDefaultSettings(SettingModel);
 
   // Appointment Scheduling
   const AppointmentModel = createAppointmentModel(connection);
@@ -626,6 +636,34 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // Settings service for other modules to use
+  const settingsService = (await import('./modules/settings/settings.service')).createSettingsService({
+    SettingModel,
+  });
+
+  // Client-facing Form Fill routes (mounted under /portal)
+  const formFillRouter = createFormFillRoutes({
+    FormMappingModel,
+    FormMappingVersionModel,
+    OrderModel: OrderModel as never,
+    SalesModel: SalesModel as never,
+    CounterModel: CounterModel as never,
+    authenticate: auth.authenticate,
+  });
+  // Mount form fill routes under the portal prefix
+  portalRouter.use(formFillRouter);
+
+  // Client-facing Appointment Booking routes (mounted under /portal)
+  const appointmentBookingRouter = createAppointmentBookingRoutes({
+    AppointmentModel,
+    StaffAvailabilityModel,
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    getSetting: settingsService.getSetting,
+  });
+  portalRouter.use(appointmentBookingRouter);
+
   // Phase 7: Communication Suite routes
   const chatRouter = chatEngine.createChatRoutes({
     ConversationModel: ChatConversationModel,
@@ -784,6 +822,13 @@ async function bootstrap(): Promise<void> {
     exportQueue: analyticsExportQueue,
   });
 
+  // Settings routes
+  const settingsRouter = createSettingsRoutes({
+    SettingModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
   // Appointment Scheduling routes
   const { appointmentRouter, staffAvailabilityRouter } = createAppointmentRoutes({
     AppointmentModel,
@@ -793,6 +838,7 @@ async function bootstrap(): Promise<void> {
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     notificationSend: notificationEngine.send as (params: Record<string, unknown>) => Promise<unknown>,
+    getSetting: settingsService.getSetting,
   });
 
   // Staff Workload Balancing routes
@@ -886,6 +932,7 @@ async function bootstrap(): Promise<void> {
     whatsappRouter,
     privacyRouter,
     xeroRouter,
+    settingsRouter,
     referralRouter,
     calendarRouter,
     reputationRouter,

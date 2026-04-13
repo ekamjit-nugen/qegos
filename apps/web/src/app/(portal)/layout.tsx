@@ -12,6 +12,7 @@ import {
   CalculatorOutlined,
   BellOutlined,
   FileTextOutlined,
+  FormOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -24,6 +25,7 @@ const { Text } = Typography;
 
 const NAV_ITEMS = [
   { key: '/', icon: <HomeOutlined />, label: 'Dashboard' },
+  { key: '/file-tax', icon: <FormOutlined />, label: 'File Tax' },
   { key: '/orders', icon: <ShoppingCartOutlined />, label: 'My Orders' },
   { key: '/appointments', icon: <CalendarOutlined />, label: 'Appointments' },
   { key: '/chat', icon: <MessageOutlined />, label: 'Chat' },

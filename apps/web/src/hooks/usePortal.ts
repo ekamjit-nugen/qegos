@@ -380,6 +380,56 @@ export function useUpcomingAppointments(): ReturnType<typeof useQuery<Appointmen
   });
 }
 
+// ─── Appointment Booking ─────────────────────────────────────────────────────
+
+export function useAvailableSlots(
+  dateFrom: string | undefined,
+  dateTo: string | undefined,
+  staffId?: string,
+): ReturnType<typeof useQuery<Array<{ date: string; startTime: string; endTime: string; staffId: string }>>> {
+  return useQuery({
+    queryKey: ['portal', 'appointments', 'available-slots', dateFrom, dateTo, staffId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
+      if (staffId) params.set('staffId', staffId);
+      const res = await api.get<ApiResponse<{ slots: Array<{ date: string; startTime: string; endTime: string; staffId: string }> }>>(
+        `/portal/appointments/available-slots?${params.toString()}`,
+      );
+      return res.data.data.slots;
+    },
+    enabled: !!dateFrom && !!dateTo,
+  });
+}
+
+export function useBookAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      orderId: string;
+      staffId: string;
+      date: string;
+      startTime: string;
+      type: 'in_person' | 'phone' | 'video';
+    }) => {
+      const res = await api.post<ApiResponse<{
+        appointmentId: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+        type: string;
+        status: string;
+      }>>('/portal/appointments/book', data);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'appointments'] });
+      void qc.invalidateQueries({ queryKey: ['portal', 'orders'] });
+    },
+  });
+}
+
 // ─── E-Sign Hooks ─────────────────────────────────────────────────────────
 
 export function useGenerateClientSigningUri() {
