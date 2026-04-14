@@ -60,6 +60,7 @@ import * as fileStorage from '@nugen/file-storage';
 import { createPortalRoutes } from './modules/client-portal/portal.routes';
 import { createFormFillRoutes } from './modules/client-portal/formFill.routes';
 import { createPayOrderRoutes } from './modules/client-portal/payOrder.routes';
+import { createCollectPaymentRoutes } from './modules/order-management/collectPayment.routes';
 import { createFormDraftModel } from './modules/client-portal/formDraft.model';
 import { createAppointmentBookingRoutes } from './modules/client-portal/appointmentBooking.routes';
 import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
@@ -705,6 +706,18 @@ async function bootstrap(): Promise<void> {
   });
   portalRouter.use(payOrderRouter);
 
+  // Staff-facing Collect Payment on Behalf of Client (admin/CRM)
+  const collectPaymentRouter = createCollectPaymentRoutes({
+    OrderModel: OrderModel as never,
+    PaymentModel,
+    GatewayConfigModel,
+    providers,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    promoCodeService,
+    creditService: creditServiceInstance,
+  });
+
   // Client-facing Appointment Booking routes (mounted under /portal)
   const appointmentBookingRouter = createAppointmentBookingRoutes({
     AppointmentModel,
@@ -988,6 +1001,7 @@ async function bootstrap(): Promise<void> {
     billingDisputeRouter,
     leadRouter,
     orderRouter,
+    collectPaymentRouter,
     salesRouter,
     formMappingRouter,
     consentFormRouter,
