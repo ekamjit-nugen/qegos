@@ -22,7 +22,7 @@ export function SettingsPage(): React.ReactNode {
 
   // Local state for editable values
   const [slotDuration, setSlotDuration] = useState<number>(30);
-  const [bufferMinutes, setBufferMinutes] = useState<number>(0);
+  const [bufferMinutes, setBufferMinutes] = useState<number>(5);
 
   // Sync from server data
   useEffect(() => {
@@ -92,22 +92,22 @@ export function SettingsPage(): React.ReactNode {
       >
         <Descriptions column={1} size="small" bordered>
           <Descriptions.Item label="Slot Duration (minutes)">
-            <Space>
+            <Space direction="vertical" size={0}>
               <InputNumber
-                min={10}
-                max={180}
+                min={5}
+                max={240}
                 step={5}
                 value={slotDuration}
                 onChange={(v) => { if (v !== null) setSlotDuration(v); }}
                 style={{ width: 100 }}
               />
-              <Text type="secondary">
+              <Text type="secondary" style={{ fontSize: 12 }}>
                 Each appointment slot will be {slotDuration} minutes long
               </Text>
             </Space>
           </Descriptions.Item>
-          <Descriptions.Item label="Buffer Between Slots (minutes)">
-            <Space>
+          <Descriptions.Item label="Break Between Slots (minutes)">
+            <Space direction="vertical" size={0}>
               <InputNumber
                 min={0}
                 max={60}
@@ -116,8 +116,10 @@ export function SettingsPage(): React.ReactNode {
                 onChange={(v) => { if (v !== null) setBufferMinutes(v); }}
                 style={{ width: 100 }}
               />
-              <Text type="secondary">
-                Break time between consecutive appointments
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {bufferMinutes > 0
+                  ? `${bufferMinutes}-min break between appointments (next slot starts every ${slotDuration + bufferMinutes} min)`
+                  : 'No break — back-to-back appointments'}
               </Text>
             </Space>
           </Descriptions.Item>

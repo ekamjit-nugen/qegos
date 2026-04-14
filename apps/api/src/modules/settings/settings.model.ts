@@ -1,6 +1,6 @@
 import { Schema, type Model, type Connection } from 'mongoose';
 import type { ISettingDocument } from './settings.types';
-import { DEFAULT_SETTINGS } from './settings.types';
+import { getDefaultSettings } from './settings.types';
 
 const settingSchema = new Schema<ISettingDocument>(
   {
@@ -42,7 +42,8 @@ export function createSettingModel(connection: Connection): Model<ISettingDocume
 export async function seedDefaultSettings(
   SettingModel: Model<ISettingDocument>,
 ): Promise<void> {
-  for (const def of DEFAULT_SETTINGS) {
+  const defaults = getDefaultSettings();
+  for (const def of defaults) {
     await SettingModel.findOneAndUpdate(
       { key: def.key },
       { $setOnInsert: { key: def.key, value: def.value, description: def.description } },

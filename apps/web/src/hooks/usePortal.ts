@@ -430,6 +430,51 @@ export function useBookAppointment() {
   });
 }
 
+export function useRescheduleAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      appointmentId: string;
+      date: string;
+      startTime: string;
+      type?: 'in_person' | 'phone' | 'video';
+    }) => {
+      const { appointmentId, ...body } = data;
+      const res = await api.patch<ApiResponse<{
+        appointmentId: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+        type: string;
+        status: string;
+      }>>(`/portal/appointments/${appointmentId}/reschedule`, body);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'appointments'] });
+      void qc.invalidateQueries({ queryKey: ['portal', 'orders'] });
+    },
+  });
+}
+
+export function useCancelAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const res = await api.patch<ApiResponse<{
+        appointmentId: string;
+        status: string;
+        message: string;
+      }>>(`/portal/appointments/${appointmentId}/cancel`);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['portal', 'appointments'] });
+      void qc.invalidateQueries({ queryKey: ['portal', 'orders'] });
+    },
+  });
+}
+
 // ─── E-Sign Hooks ─────────────────────────────────────────────────────────
 
 export function useGenerateClientSigningUri() {
