@@ -10,6 +10,7 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
+import { getRequestId } from '../../lib/requestContext';
 import type { AuditAction, AuditActorType } from '@nugen/audit-log';
 
 import type {
@@ -31,8 +32,8 @@ import {
 // Wrap audit log to swallow failures (pattern from order.routes.ts)
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
-    _auditLog.log(params as never).catch((err: unknown) => {
-      console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
     });
   },
 };

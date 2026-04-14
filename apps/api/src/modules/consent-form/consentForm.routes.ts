@@ -12,6 +12,7 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
+import { getRequestId } from '../../lib/requestContext';
 
 import type { IConsentFormDocument, CreateConsentFormInput } from './consentForm.types';
 import { createConsentFormService } from './consentForm.service';
@@ -20,8 +21,8 @@ import { createConsentFormValidation } from './consentForm.validators';
 // Wrap audit log to swallow failures (pattern from form-mapping routes)
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
-    _auditLog.log(params as never).catch((err: unknown) => {
-      console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
     });
   },
 };

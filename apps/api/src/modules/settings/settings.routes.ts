@@ -1,14 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import { validationResult } from 'express-validator';
 import * as _auditLog from '@nugen/audit-log';
+import { getRequestId } from '../../lib/requestContext';
 import type { SettingsRouteDeps } from './settings.types';
 import { createSettingsService } from './settings.service';
 import { getSettingValidation, updateSettingValidation } from './settings.validators';
 
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
-    _auditLog.log(params as never).catch((err: unknown) => {
-      console.warn('[AUDIT] Failed to write audit log:', err);
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
     });
   },
 };

@@ -5,13 +5,14 @@ import { validate, objectId, pagination, search, email, phone, requiredString } 
 import type { check as CheckFn } from '@nugen/rbac';
 import type { authenticate as AuthFn, AuthenticatedRequest } from '@nugen/auth';
 import * as _auditLog from '@nugen/audit-log';
+import { getRequestId } from '../../lib/requestContext';
 import { createUserService } from './user.service';
 import type { IUserDocument } from './user.types';
 
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
-    _auditLog.log(params as never).catch((err: unknown) => {
-      console.warn('[AUDIT] Failed to write audit log:', err);
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
     });
   },
 };

@@ -8,6 +8,8 @@ import { sanitize } from '@nugen/validator';
 import { createApiLimiter } from '@nugen/rate-limiter';
 import { getConfig } from './config/env';
 import { mountSwaggerDocs } from './config/swagger';
+import { requestIdMiddleware } from './middleware/requestId';
+import { requestLoggerMiddleware } from './middleware/requestLogger';
 
 /**
  * Create and configure the Express application.
@@ -17,6 +19,9 @@ import { mountSwaggerDocs } from './config/swagger';
 export function createApp(): express.Express {
   const app = express();
   const config = getConfig();
+
+  // --- Request tracing (must be first) ---
+  app.use(requestIdMiddleware);
 
   // --- Security middleware ---
 
@@ -70,6 +75,9 @@ export function createApp(): express.Express {
   // --- Sanitization (GAP-C14) ---
   app.use(sanitize());
 
+  // --- Request logging ---
+  app.use(requestLoggerMiddleware);
+
   // --- Rate limiting (NFR-03: 100/min per user) ---
   app.use(`/api/${config.API_VERSION}`, createApiLimiter());
 
@@ -102,6 +110,7 @@ export function createApp(): express.Express {
           status: 403,
           code: 'CSRF_INVALID',
           message: 'Invalid or missing CSRF token',
+          ...(req.requestId ? { requestId: req.requestId } : {}),
         });
         return;
       }
@@ -130,11 +139,12 @@ export function createApp(): express.Express {
   // --- Health check endpoints ---
 
   // Shallow health (public)
-  app.get('/health', (_req: Request, res: Response): void => {
+  app.get('/health', (req: Request, res: Response): void => {
     res.status(200).json({
       status: 'ok',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
+      ...(req.requestId ? { requestId: req.requestId } : {}),
     });
   });
 
@@ -336,11 +346,12 @@ export function finalizeApp(
   }
 
   // 404 handler
-  app.use((_req: Request, res: Response): void => {
+  app.use((req: Request, res: Response): void => {
     res.status(404).json({
       status: 404,
       code: 'NOT_FOUND',
       message: 'Endpoint not found',
+      ...(req.requestId ? { requestId: req.requestId } : {}),
     });
   });
 
