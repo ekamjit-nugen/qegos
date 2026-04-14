@@ -99,6 +99,10 @@ const envSchema = z.object({
   ZOHO_SIGN_WEBHOOK_SECRET: z.string().optional(),
   ZOHO_SIGN_BASE_URL: z.string().optional().default('https://sign.zoho.com.au'),
 
+  // Appointment Scheduling (dynamic defaults for settings)
+  APPOINTMENT_SLOT_DURATION_MINUTES: z.coerce.number().min(5).max(240).default(30),
+  APPOINTMENT_BUFFER_MINUTES: z.coerce.number().min(0).max(60).default(5),
+
   // Analytics Engine
   ANALYTICS_REPLICA_URI: z.string().optional(),
 

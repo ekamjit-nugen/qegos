@@ -60,16 +60,21 @@ function logError(message: string, meta?: Record<string, unknown>): void {
  */
 export function globalErrorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
+  // Extract requestId from request (set by requestId middleware)
+  const requestId = (req as unknown as { requestId?: string }).requestId;
+
   // If already an AppError, use it directly
   if (err instanceof AppError) {
     if (!err.isOperational) {
-      logError('Non-operational error', { message: err.message, stack: err.stack });
+      logError('Non-operational error', { message: err.message, stack: err.stack, requestId });
     }
-    res.status(err.statusCode).json(err.toJSON());
+    const json = err.toJSON();
+    if (requestId) (json as Record<string, unknown>).requestId = requestId;
+    res.status(err.statusCode).json(json);
     return;
   }
 
@@ -84,6 +89,7 @@ export function globalErrorHandler(
       code: ErrorCode.VALIDATION_ERROR,
       message: 'Validation failed',
       errors,
+      ...(requestId ? { requestId } : {}),
     });
     return;
   }
@@ -94,6 +100,7 @@ export function globalErrorHandler(
       status: 400,
       code: ErrorCode.VALIDATION_ERROR,
       message: `Invalid value for ${err.path}`,
+      ...(requestId ? { requestId } : {}),
     });
     return;
   }
@@ -105,6 +112,7 @@ export function globalErrorHandler(
       status: 409,
       code: ErrorCode.CONFLICT,
       message: `Duplicate value for ${field}`,
+      ...(requestId ? { requestId } : {}),
     });
     return;
   }
@@ -116,6 +124,7 @@ export function globalErrorHandler(
         status: 401,
         code: ErrorCode.TOKEN_EXPIRED,
         message: 'Token has expired',
+        ...(requestId ? { requestId } : {}),
       });
       return;
     }
@@ -123,6 +132,7 @@ export function globalErrorHandler(
       status: 401,
       code: ErrorCode.UNAUTHORIZED,
       message: 'Invalid token',
+      ...(requestId ? { requestId } : {}),
     });
     return;
   }
@@ -132,6 +142,7 @@ export function globalErrorHandler(
     name: err.name,
     message: err.message,
     stack: err.stack,
+    requestId,
   });
 
   const isProduction = process.env.NODE_ENV === 'production';
@@ -139,5 +150,6 @@ export function globalErrorHandler(
     status: 500,
     code: ErrorCode.INTERNAL_ERROR,
     message: isProduction ? 'An unexpected error occurred' : err.message,
+    ...(requestId ? { requestId } : {}),
   });
 }

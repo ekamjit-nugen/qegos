@@ -45,11 +45,35 @@ export interface OrderLineItem {
   completedAt?: string;
 }
 
+export type SigningStatus = 'not_started' | 'awaiting_client' | 'client_signed' | 'awaiting_admin' | 'completed' | 'declined';
+
+export const SIGNING_STATUS_LABELS: Record<SigningStatus, string> = {
+  not_started: 'Not Started',
+  awaiting_client: 'Action Required',
+  client_signed: 'You Signed',
+  awaiting_admin: 'Awaiting Counter-Signature',
+  completed: 'Fully Signed',
+  declined: 'Declined',
+};
+
+export const SIGNING_STATUS_COLORS: Record<SigningStatus, string> = {
+  not_started: 'default',
+  awaiting_client: 'orange',
+  client_signed: 'blue',
+  awaiting_admin: 'blue',
+  completed: 'green',
+  declined: 'red',
+};
+
 export interface OrderDocument {
   documentId: string;
   fileName: string;
   documentType?: string;
   status: 'pending' | 'signed' | 'verified';
+  signingStatus?: SigningStatus;
+  zohoRequestId?: string;
+  clientActionId?: string;
+  clientSignedAt?: string;
 }
 
 export interface PersonalDetails {
@@ -74,11 +98,21 @@ export interface Order {
   discountPercent: number;
   discountAmount: number;
   finalAmount: number;
+  promoCode?: string;
+  creditApplied?: number;
   completionPercent: number;
   processingByName?: string;
   eFileStatus?: string;
   eFileReference?: string;
   noaReceived?: boolean;
+  scheduledAppointment?: {
+    date: string;
+    timeSlot: string;
+    staffId: string;
+    type: string;
+    meetingLink?: string;
+    status: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

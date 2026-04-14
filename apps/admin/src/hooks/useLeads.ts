@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import type { Lead, LeadListQuery } from '@/types/lead';
+import type { Lead, LeadListQuery, LeadStats } from '@/types/lead';
 import type { PaginatedResponse, ApiResponse } from '@/types/api';
 
 export function useLeadList(filters: LeadListQuery) {
@@ -108,6 +108,49 @@ export function useDeleteLead() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+export function useConvertLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.post<ApiResponse<{ lead: Lead; orderId: string; userId: string }>>(
+        `/leads/${id}/convert`,
+      );
+      return res.data.data;
+    },
+    onSuccess: (_data, id) => {
+      void qc.invalidateQueries({ queryKey: ['leads', id] });
+      void qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+export function useConvertToExistingUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
+      const res = await api.post<ApiResponse<{ lead: Lead; orderId: string }>>(
+        `/leads/${id}/convert-existing`,
+        { userId },
+      );
+      return res.data.data;
+    },
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ['leads', vars.id] });
+      void qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+export function useLeadStats() {
+  return useQuery({
+    queryKey: ['leads', 'stats', 'dashboard'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<LeadStats>>('/leads/stats/dashboard');
+      return res.data.data;
     },
   });
 }

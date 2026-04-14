@@ -34,6 +34,7 @@ export function useCreateReminder() {
       title: string;
       description?: string;
       reminderDate: string;
+      reminderTime: string;
       assignedTo: string;
     }) => {
       const res = await api.post<ApiResponse<LeadReminder>>('/leads/reminders', data);

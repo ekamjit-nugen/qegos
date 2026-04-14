@@ -15,6 +15,8 @@ interface AppointmentServiceDeps {
   OrderModel: Model<Document>;
   UserModel: Model<Document>;
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;
+  /** Optional: provide a function to read platform settings for slot duration */
+  getSetting?: (key: string) => Promise<unknown>;
 }
 
 export interface AppointmentServiceResult {
@@ -33,10 +35,29 @@ export interface AppointmentServiceResult {
 }
 
 export function createAppointmentService(deps: AppointmentServiceDeps): AppointmentServiceResult {
-  const { AppointmentModel, StaffAvailabilityModel, OrderModel, notificationSend } = deps;
+  const { AppointmentModel, StaffAvailabilityModel, OrderModel, notificationSend, getSetting } = deps;
+
+  /**
+   * Read the configured buffer (break) minutes from settings.
+   * Falls back to 5 minutes if settings are unavailable.
+   */
+  async function getBufferMinutes(): Promise<number> {
+    if (!getSetting) return 5;
+    try {
+      const val = await getSetting('appointment.bufferMinutes');
+      if (typeof val === 'number' && val >= 0) return val;
+    } catch {
+      // fall back
+    }
+    return 5;
+  }
 
   /**
    * APT-INV-01: Check for overlapping appointments for the same staff on the same date.
+   *
+   * Enforces the configured buffer (break) time between appointments.
+   * E.g. with a 5-min buffer, an existing 09:00–09:30 appointment blocks
+   * any new appointment starting before 09:35 on the same staff.
    */
   async function checkOverlap(
     staffId: string,
@@ -62,10 +83,32 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     }
 
     const existing = await AppointmentModel.find(filter).lean();
+    const buffer = await getBufferMinutes();
 
     for (const appt of existing) {
-      if (timesOverlap(startTime, endTime, appt.startTime, appt.endTime)) {
-        const error = new Error('Double-booking: staff already has an appointment at this time');
+      // Expand the existing appointment's end time by the buffer to enforce the break
+      // E.g. appointment 09:00–09:30 with 5-min buffer → blocked zone is 09:00–09:35
+      let effectiveEnd = appt.endTime;
+      if (buffer > 0) {
+        const endMins = timeToMinutes(appt.endTime) + buffer;
+        effectiveEnd = minutesToTime(Math.min(endMins, 24 * 60)); // cap at midnight
+      }
+
+      // Also expand the new appointment's end time to protect its buffer zone
+      let newEffectiveEnd = endTime;
+      if (buffer > 0) {
+        const newEndMins = timeToMinutes(endTime) + buffer;
+        newEffectiveEnd = minutesToTime(Math.min(newEndMins, 24 * 60));
+      }
+
+      // Check if the new appointment (with its buffer) overlaps the existing one (with its buffer)
+      // This means: new start must be >= existing end + buffer, OR new end + buffer <= existing start
+      if (timesOverlap(startTime, newEffectiveEnd, appt.startTime, effectiveEnd)) {
+        const error = new Error(
+          buffer > 0
+            ? `Time slot conflicts with an existing appointment (including ${buffer}-min break between slots)`
+            : 'Double-booking: staff already has an appointment at this time',
+        );
         (error as Error & { status: number; code: string }).status = 409;
         (error as Error & { status: number; code: string }).code = 'APPOINTMENT_OVERLAP';
         throw error;
@@ -274,6 +317,15 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
 
   // ─── Staff Availability ─────────────────────────────────────────────────
 
+  /**
+   * Convert minutes since midnight back to HH:mm string.
+   */
+  function minutesToTime(mins: number): string {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
   async function getStaffAvailability(
     staffId: string,
     dateFrom: string,
@@ -281,6 +333,24 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
   ): Promise<AvailableSlot[]> {
     const from = new Date(dateFrom);
     const to = new Date(dateTo);
+
+    // Read configurable slot duration from settings (default: 30 minutes)
+    let slotDuration = 30;
+    let bufferMinutes = 5;
+    if (getSetting) {
+      try {
+        const durationVal = await getSetting('appointment.slotDurationMinutes');
+        if (typeof durationVal === 'number' && durationVal > 0) {
+          slotDuration = durationVal;
+        }
+        const bufferVal = await getSetting('appointment.bufferMinutes');
+        if (typeof bufferVal === 'number' && bufferVal >= 0) {
+          bufferMinutes = bufferVal;
+        }
+      } catch {
+        // Use defaults on error
+      }
+    }
 
     // Get recurring working hours for this staff
     const recurring = await StaffAvailabilityModel.find({
@@ -306,6 +376,7 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     }).lean();
 
     const slots: AvailableSlot[] = [];
+    const slotStep = slotDuration + bufferMinutes;
 
     // Iterate each day in range
     const current = new Date(from);
@@ -314,7 +385,7 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
       const dateStr = current.toISOString().split('T')[0];
 
       // Find recurring availability for this day of week
-      const daySlots = recurring.filter((r) => r.dayOfWeek === dayOfWeek);
+      const dayWindows = recurring.filter((r) => r.dayOfWeek === dayOfWeek);
 
       // Check for blocks on this specific date
       const dayBlocks = blocks.filter(
@@ -326,24 +397,37 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
         (a) => a.date.toISOString().split('T')[0] === dateStr,
       );
 
-      for (const slot of daySlots) {
-        // Check if this slot is blocked
-        const isBlocked = dayBlocks.some((b) =>
-          timesOverlap(slot.startTime, slot.endTime, b.startTime, b.endTime),
-        );
-        if (isBlocked) continue;
+      for (const window of dayWindows) {
+        // Split each availability window into discrete slots
+        const windowStart = timeToMinutes(window.startTime);
+        const windowEnd = timeToMinutes(window.endTime);
 
-        // Check if fully booked
-        const isBooked = dayBooked.some((a) =>
-          timesOverlap(slot.startTime, slot.endTime, a.startTime, a.endTime),
-        );
-        if (isBooked) continue;
+        let slotStart = windowStart;
+        while (slotStart + slotDuration <= windowEnd) {
+          const slotEnd = slotStart + slotDuration;
+          const startStr = minutesToTime(slotStart);
+          const endStr = minutesToTime(slotEnd);
 
-        slots.push({
-          date: dateStr,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-        });
+          // Check if this discrete slot is blocked
+          const isBlocked = dayBlocks.some((b) =>
+            timesOverlap(startStr, endStr, b.startTime, b.endTime),
+          );
+
+          // Check if this discrete slot overlaps with any booked appointment
+          const isBooked = dayBooked.some((a) =>
+            timesOverlap(startStr, endStr, a.startTime, a.endTime),
+          );
+
+          if (!isBlocked && !isBooked) {
+            slots.push({
+              date: dateStr,
+              startTime: startStr,
+              endTime: endStr,
+            });
+          }
+
+          slotStart += slotStep;
+        }
       }
 
       current.setUTCDate(current.getUTCDate() + 1);

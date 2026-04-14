@@ -123,6 +123,16 @@ export interface IDeductionDetails {
   incomeProtection?: boolean;
 }
 
+export const SIGNING_STATUSES = [
+  'not_started',
+  'awaiting_client',
+  'client_signed',
+  'awaiting_admin',
+  'completed',
+  'declined',
+] as const;
+export type SigningStatus = (typeof SIGNING_STATUSES)[number];
+
 export interface IOrderDocument {
   documentId?: Types.ObjectId;
   fileName: string;
@@ -131,6 +141,14 @@ export interface IOrderDocument {
   status: 'pending' | 'signed' | 'verified';
   zohoRequestId?: string;
   docuSignEnvelopeId?: string;
+  // Dual-signature tracking
+  signingStatus: SigningStatus;
+  clientActionId?: string;
+  adminActionId?: string;
+  clientSignedAt?: Date;
+  adminSignedAt?: Date;
+  clientEmail?: string;
+  adminEmail?: string;
 }
 
 export interface ILineItem {
@@ -160,6 +178,10 @@ export interface IOrder {
   userId: Types.ObjectId;
   leadId?: Types.ObjectId;
   financialYear: string;
+  // Form mapping reference (client-submitted tax filing form)
+  formMappingId?: Types.ObjectId;
+  formVersionNumber?: number;
+  formAnswers?: Record<string, unknown>;
   status: OrderStatus;
   personalDetails: IPersonalDetails;
   maritalStatus?: string;
@@ -174,6 +196,12 @@ export interface IOrder {
   discountPercent: number;
   discountAmount: number; // cents
   finalAmount: number; // cents
+  // Discount source tracking
+  discountSource?: 'promo_code' | 'referral' | 'manual' | 'credit';
+  promoCodeId?: Types.ObjectId;
+  promoCode?: string;
+  creditApplied: number; // cents — credit balance applied to this order
+  paymentStatus?: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
   processingBy?: Types.ObjectId;
   completionPercent: number;
   scheduledAppointment?: IScheduledAppointment;

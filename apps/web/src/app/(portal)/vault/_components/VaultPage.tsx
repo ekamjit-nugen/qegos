@@ -7,6 +7,7 @@ import {
   Col,
   Empty,
   Modal,
+  Popconfirm,
   Progress,
   Row,
   Select,
@@ -19,9 +20,10 @@ import {
 } from 'antd';
 import {
   CloudUploadOutlined,
-  DeleteOutlined,
   DownloadOutlined,
   InboxOutlined,
+  FolderOutlined,
+  UndoOutlined,
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import {
@@ -29,24 +31,64 @@ import {
   useVaultYears,
   useStorageUsage,
   useUploadDocument,
-  useDeleteDocument,
   useArchiveDocument,
+  useRestoreDocument,
 } from '@/hooks/usePortal';
+import { api } from '@/lib/api/client';
 import type { VaultDocument } from '@/types/vault';
+import type { ApiResponse } from '@/types/api';
 import { formatDate } from '@/lib/utils/format';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 
-const CATEGORY_OPTIONS = [
-  { label: 'All Categories', value: '' },
-  { label: 'Tax Return', value: 'tax_return' },
-  { label: 'Payment Summary', value: 'payment_summary' },
-  { label: 'Receipt', value: 'receipt' },
-  { label: 'Invoice', value: 'invoice' },
-  { label: 'Identity', value: 'identity' },
-  { label: 'Other', value: 'other' },
+// ─── Document categories matching backend VAULT_DOCUMENT_CATEGORIES ─────
+const VAULT_CATEGORIES = [
+  { value: 'payg_summary', label: 'PAYG Summary' },
+  { value: 'interest_statement', label: 'Interest Statement' },
+  { value: 'dividend_statement', label: 'Dividend Statement' },
+  { value: 'managed_fund_statement', label: 'Managed Fund Statement' },
+  { value: 'rental_income', label: 'Rental Income' },
+  { value: 'self_employment', label: 'Self Employment' },
+  { value: 'private_health_insurance', label: 'Private Health Insurance' },
+  { value: 'donation_receipt', label: 'Donation Receipt' },
+  { value: 'work_expense_receipt', label: 'Work Expense Receipt' },
+  { value: 'self_education', label: 'Self Education' },
+  { value: 'vehicle_logbook', label: 'Vehicle Logbook' },
+  { value: 'home_office', label: 'Home Office' },
+  { value: 'notice_of_assessment', label: 'Notice of Assessment' },
+  { value: 'tax_return_copy', label: 'Tax Return Copy' },
+  { value: 'bas_statement', label: 'BAS Statement' },
+  { value: 'id_document', label: 'ID Document' },
+  { value: 'superannuation_statement', label: 'Superannuation Statement' },
+  { value: 'foreign_income', label: 'Foreign Income' },
+  { value: 'capital_gains_record', label: 'Capital Gains Record' },
+  { value: 'other', label: 'Other' },
 ];
+
+const CATEGORY_FILTER_OPTIONS = [
+  { label: 'All Categories', value: '' },
+  ...VAULT_CATEGORIES,
+];
+
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  VAULT_CATEGORIES.map((c) => [c.value, c.label]),
+);
+
+// Financial year options for upload form
+function getFinancialYearOptions(): { value: string; label: string }[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const years: { value: string; label: string }[] = [];
+  // Show current FY + 4 prior years
+  for (let i = 0; i < 5; i++) {
+    const startYear = currentYear - i;
+    const endYearShort = String(startYear + 1).slice(-2);
+    const fy = `${startYear}-${endYearShort}`;
+    years.push({ value: fy, label: fy });
+  }
+  return years;
+}
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) { return `${bytes} B`; }
@@ -58,6 +100,8 @@ export function VaultPage(): React.ReactNode {
   const [financialYear, setFinancialYear] = useState<string>('');
   const [category, setCategory] = useState<string>('');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadYear, setUploadYear] = useState<string | undefined>();
+  const [uploadCategory, setUploadCategory] = useState<string | undefined>();
 
   const { data: docsResponse, isLoading: docsLoading } = useVaultDocuments({
     financialYear: financialYear || undefined,
@@ -66,57 +110,75 @@ export function VaultPage(): React.ReactNode {
   const { data: years } = useVaultYears();
   const { data: storage } = useStorageUsage();
   const uploadMutation = useUploadDocument();
-  const deleteMutation = useDeleteDocument();
   const archiveMutation = useArchiveDocument();
+  const restoreMutation = useRestoreDocument();
 
   const documents = docsResponse?.data ?? [];
 
   const handleUpload: UploadProps['customRequest'] = useCallback(
     (options: { file: unknown; onSuccess?: (body: unknown) => void; onError?: (err: Error) => void }) => {
+      if (!uploadYear || !uploadCategory) {
+        void message.warning('Please select a financial year and category first');
+        return;
+      }
       const formData = new FormData();
       formData.append('file', options.file as File);
-      if (financialYear) {
-        formData.append('financialYear', financialYear);
-      }
+      formData.append('financialYear', uploadYear);
+      formData.append('category', uploadCategory);
       uploadMutation.mutate(formData, {
         onSuccess: () => {
           void message.success('Document uploaded successfully');
           options.onSuccess?.({});
           setUploadOpen(false);
+          setUploadYear(undefined);
+          setUploadCategory(undefined);
         },
         onError: () => {
-          void message.error('Upload failed');
+          void message.error('Upload failed. Check file type and size.');
           options.onError?.(new Error('Upload failed'));
         },
       });
     },
-    [financialYear, uploadMutation],
+    [uploadYear, uploadCategory, uploadMutation],
   );
 
-  const handleDelete = useCallback(
+  const handleArchive = useCallback(
     (id: string) => {
-      deleteMutation.mutate(id, {
+      archiveMutation.mutate(id, {
         onSuccess: () => {
-          void message.success('Document deleted');
+          void message.success('Document archived');
         },
       });
     },
-    [deleteMutation],
-  );
-
-  const handleArchiveToggle = useCallback(
-    (id: string, isArchived: boolean) => {
-      archiveMutation.mutate(
-        { id, archive: !isArchived },
-        {
-          onSuccess: () => {
-            void message.success(isArchived ? 'Document restored' : 'Document archived');
-          },
-        },
-      );
-    },
     [archiveMutation],
   );
+
+  const handleRestore = useCallback(
+    (id: string) => {
+      restoreMutation.mutate(id, {
+        onSuccess: () => {
+          void message.success('Document restored');
+        },
+      });
+    },
+    [restoreMutation],
+  );
+
+  const handleDownload = useCallback(async (id: string) => {
+    try {
+      const res = await api.get<ApiResponse<{ document: VaultDocument; downloadUrl: string }>>(
+        `/portal/vault/documents/${id}`,
+      );
+      const url = res.data.data.downloadUrl;
+      if (url) {
+        window.open(url, '_blank');
+      } else {
+        void message.error('Download URL not available');
+      }
+    } catch {
+      void message.error('Failed to get download link');
+    }
+  }, []);
 
   const yearOptions = [
     { label: 'All Years', value: '' },
@@ -153,8 +215,8 @@ export function VaultPage(): React.ReactNode {
         <Select
           value={category}
           onChange={setCategory}
-          options={CATEGORY_OPTIONS}
-          style={{ width: 180 }}
+          options={CATEGORY_FILTER_OPTIONS}
+          style={{ width: 220 }}
           placeholder="Category"
         />
         <Button
@@ -169,20 +231,46 @@ export function VaultPage(): React.ReactNode {
       <Modal
         title="Upload Document"
         open={uploadOpen}
-        onCancel={() => { setUploadOpen(false); }}
+        onCancel={() => { setUploadOpen(false); setUploadYear(undefined); setUploadCategory(undefined); }}
         footer={null}
+        destroyOnClose
       >
+        <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }} size="middle">
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: 4 }}>Financial Year *</Text>
+            <Select
+              value={uploadYear}
+              onChange={setUploadYear}
+              options={getFinancialYearOptions()}
+              style={{ width: '100%' }}
+              placeholder="Select financial year"
+            />
+          </div>
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: 4 }}>Category *</Text>
+            <Select
+              value={uploadCategory}
+              onChange={setUploadCategory}
+              options={VAULT_CATEGORIES}
+              style={{ width: '100%' }}
+              placeholder="Select document category"
+              showSearch
+              optionFilterProp="label"
+            />
+          </div>
+        </Space>
         <Dragger
           customRequest={handleUpload as UploadProps['customRequest']}
           showUploadList={false}
-          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+          accept=".pdf,.jpg,.jpeg,.png,.heic,.tif,.tiff"
+          disabled={!uploadYear || !uploadCategory}
         >
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">Click or drag a file to upload</p>
           <p className="ant-upload-hint">
-            PDF, images, or Office documents up to 10 MB
+            PDF or image files up to 20 MB
           </p>
         </Dragger>
       </Modal>
@@ -205,32 +293,45 @@ export function VaultPage(): React.ReactNode {
                     type="link"
                     icon={<DownloadOutlined />}
                     size="small"
+                    onClick={() => { void handleDownload(doc._id); }}
                   >
                     Download
                   </Button>,
-                  <Button
-                    key="archive"
-                    type="link"
-                    size="small"
-                    onClick={() => { handleArchiveToggle(doc._id, doc.isArchived); }}
-                  >
-                    {doc.isArchived ? 'Restore' : 'Archive'}
-                  </Button>,
-                  <Button
-                    key="delete"
-                    type="link"
-                    danger
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    onClick={() => { handleDelete(doc._id); }}
-                  />,
+                  doc.isArchived ? (
+                    <Button
+                      key="restore"
+                      type="link"
+                      icon={<UndoOutlined />}
+                      size="small"
+                      onClick={() => { handleRestore(doc._id); }}
+                    >
+                      Restore
+                    </Button>
+                  ) : (
+                    <Popconfirm
+                      key="archive"
+                      title="Archive this document?"
+                      description="Archived documents are permanently deleted after 30 days."
+                      onConfirm={() => { handleArchive(doc._id); }}
+                      okText="Archive"
+                      cancelText="Cancel"
+                    >
+                      <Button
+                        type="link"
+                        icon={<FolderOutlined />}
+                        size="small"
+                      >
+                        Archive
+                      </Button>
+                    </Popconfirm>
+                  ),
                 ]}
               >
                 <Text strong ellipsis style={{ display: 'block', marginBottom: 4 }}>
                   {doc.fileName}
                 </Text>
                 <Space size={4} wrap>
-                  <Tag>{doc.category}</Tag>
+                  <Tag>{CATEGORY_LABELS[doc.category] ?? doc.category}</Tag>
                   {doc.isArchived && <Tag color="orange">Archived</Tag>}
                 </Space>
                 <div style={{ marginTop: 8 }}>

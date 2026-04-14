@@ -4,12 +4,13 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
+import { getRequestId } from '../../lib/requestContext';
 
 // Fix for B-3.45: Wrap audit log to catch failures instead of silent void
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
-    _auditLog.log(params).catch((err: unknown) => {
-      console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
     });
   },
 };

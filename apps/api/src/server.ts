@@ -4,12 +4,14 @@ import * as auth from '@nugen/auth';
 import * as rbac from '@nugen/rbac';
 import * as auditLog from '@nugen/audit-log';
 import * as paymentGateway from '@nugen/payment-gateway';
+import { setErrorLogger } from '@nugen/error-handler';
 import { initRateLimiter, createAuthLimiters } from '@nugen/rate-limiter';
-import { loadConfig, getConfig } from './config/env';
+import { loadConfig } from './config/env';
 import { connectDatabase, getConnection, disconnectDatabase } from './database/connection';
 import { ensurePerformanceIndexes } from './database/ensureIndexes';
 import { createRedisClient, disconnectRedis } from './database/redis';
 import { createApp, finalizeApp } from './app';
+import { logger } from './lib/logger';
 import { createUserModel } from './modules/user/user.model';
 import { createUserRoutes } from './modules/user/user.routes';
 import { createTaxRuleConfigModel } from './modules/tax-rules/taxRule.model';
@@ -56,6 +58,8 @@ import * as broadcastEngine from '@nugen/broadcast-engine';
 // Phase 6: Client Portal & Vault
 import * as fileStorage from '@nugen/file-storage';
 import { createPortalRoutes } from './modules/client-portal/portal.routes';
+import { createFormFillRoutes } from './modules/client-portal/formFill.routes';
+import { createAppointmentBookingRoutes } from './modules/client-portal/appointmentBooking.routes';
 import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
 import { reconcileStorageUsage } from '@nugen/file-storage';
 
@@ -84,6 +88,18 @@ import { createDocumentRoutes, createZohoWebhookRoute } from './modules/document
 import * as xeroConnector from '@nugen/xero-connector';
 import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
 
+// Settings
+import { createSettingModel, seedDefaultSettings } from './modules/settings/settings.model';
+import { createSettingsRoutes } from './modules/settings/settings.routes';
+
+// Promo Code & Credits
+import { createPromoCodeModel, createPromoCodeUsageModel } from './modules/promo-code/promoCode.model';
+import { createPromoCodeRoutes } from './modules/promo-code/promoCode.routes';
+import { createPromoCodeService } from './modules/promo-code/promoCode.service';
+import { createCreditTransactionModel } from './modules/credit/credit.model';
+import { createCreditRoutes } from './modules/credit/credit.routes';
+import { createCreditService } from './modules/credit/credit.service';
+
 // Phase 8: Engagement Modules
 import { createReferralModel, createReferralConfigModel } from './modules/referral-engine/referral.model';
 import { createReferralRoutes, expireStaleReferrals, expireCreditRewards } from './modules/referral-engine/referral.routes';
@@ -102,6 +118,14 @@ async function bootstrap(): Promise<void> {
   // 1. Load and validate environment
   const config = loadConfig();
 
+  // 1b. Initialize structured logger and wire to error handler
+  if (config.NODE_ENV === 'production') {
+    logger.setLevel('info');
+  } else {
+    logger.setLevel('debug');
+  }
+  setErrorLogger(logger);
+
   // 2. Create Express app
   const app = createApp();
 
@@ -113,7 +137,7 @@ async function bootstrap(): Promise<void> {
   try {
     await redisClient.connect();
   } catch (err) {
-    console.warn('Redis connection failed, continuing without Redis:', err); // eslint-disable-line no-console
+    logger.warn('Redis connection failed, continuing without Redis', { error: (err as Error).message });
   }
 
   // 4. Initialize Tier 1 packages
@@ -302,6 +326,15 @@ async function bootstrap(): Promise<void> {
   const DeadlineReminderModel = createDeadlineReminderModel(connection);
   const ReputationReviewModel = createReviewModel(connection);
 
+  // Promo Code & Credit models
+  const PromoCodeModel = createPromoCodeModel(connection);
+  const PromoCodeUsageModel = createPromoCodeUsageModel(connection);
+  const CreditTransactionModel = createCreditTransactionModel(connection);
+
+  // Settings
+  const SettingModel = createSettingModel(connection);
+  await seedDefaultSettings(SettingModel);
+
   // Appointment Scheduling
   const AppointmentModel = createAppointmentModel(connection);
   const StaffAvailabilityModel = createStaffAvailabilityModel(connection);
@@ -439,10 +472,10 @@ async function bootstrap(): Promise<void> {
   if (config.NODE_ENV === 'production') {
     const indexResult = await ensurePerformanceIndexes(connection);
     if (indexResult.created.length > 0) {
-      console.log(`[indexes] Created ${indexResult.created.length} indexes:`, indexResult.created); // eslint-disable-line no-console
+      logger.info(`Created ${indexResult.created.length} performance indexes`, { indexes: indexResult.created });
     }
     if (indexResult.errors.length > 0) {
-      console.warn('[indexes] Failed to create some indexes:', indexResult.errors); // eslint-disable-line no-console
+      logger.warn('Failed to create some indexes', { errors: indexResult.errors });
     }
   }
 
@@ -626,6 +659,45 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // Settings service for other modules to use
+  const settingsService = (await import('./modules/settings/settings.service')).createSettingsService({
+    SettingModel,
+  });
+
+  // Promo Code & Credit services
+  const promoCodeService = createPromoCodeService({
+    PromoCodeModel,
+    PromoCodeUsageModel,
+  });
+  const creditServiceInstance = createCreditService({
+    CreditTransactionModel,
+  });
+
+  // Client-facing Form Fill routes (mounted under /portal)
+  const formFillRouter = createFormFillRoutes({
+    FormMappingModel,
+    FormMappingVersionModel,
+    OrderModel: OrderModel as never,
+    SalesModel: SalesModel as never,
+    CounterModel: CounterModel as never,
+    authenticate: auth.authenticate,
+    promoCodeService,
+    creditService: creditServiceInstance,
+  });
+  // Mount form fill routes under the portal prefix
+  portalRouter.use(formFillRouter);
+
+  // Client-facing Appointment Booking routes (mounted under /portal)
+  const appointmentBookingRouter = createAppointmentBookingRoutes({
+    AppointmentModel,
+    StaffAvailabilityModel,
+    OrderModel: OrderModel as never,
+    UserModel: UserModel as never,
+    authenticate: auth.authenticate,
+    getSetting: settingsService.getSetting,
+  });
+  portalRouter.use(appointmentBookingRouter);
+
   // Phase 7: Communication Suite routes
   const chatRouter = chatEngine.createChatRoutes({
     ConversationModel: ChatConversationModel,
@@ -700,6 +772,22 @@ async function bootstrap(): Promise<void> {
     OrderModel: OrderModel as never,
     LeadModel: LeadModel as never,
     CounterModel: CounterModel as never,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    creditService: creditServiceInstance,
+  });
+
+  // Promo Code routes (admin CRUD)
+  const promoCodeRouter = createPromoCodeRoutes({
+    PromoCodeModel,
+    PromoCodeUsageModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
+  // Credit routes (client balance/transactions, admin lookup)
+  const creditRouter = createCreditRoutes({
+    CreditTransactionModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -784,6 +872,13 @@ async function bootstrap(): Promise<void> {
     exportQueue: analyticsExportQueue,
   });
 
+  // Settings routes
+  const settingsRouter = createSettingsRoutes({
+    SettingModel,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
   // Appointment Scheduling routes
   const { appointmentRouter, staffAvailabilityRouter } = createAppointmentRoutes({
     AppointmentModel,
@@ -793,6 +888,7 @@ async function bootstrap(): Promise<void> {
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     notificationSend: notificationEngine.send as (params: Record<string, unknown>) => Promise<unknown>,
+    getSetting: settingsService.getSetting,
   });
 
   // Staff Workload Balancing routes
@@ -886,9 +982,12 @@ async function bootstrap(): Promise<void> {
     whatsappRouter,
     privacyRouter,
     xeroRouter,
+    settingsRouter,
     referralRouter,
     calendarRouter,
     reputationRouter,
+    promoCodeRouter,
+    creditRouter,
     notificationRouter,
     analyticsRouter,
     appointmentRouter,
@@ -912,6 +1011,9 @@ async function bootstrap(): Promise<void> {
 
   // ─── BullMQ Retry Hardening ──────────────────────────────────────────────
   // redisConnectionOpts and defaultJobOptions defined above (before analytics queue)
+
+  // BullMQ structured logger
+  const jobLogger = logger.child({ module: 'bullmq' });
 
   // Dead-letter queue for permanently failed jobs across all queues
   const deadLetterQueue = new Queue('dead-letter', { connection: redisConnectionOpts });
@@ -944,9 +1046,12 @@ async function bootstrap(): Promise<void> {
       removeOnFail: 200,
     });
 
-    console.warn( // eslint-disable-line no-console
-      `[DLQ] Job ${job.name} from ${sourceQueue} moved to dead-letter after ${job.attemptsMade} attempts: ${err.message}`,
-    );
+    jobLogger.error(`Job moved to dead-letter queue`, {
+      queue: sourceQueue,
+      jobName: job.name,
+      attemptsMade: job.attemptsMade,
+      error: err.message,
+    });
   }
 
   const automationQueue = new Queue('lead-automation', {
@@ -1003,8 +1108,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  automationWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'lead-automation', jobName: job.name });
+  });
   automationWorker.on('failed', (job, err) => {
-    console.warn(`[AUTOMATION] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'lead-automation', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('lead-automation', job, err);
   });
 
@@ -1064,8 +1172,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  broadcastWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'broadcast-engine', jobName: job.name });
+  });
   broadcastWorker.on('failed', (job, err) => {
-    console.warn(`[BROADCAST] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'broadcast-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('broadcast-engine', job, err);
   });
 
@@ -1101,8 +1212,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  vaultWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'vault-maintenance', jobName: job.name });
+  });
   vaultWorker.on('failed', (job, err) => {
-    console.warn(`[VAULT] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'vault-maintenance', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('vault-maintenance', job, err);
   });
 
@@ -1146,8 +1260,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  ticketWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'support-tickets', jobName: job.name });
+  });
   ticketWorker.on('failed', (job, err) => {
-    console.warn(`[TICKETS] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'support-tickets', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('support-tickets', job, err);
   });
 
@@ -1183,8 +1300,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  privacyWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'data-lifecycle', jobName: job.name });
+  });
   privacyWorker.on('failed', (job, err) => {
-    console.warn(`[PRIVACY] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'data-lifecycle', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('data-lifecycle', job, err);
   });
 
@@ -1220,8 +1340,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  xeroWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'xero-sync', jobName: job.name });
+  });
   xeroWorker.on('failed', (job, err) => {
-    console.warn(`[XERO] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'xero-sync', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('xero-sync', job, err);
   });
 
@@ -1265,8 +1388,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  engagementWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'engagement-engine', jobName: job.name });
+  });
   engagementWorker.on('failed', (job, err) => {
-    console.warn(`[ENGAGEMENT] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'engagement-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('engagement-engine', job, err);
   });
 
@@ -1303,8 +1429,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  notificationWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'notification-engine', jobName: job.name });
+  });
   notificationWorker.on('failed', (job, err) => {
-    console.warn(`[NOTIFICATION] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'notification-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('notification-engine', job, err);
   });
 
@@ -1350,8 +1479,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  analyticsWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'analytics-engine', jobName: job.name });
+  });
   analyticsWorker.on('failed', (job, err) => {
-    console.warn(`[ANALYTICS] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'analytics-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('analytics-engine', job, err);
   });
 
@@ -1387,8 +1519,11 @@ async function bootstrap(): Promise<void> {
     { connection: redisConnectionOpts },
   );
 
+  appointmentWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'appointment-scheduling', jobName: job.name });
+  });
   appointmentWorker.on('failed', (job, err) => {
-    console.warn(`[APPOINTMENT] Job ${job?.name} failed (attempt ${job?.attemptsMade}):`, err); // eslint-disable-line no-console
+    jobLogger.warn('Job failed', { queue: 'appointment-scheduling', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('appointment-scheduling', job, err);
   });
 
@@ -1406,12 +1541,12 @@ async function bootstrap(): Promise<void> {
   });
 
   const server = httpServer.listen(port, () => {
-    console.warn(`QEGOS API running on port ${port} [${config.NODE_ENV}] (Socket.io enabled)`); // eslint-disable-line no-console
+    logger.info(`QEGOS API running on port ${port}`, { env: config.NODE_ENV, socketIo: true });
   });
 
   // 9. Graceful shutdown
   const shutdown = async (signal: string): Promise<void> => {
-    console.warn(`${signal} received. Shutting down gracefully...`); // eslint-disable-line no-console
+    logger.info('Graceful shutdown initiated', { signal });
     chatSocketServer.close();
     server.close(async () => {
       await automationWorker.close();
@@ -1443,7 +1578,7 @@ async function bootstrap(): Promise<void> {
 
     // Force exit after 10 seconds
     setTimeout(() => {
-      console.error('Forced shutdown after timeout'); // eslint-disable-line no-console
+      logger.error('Forced shutdown after timeout');
       process.exit(1);
     }, 10000);
   };
@@ -1453,6 +1588,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  console.error('Failed to start server:', err); // eslint-disable-line no-console
+  logger.error('Failed to start server', { error: (err as Error).message, stack: (err as Error).stack });
   process.exit(1);
 });

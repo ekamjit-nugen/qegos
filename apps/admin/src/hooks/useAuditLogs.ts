@@ -15,3 +15,24 @@ export function useAuditLogList(filters: AuditLogQuery) {
     placeholderData: (prev) => prev,
   });
 }
+
+interface AuditStatsResponse {
+  status: number;
+  data: {
+    actionsPerDay: Array<{ _id: string; count: number }>;
+    topActors: Array<{ _id: string; count: number }>;
+    criticalCount: number;
+    failedLogins: number;
+  };
+}
+
+export function useAuditStats() {
+  return useQuery({
+    queryKey: ['audit-logs', 'stats'],
+    queryFn: async () => {
+      const res = await api.get<AuditStatsResponse>('/audit-logs/stats');
+      return res.data;
+    },
+    staleTime: 60_000, // cache for 1 minute
+  });
+}

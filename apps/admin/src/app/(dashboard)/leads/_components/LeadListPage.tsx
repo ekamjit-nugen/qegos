@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Table, Tag, Button, Input, Select, Card, Row, Col } from 'antd';
-import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Tag, Button, Input, Select, Card, Row, Col, Statistic, Alert } from 'antd';
+import {
+  PlusOutlined, SearchOutlined, EyeOutlined,
+  TeamOutlined, RiseOutlined, TrophyOutlined, DollarOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useLeadList } from '@/hooks/useLeads';
+import { useLeadList, useLeadStats } from '@/hooks/useLeads';
+import { useAuth } from '@/lib/auth/useAuth';
 import type { Lead, LeadListQuery } from '@/types/lead';
 import {
   LEAD_STATUS_LABELS,
@@ -14,14 +18,18 @@ import {
   LEAD_SOURCE_LABELS,
   LEAD_PRIORITY_COLORS,
 } from '@/types/lead';
-import { formatDate, formatPhone, fullName } from '@/lib/utils/format';
+import { formatDate, formatPhone, fullName, formatCurrency } from '@/lib/utils/format';
 import { LeadFormModal } from './LeadFormModal';
 
 export function LeadListPage(): React.ReactNode {
   const router = useRouter();
+  const { user } = useAuth();
   const [filters, setFilters] = useState<LeadListQuery>({ page: 1, limit: 20 });
   const [showCreate, setShowCreate] = useState(false);
   const { data, isLoading } = useLeadList(filters);
+  const { data: stats } = useLeadStats();
+
+  const isStaff = user?.userType === 4;
 
   const columns: ColumnsType<Lead> = [
     {
@@ -45,7 +53,9 @@ export function LeadListPage(): React.ReactNode {
     {
       title: 'Source',
       dataIndex: 'source',
-      render: (val: string) => LEAD_SOURCE_LABELS[val] ?? val,
+      render: (val: string) => (
+        <Tag>{LEAD_SOURCE_LABELS[val] ?? val}</Tag>
+      ),
     },
     {
       title: 'Status',
@@ -66,6 +76,11 @@ export function LeadListPage(): React.ReactNode {
       dataIndex: 'score',
       sorter: true,
       width: 80,
+    },
+    {
+      title: 'Assigned To',
+      dataIndex: 'assignedToName',
+      render: (val: string) => val ?? '—',
     },
     {
       title: 'Created',
@@ -106,6 +121,65 @@ export function LeadListPage(): React.ReactNode {
         </Button>
       </div>
 
+      {/* Staff indicator */}
+      {isStaff && (
+        <Alert
+          type="info"
+          showIcon
+          message="Showing leads assigned to you"
+          style={{ marginBottom: 16 }}
+          closable
+        />
+      )}
+
+      {/* Stats Dashboard */}
+      {stats && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="Active Leads"
+                value={stats.totalActive}
+                prefix={<TeamOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="New This Week"
+                value={stats.newThisWeek}
+                prefix={<RiseOutlined />}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="Conversion Rate"
+                value={stats.conversionRate?.rate ?? 0}
+                prefix={<TrophyOutlined />}
+                suffix="%"
+                precision={1}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="Pipeline Value"
+                value={stats.pipelineValue ?? 0}
+                prefix={<DollarOutlined />}
+                formatter={(val) => formatCurrency(Number(val))}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Filters */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={8}>

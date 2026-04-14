@@ -56,6 +56,26 @@ export interface OrderLineItem {
   completionStatus?: string;
 }
 
+export type SigningStatus = 'not_started' | 'awaiting_client' | 'client_signed' | 'awaiting_admin' | 'completed' | 'declined';
+
+export const SIGNING_STATUS_LABELS: Record<SigningStatus, string> = {
+  not_started: 'Not Started',
+  awaiting_client: 'Awaiting Client',
+  client_signed: 'Client Signed',
+  awaiting_admin: 'Awaiting Your Signature',
+  completed: 'Fully Signed',
+  declined: 'Declined',
+};
+
+export const SIGNING_STATUS_COLORS: Record<SigningStatus, string> = {
+  not_started: 'default',
+  awaiting_client: 'orange',
+  client_signed: 'blue',
+  awaiting_admin: 'gold',
+  completed: 'green',
+  declined: 'red',
+};
+
 export interface OrderDocument {
   documentId?: string;
   fileName: string;
@@ -63,6 +83,13 @@ export interface OrderDocument {
   documentType?: string;
   status: 'pending' | 'signed' | 'verified';
   zohoRequestId?: string;
+  signingStatus?: SigningStatus;
+  clientActionId?: string;
+  adminActionId?: string;
+  clientSignedAt?: string;
+  adminSignedAt?: string;
+  clientEmail?: string;
+  adminEmail?: string;
 }
 
 export interface Order {
@@ -84,6 +111,11 @@ export interface Order {
   discountPercent: number;
   discountAmount: number; // cents
   finalAmount: number; // cents
+  discountSource?: 'promo_code' | 'referral' | 'manual' | 'credit';
+  promoCodeId?: string;
+  promoCode?: string;
+  creditApplied: number; // cents
+  paymentStatus?: string;
   processingBy?: string;
   processingByName?: string;
   completionPercent: number;

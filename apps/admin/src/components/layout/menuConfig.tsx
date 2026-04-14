@@ -10,12 +10,14 @@ import {
   CalendarOutlined,
   StarOutlined,
   FolderOpenOutlined,
+  CloudServerOutlined,
   AuditOutlined,
   UserOutlined,
   NotificationOutlined,
   PhoneOutlined,
   ScheduleOutlined,
   FormOutlined,
+  GiftOutlined,
 } from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 
@@ -59,6 +61,7 @@ export const menuItems: MenuDataItem[] = [
     children: [
       { path: '/payments', name: 'Payments', icon: <DollarOutlined /> },
       { path: '/billing-disputes', name: 'Billing Disputes', icon: <FileTextOutlined /> },
+      { path: '/promo-codes', name: 'Promo Codes', icon: <GiftOutlined /> },
       { path: '/xero', name: 'Xero Sync', icon: <DollarOutlined /> },
     ],
   },
@@ -66,6 +69,11 @@ export const menuItems: MenuDataItem[] = [
     path: '/documents',
     name: 'Documents',
     icon: <FolderOpenOutlined />,
+  },
+  {
+    path: '/vault',
+    name: 'Client Vault',
+    icon: <CloudServerOutlined />,
   },
   {
     name: 'Reports',
@@ -83,6 +91,7 @@ export const menuItems: MenuDataItem[] = [
       { path: '/form-mappings', name: 'Form Mappings', icon: <FormOutlined /> },
       { path: '/calendar', name: 'Tax Calendar', icon: <CalendarOutlined /> },
       { path: '/reputation', name: 'Reputation', icon: <StarOutlined /> },
+      { path: '/settings', name: 'Settings', icon: <SettingOutlined /> },
     ],
   },
 ];

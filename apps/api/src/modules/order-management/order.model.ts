@@ -9,6 +9,7 @@ import {
   APPOINTMENT_STATUSES,
   ORDER_TYPES,
   LINE_ITEM_COMPLETION_STATUSES,
+  SIGNING_STATUSES,
 } from './order.types';
 import type { ICounterDocument } from '../../database/counter.model';
 import { getNextSequence } from '../../database/counter.model';
@@ -81,6 +82,10 @@ const orderSchema = new Schema<IOrderDocument2>(
     },
     leadId: { type: Schema.Types.ObjectId, ref: 'Lead', index: true },
     financialYear: { type: String, required: [true, 'Financial year is required'] },
+    // Form mapping reference (client-submitted tax filing form)
+    formMappingId: { type: Schema.Types.ObjectId, ref: 'FormMapping' },
+    formVersionNumber: { type: Number },
+    formAnswers: { type: Schema.Types.Mixed },
     status: {
       type: Number,
       required: true,
@@ -162,6 +167,14 @@ const orderSchema = new Schema<IOrderDocument2>(
         status: { type: String, enum: ['pending', 'signed', 'verified'], default: 'pending' },
         zohoRequestId: String,
         docuSignEnvelopeId: String,
+        // Dual-signature tracking
+        signingStatus: { type: String, enum: SIGNING_STATUSES, default: 'not_started' },
+        clientActionId: String,
+        adminActionId: String,
+        clientSignedAt: { type: Date },
+        adminSignedAt: { type: Date },
+        clientEmail: { type: String, lowercase: true, trim: true },
+        adminEmail: { type: String, lowercase: true, trim: true },
       },
     ],
     lineItems: [lineItemSchema],
@@ -189,6 +202,23 @@ const orderSchema = new Schema<IOrderDocument2>(
         validator: (v: number): boolean => Number.isInteger(v),
         message: 'finalAmount must be an integer (cents) — ORD-INV-04',
       },
+    },
+    // Discount source tracking
+    discountSource: { type: String, enum: ['promo_code', 'referral', 'manual', 'credit'] },
+    promoCodeId: { type: Schema.Types.ObjectId, ref: 'PromoCode' },
+    promoCode: { type: String },
+    creditApplied: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: (v: number): boolean => Number.isInteger(v),
+        message: 'creditApplied must be an integer (cents)',
+      },
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'succeeded', 'failed', 'refunded', 'partially_refunded'],
+      default: 'pending',
     },
     processingBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     completionPercent: { type: Number, default: 0, min: 0, max: 100 },
@@ -236,14 +266,17 @@ orderSchema.index({ processingBy: 1, status: 1, updatedAt: -1 });
 // ─── ORD-INV-03: Server-side total recalculation pre-save ───────────────────
 
 orderSchema.pre('save', function (next) {
-  if (this.isModified('lineItems') || this.isModified('discountPercent')) {
+  if (this.isModified('lineItems') || this.isModified('discountPercent') || this.isModified('creditApplied')) {
     const total = this.lineItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
     this.totalAmount = total;
     this.discountAmount = Math.round(total * (this.discountPercent / 100));
-    this.finalAmount = total - this.discountAmount;
+    const afterDiscount = total - this.discountAmount;
+    const creditUsed = Math.min(this.creditApplied ?? 0, afterDiscount);
+    this.creditApplied = creditUsed;
+    this.finalAmount = afterDiscount - creditUsed;
   }
   next();
 });

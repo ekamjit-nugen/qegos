@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
@@ -11,11 +12,13 @@ import {
   Spin,
   Tag,
   Typography,
+  message,
 } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { useOrder } from '@/hooks/usePortal';
+import { ArrowLeftOutlined, EditOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { useOrder, useGenerateClientSigningUri } from '@/hooks/usePortal';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
-import type { OrderLineItem, OrderDocument } from '@/types/order';
+import type { OrderLineItem, OrderDocument, SigningStatus } from '@/types/order';
+import { SIGNING_STATUS_LABELS, SIGNING_STATUS_COLORS } from '@/types/order';
 import { formatCurrency, formatDateTime } from '@/lib/utils/format';
 
 const { Title, Text } = Typography;
@@ -27,12 +30,6 @@ const LINE_ITEM_STATUS_COLORS: Record<string, string> = {
   cancelled: 'error',
 };
 
-const DOC_STATUS_COLORS: Record<string, string> = {
-  pending: 'orange',
-  signed: 'blue',
-  verified: 'green',
-};
-
 interface OrderDetailPageProps {
   id: string;
 }
@@ -40,6 +37,36 @@ interface OrderDetailPageProps {
 export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
   const router = useRouter();
   const { data: order, isLoading } = useOrder(id);
+  const generateUriMutation = useGenerateClientSigningUri();
+
+  const handleSign = useCallback(
+    (doc: OrderDocument) => {
+      if (!doc.zohoRequestId || !doc.clientActionId) {
+        void message.error('Signing information not available');
+        return;
+      }
+      generateUriMutation.mutate(
+        {
+          orderId: id,
+          zohoRequestId: doc.zohoRequestId,
+          actionId: doc.clientActionId,
+        },
+        {
+          onSuccess: (result) => {
+            if (result.signUrl) {
+              window.open(result.signUrl, '_blank');
+            } else {
+              void message.error('Signing URL not available');
+            }
+          },
+          onError: () => {
+            void message.error('Failed to get signing URL');
+          },
+        },
+      );
+    },
+    [id, generateUriMutation],
+  );
 
   if (isLoading) {
     return (
@@ -131,12 +158,54 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
           ) : (
             <List
               dataSource={order.documents}
-              renderItem={(doc: OrderDocument) => (
-                <List.Item>
-                  <List.Item.Meta title={doc.fileName} description={doc.documentType ?? '-'} />
-                  <Tag color={DOC_STATUS_COLORS[doc.status] ?? 'default'}>{doc.status}</Tag>
-                </List.Item>
-              )}
+              renderItem={(doc: OrderDocument) => {
+                const ss = (doc.signingStatus ?? 'not_started') as SigningStatus;
+                return (
+                  <List.Item
+                    actions={[
+                      ss === 'awaiting_client' ? (
+                        <Button
+                          key="sign"
+                          type="primary"
+                          size="small"
+                          icon={<EditOutlined />}
+                          loading={generateUriMutation.isPending}
+                          onClick={() => { handleSign(doc); }}
+                        >
+                          Sign Document
+                        </Button>
+                      ) : ss === 'client_signed' || ss === 'awaiting_admin' ? (
+                        <Tag key="status" color="blue">
+                          Awaiting counter-signature
+                        </Tag>
+                      ) : ss === 'completed' ? (
+                        <Tag key="status" icon={<CheckCircleOutlined />} color="success">
+                          Fully Signed
+                        </Tag>
+                      ) : ss === 'declined' ? (
+                        <Tag key="status" color="red">Declined</Tag>
+                      ) : null,
+                    ].filter(Boolean)}
+                  >
+                    <List.Item.Meta
+                      title={doc.fileName}
+                      description={
+                        <div>
+                          <Text type="secondary">{doc.documentType ?? '-'}</Text>
+                          {ss !== 'not_started' && (
+                            <Tag
+                              color={SIGNING_STATUS_COLORS[ss]}
+                              style={{ marginLeft: 8 }}
+                            >
+                              {SIGNING_STATUS_LABELS[ss]}
+                            </Tag>
+                          )}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
             />
           )}
         </Card>

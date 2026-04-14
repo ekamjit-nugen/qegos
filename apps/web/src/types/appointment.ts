@@ -36,3 +36,29 @@ export const APPOINTMENT_STATUS_COLORS: Record<Appointment['status'], string> = 
   cancelled: 'red',
   rescheduled: 'orange',
 };
+
+// ─── Available Slot ────────────────────────────────────────────────────────
+
+export interface AvailableSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  staffId: string;
+}
+
+export interface BookAppointmentRequest {
+  orderId: string;
+  staffId: string;
+  date: string;
+  startTime: string;
+  type: 'in_person' | 'phone' | 'video';
+}
+
+export interface BookAppointmentResult {
+  appointmentId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  status: string;
+}

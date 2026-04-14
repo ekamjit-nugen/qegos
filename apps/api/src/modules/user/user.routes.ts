@@ -1,11 +1,21 @@
 import { Router, type Request, type Response } from 'express';
-import type { Model, Types } from 'mongoose';
+import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
 import { validate, objectId, pagination, search, email, phone, requiredString } from '@nugen/validator';
 import type { check as CheckFn } from '@nugen/rbac';
 import type { authenticate as AuthFn, AuthenticatedRequest } from '@nugen/auth';
+import * as _auditLog from '@nugen/audit-log';
+import { getRequestId } from '../../lib/requestContext';
 import { createUserService } from './user.service';
 import type { IUserDocument } from './user.types';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
+    });
+  },
+};
 
 export interface UserRouteDeps {
   UserModel: Model<IUserDocument>;
@@ -60,6 +70,16 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
       }
       const user = await service.updateUser(userId, updates as Partial<IUserDocument>);
       res.status(200).json({ status: 200, data: user });
+
+      auditLog.log({
+        actor: (req as unknown as { user?: { userId?: string } }).user?.userId ?? '',
+        actorType: 'user',
+        action: 'update',
+        resource: 'user',
+        resourceId: userId,
+        severity: 'info',
+        description: `User ${userId} updated own profile`,
+      });
     }),
   );
 
@@ -127,6 +147,16 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
 
       const user = await service.createUser(body as Partial<IUserDocument>);
       res.status(201).json({ status: 201, data: user });
+
+      auditLog.log({
+        actor: (req as unknown as { user?: { userId?: string } }).user?.userId ?? '',
+        actorType: 'admin',
+        action: 'create',
+        resource: 'user',
+        resourceId: String(user._id),
+        severity: 'info',
+        description: `Created user ${String(user._id)}`,
+      });
     }),
   );
 
@@ -163,6 +193,16 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
         authReq.scopeFilter,
       );
       res.status(200).json({ status: 200, data: user });
+
+      auditLog.log({
+        actor: (req as unknown as { user?: { userId?: string } }).user?.userId ?? '',
+        actorType: 'admin',
+        action: 'update',
+        resource: 'user',
+        resourceId: req.params.id,
+        severity: 'warning',
+        description: `Admin updated user ${req.params.id}`,
+      });
     }),
   );
 
@@ -177,6 +217,16 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
       const authReq = req as AuthenticatedRequest;
       const user = await service.toggleStatus(req.params.id, authReq.scopeFilter);
       res.status(200).json({ status: 200, data: user });
+
+      auditLog.log({
+        actor: (req as unknown as { user?: { userId?: string } }).user?.userId ?? '',
+        actorType: 'admin',
+        action: 'status_change',
+        resource: 'user',
+        resourceId: req.params.id,
+        severity: 'warning',
+        description: `Toggled status for user ${req.params.id}`,
+      });
     }),
   );
 
@@ -191,6 +241,16 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
       const authReq = req as AuthenticatedRequest;
       const user = await service.softDelete(req.params.id, authReq.scopeFilter);
       res.status(200).json({ status: 200, data: { message: 'User deleted', id: user._id } });
+
+      auditLog.log({
+        actor: (req as unknown as { user?: { userId?: string } }).user?.userId ?? '',
+        actorType: 'admin',
+        action: 'delete',
+        resource: 'user',
+        resourceId: req.params.id,
+        severity: 'critical',
+        description: `Soft-deleted user ${req.params.id}`,
+      });
     }),
   );
 

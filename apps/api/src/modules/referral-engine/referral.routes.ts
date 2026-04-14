@@ -44,6 +44,7 @@ export function createReferralRoutes(deps: ReferralRouteDeps): Router {
     OrderModel: deps.OrderModel,
     LeadModel: deps.LeadModel,
     CounterModel: deps.CounterModel,
+    creditService: deps.creditService,
   });
 
   // ─── GET /my-code — Get or generate referral code (client) ────────────────
