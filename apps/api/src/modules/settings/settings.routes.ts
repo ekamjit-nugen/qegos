@@ -26,7 +26,7 @@ export function createSettingsRoutes(deps: SettingsRouteDeps): Router {
   router.get(
     '/',
     deps.authenticate(),
-    deps.checkPermission('settings', 'read'),
+    deps.checkPermission('system_config', 'read'),
     async (_req: Request, res: Response): Promise<void> => {
       try {
         const settings = await service.getAllSettings();
@@ -45,7 +45,7 @@ export function createSettingsRoutes(deps: SettingsRouteDeps): Router {
   router.get(
     '/:key',
     deps.authenticate(),
-    deps.checkPermission('settings', 'read'),
+    deps.checkPermission('system_config', 'read'),
     ...getSettingValidation(),
     async (req: Request, res: Response): Promise<void> => {
       const errors = validationResult(req);
@@ -74,7 +74,7 @@ export function createSettingsRoutes(deps: SettingsRouteDeps): Router {
   router.patch(
     '/:key',
     deps.authenticate(),
-    deps.checkPermission('settings', 'update'),
+    deps.checkPermission('system_config', 'update'),
     ...updateSettingValidation(),
     async (req: AuthRequest, res: Response): Promise<void> => {
       const errors = validationResult(req);

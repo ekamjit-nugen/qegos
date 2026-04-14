@@ -50,7 +50,7 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
 
   const router = Router();
   const auth = [deps.authenticate()];
-  const authStaff = [deps.authenticate(), deps.checkPermission('documents', 'manage')];
+  const authStaff = [deps.authenticate(), deps.checkPermission('vault_documents', 'update')];
 
   // 1. POST /upload — Upload document to order (DOC-INV-01/02/03/04)
   router.post(
