@@ -8,6 +8,15 @@
 
 import { Router, type Request, type Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
+import * as _auditLog from '@nugen/audit-log';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params as never).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err);
+    });
+  },
+};
 import type { Model, Document } from 'mongoose';
 import type { IAppointmentDocument, IStaffAvailabilityDocument } from '../appointment-scheduling/appointment.types';
 import { createAppointmentService } from '../appointment-scheduling/appointment.service';
@@ -226,6 +235,16 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
             type: appointment.type,
             status: appointment.status,
           },
+        });
+
+        auditLog.log({
+          actor: userId,
+          actorType: 'client',
+          action: 'create',
+          resource: 'appointment',
+          resourceId: String(appointment._id),
+          severity: 'info',
+          description: `Client booked appointment ${String(appointment._id)}`,
         });
       } catch (err) {
         const error = err as Error & { statusCode?: number; code?: string };

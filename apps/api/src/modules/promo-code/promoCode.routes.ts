@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { validationResult } from 'express-validator';
+import * as _auditLog from '@nugen/audit-log';
 import type { PromoCodeRouteDeps, CreatePromoCodeInput, PromoCodeListQuery } from './promoCode.types';
 import { createPromoCodeService } from './promoCode.service';
 import {
@@ -8,6 +9,14 @@ import {
   promoCodeIdValidation,
   listPromoCodesValidation,
 } from './promoCode.validators';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params as never).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err);
+    });
+  },
+};
 
 interface AuthRequest extends Request {
   user?: { _id: string; userId?: string; userType?: number };
@@ -36,6 +45,17 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         const authReq = req as AuthRequest;
         const createdBy = authReq.user?.userId ?? authReq.user?._id ?? '';
         const promo = await service.createPromoCode(req.body as CreatePromoCodeInput, createdBy);
+
+        auditLog.log({
+          actor: createdBy,
+          actorType: 'staff',
+          action: 'create',
+          resource: 'promo_code',
+          resourceId: String(promo._id),
+          severity: 'info',
+          description: `Promo code created`,
+        });
+
         res.status(201).json({ status: 201, data: promo });
       } catch (err) {
         const error = err as Error & { statusCode?: number; code?: string };
@@ -106,10 +126,22 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         return;
       }
       try {
+        const authReq2 = req as AuthRequest;
         const promo = await service.updatePromoCode(
           req.params.id as string,
           req.body as Partial<CreatePromoCodeInput>,
         );
+
+        auditLog.log({
+          actor: authReq2.user?.userId ?? authReq2.user?._id ?? '',
+          actorType: 'staff',
+          action: 'update',
+          resource: 'promo_code',
+          resourceId: req.params.id as string,
+          severity: 'warning',
+          description: `Promo code updated`,
+        });
+
         res.status(200).json({ status: 200, data: promo });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
@@ -131,7 +163,19 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         return;
       }
       try {
+        const authReq3 = req as AuthRequest;
         const promo = await service.deactivatePromoCode(req.params.id as string);
+
+        auditLog.log({
+          actor: authReq3.user?.userId ?? authReq3.user?._id ?? '',
+          actorType: 'staff',
+          action: 'delete',
+          resource: 'promo_code',
+          resourceId: req.params.id as string,
+          severity: 'warning',
+          description: `Promo code deactivated`,
+        });
+
         res.status(200).json({ status: 200, data: promo });
       } catch (err) {
         const error = err as Error & { statusCode?: number };

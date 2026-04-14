@@ -9,6 +9,15 @@
 
 import { Router, type Request, type Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
+import * as _auditLog from '@nugen/audit-log';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params as never).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err);
+    });
+  },
+};
 import type { Model, Types } from 'mongoose';
 import type { IFormMappingDocument, IFormMappingVersionDocument } from '../form-mapping/formMapping.types';
 import type { IOrderDocument2, ISalesDocument } from '../order-management/order.types';
@@ -368,6 +377,16 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
             finalAmount: order.finalAmount,
             promoCode: promoCodeStr,
           },
+        });
+
+        auditLog.log({
+          actor: userId,
+          actorType: 'client',
+          action: 'create',
+          resource: 'order',
+          resourceId: String(order._id),
+          severity: 'info',
+          description: `Client submitted form-fill, created order ${order.orderNumber}`,
         });
       } catch (err) {
         const error = err as Error & { statusCode?: number; code?: string };

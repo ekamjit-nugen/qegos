@@ -1,8 +1,17 @@
 import { Router, type Request, type Response } from 'express';
 import { validationResult } from 'express-validator';
+import * as _auditLog from '@nugen/audit-log';
 import type { SettingsRouteDeps } from './settings.types';
 import { createSettingsService } from './settings.service';
 import { getSettingValidation, updateSettingValidation } from './settings.validators';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params as never).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err);
+    });
+  },
+};
 
 interface AuthRequest extends Request {
   user?: { _id: string; userType?: number };
@@ -80,6 +89,17 @@ export function createSettingsRoutes(deps: SettingsRouteDeps): Router {
           value,
           userId,
         );
+
+        auditLog.log({
+          actor: userId,
+          actorType: 'staff',
+          action: 'config_change',
+          resource: 'settings',
+          resourceId: req.params.key as string,
+          severity: 'critical',
+          description: `Setting ${req.params.key} updated`,
+        });
+
         res.status(200).json({ status: 200, data: setting });
       } catch (err) {
         const error = err as Error & { statusCode?: number };

@@ -8,7 +8,7 @@ import * as _auditLog from '@nugen/audit-log';
 // Fix for B-3.45: Wrap audit log to catch failures instead of silent void
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
-    _auditLog.log(params).catch((err: unknown) => {
+    _auditLog.log(params as never).catch((err: unknown) => {
       console.warn('[AUDIT] Failed to write audit log:', err); // eslint-disable-line no-console
     });
   },

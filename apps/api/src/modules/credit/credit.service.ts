@@ -1,6 +1,15 @@
 import type { Model } from 'mongoose';
+import * as _auditLog from '@nugen/audit-log';
 import { AppError } from '@nugen/error-handler';
 import type { ICreditTransactionDocument, CreditType } from './credit.types';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params as never).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err);
+    });
+  },
+};
 
 export interface CreditServiceDeps {
   CreditTransactionModel: Model<ICreditTransactionDocument>;
@@ -39,7 +48,7 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
     const currentBalance = await getBalance(userId);
     const newBalance = currentBalance + amount;
 
-    return CreditTransactionModel.create({
+    const transaction = await CreditTransactionModel.create({
       userId,
       type,
       amount,
@@ -48,6 +57,18 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
       description,
       expiresAt,
     });
+
+    auditLog.log({
+      actor: userId,
+      actorType: 'system',
+      action: 'create',
+      resource: 'credit',
+      resourceId: String(transaction._id),
+      severity: 'info',
+      description: `Credit added: ${amount} cents, type=${type}`,
+    });
+
+    return transaction;
   }
 
   async function useCredit(
@@ -68,7 +89,7 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
 
     const newBalance = currentBalance - amount;
 
-    return CreditTransactionModel.create({
+    const transaction = await CreditTransactionModel.create({
       userId,
       type: 'usage',
       amount: -amount, // negative for deduction
@@ -76,6 +97,18 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
       referenceId: orderId,
       description: `Credit applied to order`,
     });
+
+    auditLog.log({
+      actor: userId,
+      actorType: 'system',
+      action: 'update',
+      resource: 'credit',
+      resourceId: String(transaction._id),
+      severity: 'warning',
+      description: `Credit used: ${amount} cents for order ${orderId}`,
+    });
+
+    return transaction;
   }
 
   async function getTransactions(

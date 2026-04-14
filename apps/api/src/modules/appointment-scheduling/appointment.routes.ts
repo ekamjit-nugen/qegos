@@ -1,5 +1,14 @@
 import { Router } from 'express';
+import * as _auditLog from '@nugen/audit-log';
 import { validationResult } from 'express-validator';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log(params as never).catch((err: unknown) => {
+      console.warn('[AUDIT] Failed to write audit log:', err);
+    });
+  },
+};
 import type { Request, Response } from 'express';
 import type { AppointmentRouteDeps, AppointmentStatus } from './appointment.types';
 import { createAppointmentService, type AppointmentServiceResult } from './appointment.service';
@@ -59,6 +68,15 @@ export function createAppointmentRoutes(
       const actorId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
       const appointment = await service.createAppointment(req.body as Record<string, unknown>, actorId);
       res.status(201).json({ status: 201, data: appointment });
+      auditLog.log({
+        actor: actorId,
+        actorType: 'staff',
+        action: 'create',
+        resource: 'appointment',
+        resourceId: (appointment as { _id?: { toString(): string } })._id?.toString() ?? '',
+        severity: 'info',
+        description: 'Appointment created',
+      });
     } catch (err) {
       const error = err as Error & { status?: number; code?: string };
       res.status(error.status ?? 500).json({
@@ -151,6 +169,16 @@ export function createAppointmentRoutes(
         return;
       }
       res.json({ status: 200, data: updated });
+      const actorId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
+      auditLog.log({
+        actor: actorId,
+        actorType: 'staff',
+        action: 'update',
+        resource: 'appointment',
+        resourceId: req.params.id,
+        severity: 'warning',
+        description: 'Appointment updated',
+      });
     } catch (err) {
       const error = err as Error & { status?: number };
       res.status(error.status ?? 500).json({
@@ -170,6 +198,16 @@ export function createAppointmentRoutes(
         req.body.status as AppointmentStatus,
       );
       res.json({ status: 200, data: appointment });
+      const actorId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
+      auditLog.log({
+        actor: actorId,
+        actorType: 'staff',
+        action: 'status_change',
+        resource: 'appointment',
+        resourceId: req.params.id,
+        severity: 'warning',
+        description: `Appointment status changed to ${req.body.status as string}`,
+      });
     } catch (err) {
       const error = err as Error & { status?: number };
       res.status(error.status ?? 500).json({
@@ -190,6 +228,16 @@ export function createAppointmentRoutes(
         return;
       }
       res.json({ status: 200, data: { message: 'Appointment deleted' } });
+      const actorId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
+      auditLog.log({
+        actor: actorId,
+        actorType: 'staff',
+        action: 'delete',
+        resource: 'appointment',
+        resourceId: req.params.id,
+        severity: 'critical',
+        description: 'Appointment soft deleted',
+      });
     } catch (err) {
       res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
     }
@@ -230,6 +278,16 @@ export function createAppointmentRoutes(
           req.body as Record<string, unknown>,
         );
         res.status(201).json({ status: 201, data: availability });
+        const actorId = (req as unknown as { user?: { userId?: string } }).user?.userId ?? '';
+        auditLog.log({
+          actor: actorId,
+          actorType: 'staff',
+          action: 'create',
+          resource: 'staff_availability',
+          resourceId: req.params.staffId,
+          severity: 'info',
+          description: 'Staff availability set',
+        });
       } catch (err) {
         res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
       }
