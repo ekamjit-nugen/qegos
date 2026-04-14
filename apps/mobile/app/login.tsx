@@ -203,6 +203,13 @@ export default function LoginScreen(): React.ReactNode {
             >
               Sign In
             </Button>
+            <Button
+              mode="text"
+              onPress={() => router.push('/forgot-password' as never)}
+              style={styles.linkButton}
+            >
+              Forgot password?
+            </Button>
           </View>
         )}
 

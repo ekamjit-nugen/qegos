@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Layout, Menu, Typography, Button, Avatar, Dropdown, theme } from 'antd';
 import {
   LogoutOutlined,
+  LockOutlined,
   UserOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -108,6 +109,12 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
       key: 'settings',
       icon: <SettingOutlined />,
       label: 'Settings',
+    },
+    {
+      key: 'change-password',
+      icon: <LockOutlined />,
+      label: 'Change Password',
+      onClick: () => { router.push('/change-password'); },
     },
     { type: 'divider' },
     {
