@@ -118,9 +118,11 @@ export function calculateGst(priceInclusiveCents: number): number {
 export interface XeroRouteDeps {
   XeroConfigModel: import('mongoose').Model<IXeroConfigDocument>;
   XeroSyncLogModel: import('mongoose').Model<IXeroSyncLogDocument>;
-  OrderModel: import('mongoose').Model<Document>;
-  UserModel: import('mongoose').Model<Document>;
-  PaymentModel: import('mongoose').Model<Document>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes narrow Model<IFooDocument> */
+  OrderModel: import('mongoose').Model<any>;
+  UserModel: import('mongoose').Model<any>;
+  PaymentModel: import('mongoose').Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   redisClient: import('ioredis').Redis;
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;

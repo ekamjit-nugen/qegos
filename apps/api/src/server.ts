@@ -177,6 +177,8 @@ async function bootstrap(): Promise<void> {
     mfaIssuer: config.MFA_ISSUER,
   };
 
+  // @nugen/auth narrows to Model<IAuthDocument> for password/refreshToken/OTP field access.
+  // Keep the cast — widening the package would lose type safety inside auth.
   auth.init(authConfig, connection, UserModel as never);
 
   // Audit log
@@ -292,7 +294,7 @@ async function bootstrap(): Promise<void> {
   const {
     TicketModel: SupportTicketModel,
   } = supportTickets.init(connection, {}, {
-    CounterModel: CounterModel as never,
+    CounterModel: CounterModel,
   });
 
   const {
@@ -336,7 +338,7 @@ async function bootstrap(): Promise<void> {
     sesFromEmail: config.AWS_SES_FROM_EMAIL,
     defaultTimezone: 'Australia/Sydney',
   }, {
-    UserModel: UserModel as never,
+    UserModel: UserModel,
   });
 
   // Phase 8: Engagement Modules — Models
@@ -500,6 +502,7 @@ async function bootstrap(): Promise<void> {
 
   // 6. Create routes
   const authRouter = auth.createAuthRoutes({
+    // @nugen/auth narrows to Model<IAuthDocument>; keep cast (see auth.init above).
     UserModel: UserModel as never,
     config: authConfig,
     authLimiters,
@@ -508,7 +511,7 @@ async function bootstrap(): Promise<void> {
   const rbacRouter = rbac.createRbacRoutes({
     RoleModel,
     PermissionSnapshotModel,
-    UserModel: UserModel as never,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
   });
 
@@ -555,8 +558,8 @@ async function bootstrap(): Promise<void> {
     connection,
     // Fix for B-3.1, T-3.11: Pass CounterModel and injected models
     CounterModel,
-    UserModel: UserModel as never,
-    OrderModel: OrderModel as never,
+    UserModel: UserModel,
+    OrderModel: OrderModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -565,9 +568,9 @@ async function bootstrap(): Promise<void> {
     OrderModel,
     SalesModel,
     // Fix for S-3.1, B-3.1: Pass ReviewAssignmentModel and CounterModel
-    ReviewAssignmentModel: ReviewAssignmentModel as never,
+    ReviewAssignmentModel: ReviewAssignmentModel,
     CounterModel,
-    UserModel: UserModel as never,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -582,7 +585,7 @@ async function bootstrap(): Promise<void> {
   const formMappingRouter = createFormMappingRoutes({
     FormMappingModel,
     FormMappingVersionModel,
-    SalesModel: SalesModel as never,
+    SalesModel: SalesModel,
     connection,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
@@ -608,8 +611,8 @@ async function bootstrap(): Promise<void> {
 
   const reviewRouter = createReviewRoutes({
     ReviewAssignmentModel,
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
+    OrderModel: OrderModel,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -621,8 +624,8 @@ async function bootstrap(): Promise<void> {
     MessageModel: BroadcastMessageModel,
     OptOutModel: BroadcastOptOutModel,
     ConsentModel: BroadcastConsentModel,
-    LeadModel: LeadModel as never,
-    UserModel: UserModel as never,
+    LeadModel: LeadModel,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     auditLog: auditLogDI,
@@ -639,7 +642,7 @@ async function bootstrap(): Promise<void> {
   const portalRouter = createPortalRoutes({
     VaultDocumentModel,
     TaxYearSummaryModel,
-    UserModel: UserModel as never,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     auditLog: auditLogDI,
@@ -690,9 +693,9 @@ async function bootstrap(): Promise<void> {
   const formFillRouter = createFormFillRoutes({
     FormMappingModel,
     FormMappingVersionModel,
-    OrderModel: OrderModel as never,
-    SalesModel: SalesModel as never,
-    CounterModel: CounterModel as never,
+    OrderModel: OrderModel,
+    SalesModel: SalesModel,
+    CounterModel: CounterModel,
     FormDraftModel,
     authenticate: auth.authenticate,
     promoCodeService,
@@ -703,7 +706,7 @@ async function bootstrap(): Promise<void> {
 
   // Client-facing Pay Now routes (credits + promo + Stripe)
   const payOrderRouter = createPayOrderRoutes({
-    OrderModel: OrderModel as never,
+    OrderModel: OrderModel,
     PaymentModel,
     GatewayConfigModel,
     providers,
@@ -715,7 +718,7 @@ async function bootstrap(): Promise<void> {
 
   // Staff-facing Collect Payment on Behalf of Client (admin/CRM)
   const collectPaymentRouter = createCollectPaymentRoutes({
-    OrderModel: OrderModel as never,
+    OrderModel: OrderModel,
     PaymentModel,
     GatewayConfigModel,
     providers,
@@ -729,8 +732,8 @@ async function bootstrap(): Promise<void> {
   const appointmentBookingRouter = createAppointmentBookingRoutes({
     AppointmentModel,
     StaffAvailabilityModel,
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
+    OrderModel: OrderModel,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     getSetting: settingsService.getSetting,
   });
@@ -749,7 +752,7 @@ async function bootstrap(): Promise<void> {
 
   const ticketRouter = supportTickets.createTicketRoutes({
     TicketModel: SupportTicketModel,
-    CounterModel: CounterModel as never,
+    CounterModel: CounterModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     auditLog: auditLogDI,
@@ -780,9 +783,9 @@ async function bootstrap(): Promise<void> {
   const xeroRouter = xeroConnector.createXeroRoutes({
     XeroConfigModel,
     XeroSyncLogModel,
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
-    PaymentModel: PaymentModel as never,
+    OrderModel: OrderModel,
+    UserModel: UserModel,
+    PaymentModel: PaymentModel,
     redisClient,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
@@ -794,10 +797,10 @@ async function bootstrap(): Promise<void> {
   const referralRouter = createReferralRoutes({
     ReferralModel,
     ReferralConfigModel,
-    UserModel: UserModel as never,
-    OrderModel: OrderModel as never,
-    LeadModel: LeadModel as never,
-    CounterModel: CounterModel as never,
+    UserModel: UserModel,
+    OrderModel: OrderModel,
+    LeadModel: LeadModel,
+    CounterModel: CounterModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     creditService: creditServiceInstance,
@@ -821,8 +824,8 @@ async function bootstrap(): Promise<void> {
   const calendarRouter = createCalendarRoutes({
     TaxDeadlineModel,
     DeadlineReminderModel,
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
+    OrderModel: OrderModel,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
   });
@@ -831,8 +834,8 @@ async function bootstrap(): Promise<void> {
     { authenticate: auth.authenticate, checkPermission: rbac.check, auditLogDI },
     {
       connection,
-      OrderModel: OrderModel as never,
-      UserModel: UserModel as never,
+      OrderModel: OrderModel,
+      UserModel: UserModel,
     },
   );
   const { reputationRouter } = reputationRouters;
@@ -905,8 +908,8 @@ async function bootstrap(): Promise<void> {
   const { appointmentRouter, staffAvailabilityRouter } = createAppointmentRoutes({
     AppointmentModel,
     StaffAvailabilityModel,
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
+    OrderModel: OrderModel,
+    UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     notificationSend: notificationEngine.send as unknown as (params: Record<string, unknown>) => Promise<unknown>,
@@ -917,12 +920,12 @@ async function bootstrap(): Promise<void> {
   const { routers: staffWorkloadRouters = {} } = bootstrapStaffWorkload(
     { authenticate: auth.authenticate, checkPermission: rbac.check, auditLogDI },
     {
-      UserModel: UserModel as never,
-      LeadModel: LeadModel as never,
-      OrderModel: OrderModel as never,
-      ReviewAssignmentModel: ReviewAssignmentModel as never,
-      SupportTicketModel: SupportTicketModel as never,
-      AppointmentModel: AppointmentModel as never,
+      UserModel: UserModel,
+      LeadModel: LeadModel,
+      OrderModel: OrderModel,
+      ReviewAssignmentModel: ReviewAssignmentModel,
+      SupportTicketModel: SupportTicketModel,
+      AppointmentModel: AppointmentModel,
     },
   );
   const { workloadRouter } = staffWorkloadRouters;
@@ -931,8 +934,8 @@ async function bootstrap(): Promise<void> {
   const { routers: documentMgmtRouters = {} } = bootstrapDocumentManagement(
     { authenticate: auth.authenticate, checkPermission: rbac.check, auditLogDI },
     {
-      OrderModel: OrderModel as never,
-      UserModel: UserModel as never,
+      OrderModel: OrderModel,
+      UserModel: UserModel,
       zohoSignConfig: {
         clientId: config.ZOHO_SIGN_CLIENT_ID ?? '',
         clientSecret: config.ZOHO_SIGN_CLIENT_SECRET ?? '',
@@ -1021,7 +1024,7 @@ async function bootstrap(): Promise<void> {
     LeadReminderModel,
     recalculateScore: createLeadService({
       LeadModel, LeadActivityModel, LeadReminderModel, connection, CounterModel,
-      UserModel: UserModel as never, OrderModel: OrderModel as never,
+      UserModel: UserModel, OrderModel: OrderModel,
     }).calculateScore,
     smartAssignBulk: getWorkloadService()?.smartAssignBulk as unknown as ((count: number, request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] }) => Promise<{ staffId: string }[]>) | undefined,
   });

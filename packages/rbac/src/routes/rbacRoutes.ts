@@ -16,7 +16,8 @@ import type {
 export interface RbacRouteDeps {
   RoleModel: Model<IRoleDocument>;
   PermissionSnapshotModel: Model<IPermissionSnapshotDocument>;
-  UserModel: Model<unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; rbac only needs structural field access
+  UserModel: Model<any>;
   authenticate: () => unknown;
 }
 

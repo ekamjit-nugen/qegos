@@ -1,4 +1,4 @@
-import type { Connection, Model, Document } from 'mongoose';
+import type { Connection, Model } from 'mongoose';
 import type { ISupportTicketDocument, SupportTicketsConfig } from './types';
 import { createSupportTicketModel } from './models/ticketModel';
 import { initSlaEngine } from './services/slaEngine';
@@ -17,7 +17,8 @@ export function init(
   connection: Connection,
   config?: SupportTicketsConfig,
   externalModels?: {
-    CounterModel: Model<Document>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<ICounterDocument>
+    CounterModel: Model<any>;
   },
 ): SupportTicketsInitResult {
   const TicketModel = createSupportTicketModel(connection);

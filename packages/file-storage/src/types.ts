@@ -200,7 +200,8 @@ export interface YoYComparison {
 export interface FileStorageRouteDeps {
   VaultDocumentModel: import('mongoose').Model<IVaultDocumentDocument>;
   TaxYearSummaryModel: import('mongoose').Model<ITaxYearSummaryDocument>;
-  UserModel: import('mongoose').Model<Document>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
+  UserModel: import('mongoose').Model<any>;
   authenticate: import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   auditLog: import('@nugen/audit-log').AuditLogDI;
