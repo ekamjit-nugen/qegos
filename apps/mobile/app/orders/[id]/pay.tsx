@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Linking } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Appbar,
   Button,
@@ -11,7 +11,7 @@ import {
   TextInput,
   useTheme,
 } from 'react-native-paper';
-import * as WebBrowser from 'expo-web-browser';
+import { useStripe } from '@stripe/stripe-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   usePricingPreview,
@@ -33,10 +33,12 @@ export default function PayOrderScreen(): React.ReactNode {
   const { id, orderNumber } = useLocalSearchParams<{ id: string; orderNumber?: string }>();
   const previewMutation = usePricingPreview();
   const payMutation = usePayOrder();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [breakdown, setBreakdown] = useState<PricingBreakdown | null>(null);
   const [promoCode, setPromoCode] = useState('');
   const [useCredits, setUseCredits] = useState(false);
   const [error, setError] = useState('');
+  const [sheetLoading, setSheetLoading] = useState(false);
 
   // Initial preview
   useEffect(() => {
@@ -78,20 +80,35 @@ export default function PayOrderScreen(): React.ReactNode {
             router.replace(`/orders/${id}` as never);
             return;
           }
-          // Open web portal to complete card entry. The /pay endpoint already
-          // applied promo + credits on the server, so the web Pay Now modal
-          // will show $0 deductions and just collect the card.
-          const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
-          const webBase =
-            process.env.EXPO_PUBLIC_WEB_URL ??
-            apiUrl.replace(/\/api\/v\d+$/, '').replace(':5001', ':3001');
-          const url = `${webBase}/orders/${id}?pay=1`;
+
+          // Stripe PaymentSheet native flow. Backend has already applied
+          // promo + credits and returned a clientSecret for the remaining
+          // amount plus the account's publishable key.
+          setSheetLoading(true);
           try {
-            await WebBrowser.openBrowserAsync(url);
-          } catch {
-            await Linking.openURL(url);
+            const { error: initError } = await initPaymentSheet({
+              paymentIntentClientSecret: data.clientSecret,
+              merchantDisplayName: 'QEGOS',
+              returnURL: 'qegos://payment-return',
+              allowsDelayedPaymentMethods: false,
+            });
+            if (initError) {
+              setError(initError.message);
+              return;
+            }
+            const { error: presentError } = await presentPaymentSheet();
+            if (presentError) {
+              // Cancellation is not an error worth surfacing loudly.
+              if (presentError.code !== 'Canceled') {
+                setError(presentError.message);
+              }
+              return;
+            }
+            // Success — backend webhook will reconcile the order status.
+            router.replace(`/orders/${id}` as never);
+          } finally {
+            setSheetLoading(false);
           }
-          router.replace(`/orders/${id}` as never);
         },
         onError: (err) => setError(err.message),
       },
@@ -188,8 +205,8 @@ export default function PayOrderScreen(): React.ReactNode {
         <Button
           mode="contained"
           onPress={handlePay}
-          loading={payMutation.isPending}
-          disabled={!breakdown || payMutation.isPending}
+          loading={payMutation.isPending || sheetLoading}
+          disabled={!breakdown || payMutation.isPending || sheetLoading}
           icon="credit-card-outline"
           style={styles.payBtn}
           contentStyle={{ paddingVertical: 6 }}
@@ -200,7 +217,7 @@ export default function PayOrderScreen(): React.ReactNode {
         </Button>
 
         <HelperText type="info" visible style={{ textAlign: 'center' }}>
-          Card payment opens in a secure browser window.
+          Card details are processed securely by Stripe.
         </HelperText>
       </ScrollView>
     </View>
