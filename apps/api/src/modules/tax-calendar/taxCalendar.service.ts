@@ -29,7 +29,7 @@ export function initCalendarService(deps: {
 // ─── Upcoming Deadlines (Client) ────────────────────────────────────────────
 
 export async function getUpcomingDeadlines(
-  _userId: string,
+  userId: string,
   userType?: string,
 ): Promise<ITaxDeadlineDocument[]> {
   const now = new Date();
@@ -37,14 +37,39 @@ export async function getUpcomingDeadlines(
   const applicableFilter: string[] = ['all_clients'];
   if (userType) applicableFilter.push(userType);
 
-  return TaxDeadlineModel.find({
+  // Pull a larger-than-needed window so we can drop already-filed FYs and
+  // still return `limit` items. Tax deadlines are org-wide, but once the
+  // client has filed for the relevant financial year (order status >= 7)
+  // the deadline is no longer "upcoming" for them personally.
+  const candidates = (await TaxDeadlineModel.find({
     isActive: true,
     deadlineDate: { $gte: now },
     applicableTo: { $in: applicableFilter },
   })
     .sort({ deadlineDate: 1 })
-    .limit(3)
-    .lean() as unknown as ITaxDeadlineDocument[];
+    .limit(10)
+    .lean()) as unknown as ITaxDeadlineDocument[];
+
+  if (candidates.length === 0) return [];
+
+  const financialYears = Array.from(
+    new Set(candidates.map((d) => d.financialYear).filter(Boolean)),
+  );
+  const filedOrders = await OrderModel.find({
+    userId,
+    status: { $gte: 7 },
+    financialYear: { $in: financialYears },
+  })
+    .select('financialYear')
+    .lean<Array<{ financialYear?: string }>>();
+
+  const filedFys = new Set(
+    filedOrders.map((o) => o.financialYear).filter(Boolean) as string[],
+  );
+
+  return candidates
+    .filter((d) => !filedFys.has(d.financialYear))
+    .slice(0, 3);
 }
 
 // ─── List Deadlines ─────────────────────────────────────────────────────────
@@ -114,18 +139,23 @@ export async function processReminders(): Promise<number> {
   }).lean();
 
   for (const deadline of deadlines) {
+    let deadlineSent = 0;
     for (const schedule of deadline.reminderSchedule) {
+      // UTC throughout: deadlineDate is stored as UTC, getNextBusinessDay
+      // uses getUTCDay / getUTC*, so the arithmetic and the "is it today?"
+      // comparison must also be UTC or a server in e.g. UTC+10 will skew
+      // the reminder by a calendar day.
       const reminderDate = new Date(deadline.deadlineDate);
-      reminderDate.setDate(reminderDate.getDate() - schedule.daysBefore);
+      reminderDate.setUTCDate(reminderDate.getUTCDate() - schedule.daysBefore);
 
       // CAL-INV-02: Shift to next business day if weekend/holiday
       const adjustedDate = getNextBusinessDay(reminderDate);
 
-      // Only process if today matches the adjusted reminder date
+      // Only process if today (UTC) matches the adjusted reminder date (UTC)
       if (
-        adjustedDate.getFullYear() !== now.getFullYear() ||
-        adjustedDate.getMonth() !== now.getMonth() ||
-        adjustedDate.getDate() !== now.getDate()
+        adjustedDate.getUTCFullYear() !== now.getUTCFullYear() ||
+        adjustedDate.getUTCMonth() !== now.getUTCMonth() ||
+        adjustedDate.getUTCDate() !== now.getUTCDate()
       ) {
         continue;
       }
@@ -159,6 +189,7 @@ export async function processReminders(): Promise<number> {
             channel: schedule.channel,
           });
           sentCount++;
+          deadlineSent++;
           // In production: emit notification event here
         } catch (err: unknown) {
           // Duplicate key error (E11000) = already sent, skip
@@ -166,6 +197,15 @@ export async function processReminders(): Promise<number> {
           throw err;
         }
       }
+    }
+
+    // Keep the per-deadline counter honest so admin dashboards can surface
+    // actual send volume without reaggregating from DeadlineReminder.
+    if (deadlineSent > 0) {
+      await TaxDeadlineModel.updateOne(
+        { _id: deadline._id },
+        { $inc: { notificationsSent: deadlineSent } },
+      );
     }
   }
 
