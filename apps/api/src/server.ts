@@ -82,10 +82,11 @@ import { createAppointmentModel, createStaffAvailabilityModel } from './modules/
 import { createAppointmentRoutes, processAppointmentReminders, markNoShows } from './modules/appointment-scheduling/appointment.routes';
 
 // Staff Workload Balancing
-import { createWorkloadRoutes, getWorkloadService } from './modules/staff-workload/workload.routes';
+import { getWorkloadService } from './modules/staff-workload/workload.routes';
+import { bootstrapStaffWorkload } from './modules/staff-workload/bootstrap';
 
 // Document Management & Signing
-import { createDocumentRoutes, createZohoWebhookRoute } from './modules/document-management/document.routes';
+import { bootstrapDocumentManagement } from './modules/document-management/bootstrap';
 
 // Phase 2: Xero Integration
 import * as xeroConnector from '@nugen/xero-connector';
@@ -108,8 +109,8 @@ import { createReferralModel, createReferralConfigModel } from './modules/referr
 import { createReferralRoutes, expireStaleReferrals, expireCreditRewards } from './modules/referral-engine/referral.routes';
 import { createTaxDeadlineModel, createDeadlineReminderModel } from './modules/tax-calendar/taxCalendar.model';
 import { createCalendarRoutes, processReminders as processDeadlineReminders } from './modules/tax-calendar/taxCalendar.routes';
-import { createReviewModel } from './modules/reputation-mgmt/review.model';
-import { createReviewRoutes as createReputationRoutes, sendReviewReminders } from './modules/reputation-mgmt/review.routes';
+import { sendReviewReminders } from './modules/reputation-mgmt/review.routes';
+import { bootstrapReputationMgmt } from './modules/reputation-mgmt/bootstrap';
 
 // Privacy Act 1988 Compliance (GAP-C01/C02)
 import * as dataLifecycle from '@nugen/data-lifecycle';
@@ -343,7 +344,6 @@ async function bootstrap(): Promise<void> {
   const ReferralConfigModel = createReferralConfigModel(connection);
   const TaxDeadlineModel = createTaxDeadlineModel(connection);
   const DeadlineReminderModel = createDeadlineReminderModel(connection);
-  const ReputationReviewModel = createReviewModel(connection);
 
   // Promo Code & Credit models
   const PromoCodeModel = createPromoCodeModel(connection);
@@ -827,13 +827,15 @@ async function bootstrap(): Promise<void> {
     checkPermission: rbac.check,
   });
 
-  const reputationRouter = createReputationRoutes({
-    ReviewModel: ReputationReviewModel,
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
-    authenticate: auth.authenticate,
-    checkPermission: rbac.check,
-  });
+  const { routers: reputationRouters = {} } = bootstrapReputationMgmt(
+    { authenticate: auth.authenticate, checkPermission: rbac.check, auditLogDI },
+    {
+      connection,
+      OrderModel: OrderModel as never,
+      UserModel: UserModel as never,
+    },
+  );
+  const { reputationRouter } = reputationRouters;
 
   // Notification Engine routes
   const notificationRouter = notificationEngine.createNotificationRoutes({
@@ -912,41 +914,35 @@ async function bootstrap(): Promise<void> {
   });
 
   // Staff Workload Balancing routes
-  const workloadRouter = createWorkloadRoutes({
-    UserModel: UserModel as never,
-    LeadModel: LeadModel as never,
-    OrderModel: OrderModel as never,
-    ReviewAssignmentModel: ReviewAssignmentModel as never,
-    SupportTicketModel: SupportTicketModel as never,
-    AppointmentModel: AppointmentModel as never,
-    authenticate: auth.authenticate,
-    checkPermission: rbac.check,
-  });
+  const { routers: staffWorkloadRouters = {} } = bootstrapStaffWorkload(
+    { authenticate: auth.authenticate, checkPermission: rbac.check, auditLogDI },
+    {
+      UserModel: UserModel as never,
+      LeadModel: LeadModel as never,
+      OrderModel: OrderModel as never,
+      ReviewAssignmentModel: ReviewAssignmentModel as never,
+      SupportTicketModel: SupportTicketModel as never,
+      AppointmentModel: AppointmentModel as never,
+    },
+  );
+  const { workloadRouter } = staffWorkloadRouters;
 
   // Document Management & Signing routes
-  const zohoSignConfig = {
-    clientId: config.ZOHO_SIGN_CLIENT_ID ?? '',
-    clientSecret: config.ZOHO_SIGN_CLIENT_SECRET ?? '',
-    refreshToken: config.ZOHO_SIGN_REFRESH_TOKEN ?? '',
-    webhookSecret: config.ZOHO_SIGN_WEBHOOK_SECRET ?? '',
-    baseUrl: config.ZOHO_SIGN_BASE_URL,
-  };
-  const documentRouter = createDocumentRoutes({
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
-    authenticate: auth.authenticate,
-    checkPermission: rbac.check,
-    auditLog: auditLogDI,
-    zohoSignConfig,
-  });
-  const zohoWebhookRouter = createZohoWebhookRoute({
-    OrderModel: OrderModel as never,
-    UserModel: UserModel as never,
-    authenticate: auth.authenticate,
-    checkPermission: rbac.check,
-    auditLog: auditLogDI,
-    zohoSignConfig,
-  });
+  const { routers: documentMgmtRouters = {} } = bootstrapDocumentManagement(
+    { authenticate: auth.authenticate, checkPermission: rbac.check, auditLogDI },
+    {
+      OrderModel: OrderModel as never,
+      UserModel: UserModel as never,
+      zohoSignConfig: {
+        clientId: config.ZOHO_SIGN_CLIENT_ID ?? '',
+        clientSecret: config.ZOHO_SIGN_CLIENT_SECRET ?? '',
+        refreshToken: config.ZOHO_SIGN_REFRESH_TOKEN ?? '',
+        webhookSecret: config.ZOHO_SIGN_WEBHOOK_SECRET ?? '',
+        baseUrl: config.ZOHO_SIGN_BASE_URL,
+      },
+    },
+  );
+  const { documentRouter, zohoWebhookRouter } = documentMgmtRouters;
 
   // Deep health check
   async function deepHealthCheck(_req: Request, res: Response): Promise<void> {
