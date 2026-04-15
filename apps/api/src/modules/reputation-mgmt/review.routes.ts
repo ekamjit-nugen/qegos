@@ -172,7 +172,8 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
     authenticate() as RequestHandler,
     ...validate(validateReviewId()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const review = await logGoogleClick(req.params.id);
+      const authReq = req as AuthenticatedRequest;
+      const review = await logGoogleClick(req.params.id, authReq.user.userId);
       res.status(200).json({ status: 200, data: review });
     }),
   );

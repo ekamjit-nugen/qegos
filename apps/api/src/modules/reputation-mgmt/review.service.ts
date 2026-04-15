@@ -59,10 +59,24 @@ export async function submitReview(
 ): Promise<{ review: IReviewDocument; googlePrompt: boolean }> {
   const { orderId, userId, rating, npsScore, comment, tags } = params;
 
+  // Ownership: the caller must own the order they're reviewing. Without
+  // this check, any authenticated user can drop 1-star reviews on anyone's
+  // order (reputation poisoning) or plant 5-star reviews on behalf of others.
+  const order = await OrderModel.findById(orderId)
+    .select('userId')
+    .lean<{ userId?: unknown }>();
+  if (!order) throw AppError.notFound('Order');
+  if (String(order.userId) !== String(userId)) {
+    throw AppError.forbidden('Cannot review an order that does not belong to you');
+  }
+
   // REV-INV-02: One review per {orderId, userId} — upsert
   let review = await ReviewModel.findOne({ orderId, userId });
 
-  if (review && review.status === 'submitted') {
+  // Terminal states: submitted & flagged should never be silently overwritten.
+  // Re-submitting a flagged review would un-flag it (status regression); a
+  // submitted review is final per REV-INV-02.
+  if (review && (review.status === 'submitted' || review.status === 'flagged')) {
     throw AppError.badRequest('Review already submitted for this order');
   }
 
@@ -91,9 +105,18 @@ export async function submitReview(
 
 // ─── Log Google Click ───────────────────────────────────────────────────────
 
-export async function logGoogleClick(reviewId: string): Promise<IReviewDocument> {
+export async function logGoogleClick(
+  reviewId: string,
+  userId: string,
+): Promise<IReviewDocument> {
   const review = await ReviewModel.findById(reviewId);
   if (!review) throw AppError.notFound('Review');
+
+  // Ownership: only the review author may flip their own googleReviewClicked
+  // flag. Otherwise any user could pollute another user's engagement metric.
+  if (String(review.userId) !== String(userId)) {
+    throw AppError.forbidden('Cannot log Google click on a review you did not submit');
+  }
 
   review.googleReviewClicked = true;
   await review.save();
@@ -109,6 +132,16 @@ export async function respondToReview(
 ): Promise<IReviewDocument> {
   const review = await ReviewModel.findById(reviewId);
   if (!review) throw AppError.notFound('Review');
+
+  // State guard: only actually-existing reviews can be responded to. 'requested'
+  // means the client hasn't submitted anything yet; responding pre-fabricates
+  // a response to nothing. 'responded' is allowed so admins can edit replies.
+  const allowed: ReviewStatus[] = ['submitted', 'flagged', 'responded'];
+  if (!allowed.includes(review.status)) {
+    throw AppError.badRequest(
+      `Cannot respond to a review in status '${review.status}'`,
+    );
+  }
 
   review.adminResponse = response;
   review.adminRespondedBy = adminUserId as unknown as Types.ObjectId;
