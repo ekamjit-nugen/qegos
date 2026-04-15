@@ -72,9 +72,16 @@ export default function ProfileScreen(): React.ReactNode {
               Change Password
             </Text>
             <Text variant="bodySmall" style={styles.dimText}>
-              Password changes are available through the web portal. Please log
-              in at qegos.com.au to update your password.
+              Update your account password securely. After changing, all other
+              sessions will be signed out.
             </Text>
+            <Button
+              mode="contained"
+              onPress={() => router.push('/change-password' as never)}
+              style={{ marginTop: 12 }}
+            >
+              Change Password
+            </Button>
           </Card.Content>
         </Card>
 

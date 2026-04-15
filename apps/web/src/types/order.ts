@@ -102,9 +102,14 @@ export interface Order {
   creditApplied?: number;
   completionPercent: number;
   processingByName?: string;
-  eFileStatus?: string;
+  paymentStatus?: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
+  eFileStatus?: 'not_filed' | 'pending' | 'submitted' | 'accepted' | 'rejected' | 'assessed';
   eFileReference?: string;
+  eFiledAt?: string;
   noaReceived?: boolean;
+  noaDate?: string;
+  refundOrOwing?: number;
+  formAnswers?: Record<string, unknown>;
   scheduledAppointment?: {
     date: string;
     timeSlot: string;

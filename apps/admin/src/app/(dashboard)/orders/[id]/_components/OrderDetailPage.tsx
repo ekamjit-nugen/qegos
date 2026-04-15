@@ -8,14 +8,17 @@ import {
 } from 'antd';
 import {
   CloudUploadOutlined, InboxOutlined, EditOutlined, CheckCircleOutlined,
-  SendOutlined,
+  SendOutlined, CreditCardOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
-import { useOrder } from '@/hooks/useOrders';
+import { useOrder, useAssignOrder } from '@/hooks/useOrders';
+import { useStaffList } from '@/hooks/useUsers';
 import { useUploadOrderDocument, useSendForSignature, useGenerateSigningUri } from '@/hooks/useDocuments';
 import { usePaymentsByOrder, useRefundPayment } from '@/hooks/usePayments';
 import { OrderStatusTransition } from '../../_components/OrderStatusTransition';
+import { CollectPaymentModal } from './CollectPaymentModal';
+import { useQueryClient } from '@tanstack/react-query';
 import type { OrderLineItem, OrderDocument, SigningStatus } from '@/types/order';
 import { SIGNING_STATUS_LABELS, SIGNING_STATUS_COLORS } from '@/types/order';
 import type { Payment } from '@/types/payment';
@@ -41,6 +44,12 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
   const generateUriMutation = useGenerateSigningUri();
   const { data: paymentsData } = usePaymentsByOrder(id);
   const refundMutation = useRefundPayment();
+  const qc = useQueryClient();
+  const assignMutation = useAssignOrder();
+  const { data: staffList } = useStaffList();
+
+  // Collect Payment modal state
+  const [collectOpen, setCollectOpen] = useState(false);
 
   // Upload modal state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -431,6 +440,17 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
       label: `Payments & Refunds`,
       children: (
         <div>
+          {order.paymentStatus !== 'succeeded' && order.finalAmount > 0 && (
+            <div style={{ marginBottom: 12, textAlign: 'right' }}>
+              <Button
+                type="primary"
+                icon={<CreditCardOutlined />}
+                onClick={() => { setCollectOpen(true); }}
+              >
+                Collect Payment
+              </Button>
+            </div>
+          )}
           <Table<Payment>
             columns={[
               { title: 'Payment #', dataIndex: 'paymentNumber', key: 'paymentNumber' },
@@ -583,13 +603,51 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
             </Descriptions>
           </Card>
 
-          {order.processingByName && (
-            <Card title="Processing By">
-              <strong>{order.processingByName}</strong>
-            </Card>
-          )}
+          <Card title="Assigned Staff">
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {order.processingByName && (
+                <Text>
+                  Currently: <strong>{order.processingByName}</strong>
+                </Text>
+              )}
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Assign / reassign staff…"
+                value={order.processingBy}
+                showSearch
+                optionFilterProp="label"
+                loading={assignMutation.isPending}
+                onChange={(staffId: string) => {
+                  assignMutation.mutate(
+                    { id, processingBy: staffId },
+                    {
+                      onSuccess: () => { void message.success('Order assigned'); },
+                      onError: () => { void message.error('Assignment failed'); },
+                    },
+                  );
+                }}
+                options={(staffList ?? []).map((u) => ({
+                  value: u._id,
+                  label: `${fullName(u.firstName, u.lastName)} (${u.email})`,
+                }))}
+              />
+            </Space>
+          </Card>
         </Col>
       </Row>
+
+      <CollectPaymentModal
+        open={collectOpen}
+        onClose={() => { setCollectOpen(false); }}
+        orderId={id}
+        orderNumber={order.orderNumber}
+        baseAmount={order.finalAmount}
+        onSuccess={() => {
+          setCollectOpen(false);
+          void qc.invalidateQueries({ queryKey: ['orders', id] });
+          void qc.invalidateQueries({ queryKey: ['payments', 'order', id] });
+        }}
+      />
     </div>
   );
 }

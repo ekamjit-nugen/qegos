@@ -13,7 +13,7 @@ import {
 } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useOrder } from '@/hooks/useOrders';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
+import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, PAYMENT_STATUS_LABELS, EFILE_STATUS_LABELS } from '@/types/order';
 import type { OrderLineItem, OrderDocument } from '@/types/order';
 import { DetailSkeleton } from '@/components/ScreenSkeleton';
 
@@ -51,6 +51,17 @@ export default function OrderDetailScreen(): React.ReactNode {
       <Appbar.Header>
         <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title={order.orderNumber} />
+        {order.paymentStatus !== 'succeeded' && order.finalAmount > 0 && (
+          <Appbar.Action
+            icon="credit-card-outline"
+            onPress={() => {
+              router.push({
+                pathname: '/orders/[id]/pay',
+                params: { id: id as string, orderNumber: order.orderNumber },
+              } as never);
+            }}
+          />
+        )}
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -81,6 +92,59 @@ export default function OrderDetailScreen(): React.ReactNode {
             />
           </Card.Content>
         </Card>
+
+        {(order.paymentStatus || order.eFileStatus || order.refundOrOwing !== undefined) && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Filing Status
+              </Text>
+              {order.paymentStatus && (
+                <List.Item
+                  title="Payment"
+                  description={PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
+                  left={(props) => <List.Icon {...props} icon="credit-card-outline" />}
+                />
+              )}
+              {order.eFileStatus && order.eFileStatus !== 'not_filed' && (
+                <List.Item
+                  title="ATO Lodgement"
+                  description={`${EFILE_STATUS_LABELS[order.eFileStatus] ?? order.eFileStatus}${order.eFileReference ? ` · ${order.eFileReference}` : ''}`}
+                  left={(props) => <List.Icon {...props} icon="bank-outline" />}
+                />
+              )}
+              {order.refundOrOwing !== undefined && order.refundOrOwing !== 0 && (
+                <List.Item
+                  title={order.refundOrOwing > 0 ? 'Your Refund' : 'Amount Owing'}
+                  description={`$${(Math.abs(order.refundOrOwing) / 100).toFixed(2)}`}
+                  left={(props) => <List.Icon {...props} icon="cash" color={order.refundOrOwing! > 0 ? '#52c41a' : '#ff4d4f'} />}
+                />
+              )}
+              {order.noaReceived && (
+                <List.Item
+                  title="Notice of Assessment"
+                  description={order.noaDate ? new Date(order.noaDate).toLocaleDateString('en-AU') : 'Received'}
+                  left={(props) => <List.Icon {...props} icon="check-decagram" color="#52c41a" />}
+                />
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+        {order.scheduledAppointment && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Upcoming Appointment
+              </Text>
+              <List.Item
+                title={`${order.scheduledAppointment.date} · ${order.scheduledAppointment.timeSlot}`}
+                description={`${order.scheduledAppointment.type} · ${order.scheduledAppointment.status}`}
+                left={(props) => <List.Icon {...props} icon="calendar-clock" />}
+              />
+            </Card.Content>
+          </Card>
+        )}
 
         <Card style={styles.card}>
           <Card.Content>
@@ -127,6 +191,20 @@ export default function OrderDetailScreen(): React.ReactNode {
                 </Text>
               </View>
             )}
+            {order.creditApplied !== undefined && order.creditApplied > 0 && (
+              <View style={styles.summaryRow}>
+                <Text variant="bodyMedium">Credits Applied</Text>
+                <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
+                  -${(order.creditApplied / 100).toFixed(2)}
+                </Text>
+              </View>
+            )}
+            {order.promoCode && (
+              <View style={styles.summaryRow}>
+                <Text variant="bodyMedium">Promo Code</Text>
+                <Chip compact>{order.promoCode}</Chip>
+              </View>
+            )}
             <Divider style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text variant="titleSmall" style={styles.bold}>
@@ -136,6 +214,21 @@ export default function OrderDetailScreen(): React.ReactNode {
                 ${(order.finalAmount / 100).toFixed(2)}
               </Text>
             </View>
+            {order.paymentStatus !== 'succeeded' && order.finalAmount > 0 && (
+              <Button
+                mode="contained"
+                icon="credit-card-outline"
+                style={{ marginTop: 12 }}
+                onPress={() => {
+                  router.push({
+                    pathname: '/orders/[id]/pay',
+                    params: { id: id as string, orderNumber: order.orderNumber },
+                  } as never);
+                }}
+              >
+                Pay Now
+              </Button>
+            )}
           </Card.Content>
         </Card>
 

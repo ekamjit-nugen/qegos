@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Layout, Menu, Typography, Button, Avatar, theme } from 'antd';
+import { Layout, Menu, Typography, Button, Avatar, Badge, theme } from 'antd';
 import {
   HomeOutlined,
   ShoppingCartOutlined,
@@ -15,27 +15,52 @@ import {
   FormOutlined,
   WalletOutlined,
   LogoutOutlined,
+  LockOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '@/lib/auth/useAuth';
 import { ProtectedRoute } from '@/lib/auth/ProtectedRoute';
+import { useUnreadNotificationCount } from '@/hooks/usePortal';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
-const NAV_ITEMS = [
-  { key: '/', icon: <HomeOutlined />, label: 'Dashboard' },
-  { key: '/file-tax', icon: <FormOutlined />, label: 'File Tax' },
-  { key: '/orders', icon: <ShoppingCartOutlined />, label: 'My Orders' },
-  { key: '/appointments', icon: <CalendarOutlined />, label: 'Appointments' },
-  { key: '/chat', icon: <MessageOutlined />, label: 'Chat' },
-  { key: '/vault', icon: <FolderOpenOutlined />, label: 'Document Vault' },
-  { key: '/tax-summary', icon: <CalculatorOutlined />, label: 'Tax Summary' },
-  { key: '/consent-form', icon: <FileTextOutlined />, label: 'Consent Form' },
-  { key: '/credits', icon: <WalletOutlined />, label: 'Credits' },
-  { key: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
-];
+interface NavItem {
+  key: string;
+  icon: ReactNode;
+  label: ReactNode;
+}
+
+function buildNavItems(unreadCount: number): NavItem[] {
+  return [
+    { key: '/', icon: <HomeOutlined />, label: 'Dashboard' },
+    { key: '/file-tax', icon: <FormOutlined />, label: 'File Tax' },
+    { key: '/orders', icon: <ShoppingCartOutlined />, label: 'My Orders' },
+    { key: '/appointments', icon: <CalendarOutlined />, label: 'Appointments' },
+    { key: '/chat', icon: <MessageOutlined />, label: 'Chat' },
+    { key: '/vault', icon: <FolderOpenOutlined />, label: 'Document Vault' },
+    { key: '/tax-summary', icon: <CalculatorOutlined />, label: 'Tax Summary' },
+    { key: '/consent-form', icon: <FileTextOutlined />, label: 'Consent Form' },
+    { key: '/credits', icon: <WalletOutlined />, label: 'Credits' },
+    {
+      key: '/notifications',
+      icon: <BellOutlined />,
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          Notifications
+          {unreadCount > 0 && (
+            <Badge
+              count={unreadCount}
+              size="small"
+              style={{ backgroundColor: '#ff4d4f' }}
+            />
+          )}
+        </span>
+      ),
+    },
+  ];
+}
 
 function getInitials(firstName?: string, lastName?: string): string {
   const f = firstName?.charAt(0)?.toUpperCase() ?? '';
@@ -49,13 +74,16 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { token: t } = theme.useToken();
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
+
+  const navItems = buildNavItems(unreadCount);
 
   const handleLogout = useCallback(async (): Promise<void> => {
     await logout();
     router.replace('/login');
   }, [logout, router]);
 
-  const selectedKey = NAV_ITEMS.find((item) =>
+  const selectedKey = navItems.find((item) =>
     item.key === '/' ? pathname === '/' : pathname.startsWith(item.key),
   )?.key ?? '/';
 
@@ -108,7 +136,7 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
           mode="inline"
           selectedKeys={[selectedKey]}
           onClick={({ key }) => { router.push(key); }}
-          items={NAV_ITEMS}
+          items={navItems}
           style={{
             border: 'none',
             marginTop: 8,
@@ -175,13 +203,30 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
             onClick={() => { setCollapsed(!collapsed); }}
             style={{ fontSize: 16 }}
           />
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Badge count={unreadCount} size="small" offset={[-4, 4]}>
+              <Button
+                type="text"
+                icon={<BellOutlined style={{ fontSize: 18 }} />}
+                onClick={() => { router.push('/notifications'); }}
+                aria-label="Notifications"
+              />
+            </Badge>
+            <Button
+              type="text"
+              icon={<LockOutlined />}
+              onClick={() => { router.push('/change-password'); }}
+            >
+              Change Password
+            </Button>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </div>
         </Header>
 
         {/* Content */}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Table, Tag, Button, Input, Select, Card, Row, Col, Progress } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
+import { NewOrderModal } from './NewOrderModal';
 import type { ColumnsType } from 'antd/es/table';
 import { useOrderList } from '@/hooks/useOrders';
 import type { Order, OrderListQuery } from '@/types/order';
@@ -14,6 +15,7 @@ import { getFinancialYears } from '@/lib/utils/constants';
 export function OrderListPage(): React.ReactNode {
   const router = useRouter();
   const [filters, setFilters] = useState<OrderListQuery>({ page: 1, limit: 20 });
+  const [createOpen, setCreateOpen] = useState(false);
   const { data, isLoading } = useOrderList(filters);
 
   const columns: ColumnsType<Order> = [
@@ -91,7 +93,7 @@ export function OrderListPage(): React.ReactNode {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0 }}>Orders</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => router.push('/orders?action=create')}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
           New Order
         </Button>
       </div>
@@ -141,6 +143,8 @@ export function OrderListPage(): React.ReactNode {
           onChange: (page, pageSize) => setFilters((f) => ({ ...f, page, limit: pageSize })),
         }}
       />
+
+      <NewOrderModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

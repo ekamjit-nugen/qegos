@@ -76,9 +76,39 @@ export interface Order {
   finalAmount: number;
   completionPercent: number;
   processingByName?: string;
-  eFileStatus?: string;
+  paymentStatus?: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
+  eFileStatus?: 'not_filed' | 'pending' | 'submitted' | 'accepted' | 'rejected' | 'assessed';
   eFileReference?: string;
+  eFiledAt?: string;
   noaReceived?: boolean;
+  noaDate?: string;
+  refundOrOwing?: number;
+  promoCode?: string;
+  creditApplied?: number;
+  scheduledAppointment?: {
+    date: string;
+    timeSlot: string;
+    type: string;
+    meetingLink?: string;
+    status: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
+
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'Payment Pending',
+  succeeded: 'Paid',
+  failed: 'Failed',
+  refunded: 'Refunded',
+  partially_refunded: 'Partially Refunded',
+};
+
+export const EFILE_STATUS_LABELS: Record<string, string> = {
+  not_filed: 'Not Filed',
+  pending: 'Preparing',
+  submitted: 'Submitted to ATO',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  assessed: 'Assessed',
+};

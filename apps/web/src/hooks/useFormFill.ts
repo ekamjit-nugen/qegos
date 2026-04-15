@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { AvailableFormMapping, FormFillSubmission, FormFillResult } from '@/types/formMapping';
 import type { ApiResponse } from '@/types/api';
@@ -36,14 +36,106 @@ export function useFormMappingSchema(mappingId: string | undefined, version: num
 
 // ─── Submit Form Fill ──────────────────────────────────────────────────────
 
-export function useSubmitFormFill(): ReturnType<typeof useMutation<FormFillResult, Error, FormFillSubmission>> {
+export function useSubmitFormFill(): ReturnType<typeof useMutation<FormFillResult, Error, FormFillSubmission & { draftId?: string }>> {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: FormFillSubmission) => {
+    mutationFn: async (data: FormFillSubmission & { draftId?: string }) => {
       const res = await api.post<ApiResponse<FormFillResult>>(
         '/portal/form-fill/submit',
         data,
       );
       return res.data.data;
+    },
+    onSuccess: () => {
+      // Invalidate drafts list after successful submission
+      void queryClient.invalidateQueries({ queryKey: ['portal', 'form-fill', 'drafts'] });
+      void queryClient.invalidateQueries({ queryKey: ['portal', 'orders'] });
+    },
+  });
+}
+
+// ─── Draft Management ──────────────────────────────────────────────────────
+
+export interface FormDraft {
+  _id: string;
+  mappingId: string;
+  versionNumber: number;
+  financialYear: string;
+  currentStep: number;
+  serviceTitle: string;
+  servicePrice: number;
+  formTitle: string;
+  answers: Record<string, unknown>;
+  personalDetails: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    mobile?: string;
+    dateOfBirth?: string;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+
+export function useFormDrafts(): ReturnType<typeof useQuery<FormDraft[]>> {
+  return useQuery({
+    queryKey: ['portal', 'form-fill', 'drafts'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<{ drafts: FormDraft[] }>>(
+        '/portal/form-fill/drafts',
+      );
+      return res.data.data.drafts;
+    },
+  });
+}
+
+export interface SaveDraftPayload {
+  mappingId: string;
+  versionNumber: number;
+  financialYear: string;
+  currentStep: number;
+  answers?: Record<string, unknown>;
+  personalDetails?: Record<string, unknown>;
+  serviceTitle: string;
+  servicePrice: number;
+  formTitle: string;
+}
+
+export interface SaveDraftResult {
+  draft: {
+    _id: string;
+    mappingId: string;
+    versionNumber: number;
+    financialYear: string;
+    currentStep: number;
+    updatedAt: string;
+  };
+}
+
+export function useSaveDraft(): ReturnType<typeof useMutation<SaveDraftResult, Error, SaveDraftPayload>> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: SaveDraftPayload) => {
+      const res = await api.put<ApiResponse<SaveDraftResult>>(
+        '/portal/form-fill/drafts',
+        data,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['portal', 'form-fill', 'drafts'] });
+    },
+  });
+}
+
+export function useDeleteDraft(): ReturnType<typeof useMutation<void, Error, string>> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (draftId: string) => {
+      await api.delete(`/portal/form-fill/drafts/${draftId}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['portal', 'form-fill', 'drafts'] });
     },
   });
 }
