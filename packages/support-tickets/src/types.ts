@@ -114,6 +114,12 @@ export interface ISupportTicket {
   status: TicketStatus;
   subject: string;
   description: string;
+  /**
+   * TKT-INV-02: For `staff_complaint` tickets, the staff member being
+   * complained about. `assignTicket` rejects assignments to this user so
+   * complaints never route to the subject of the complaint.
+   */
+  subjectStaffId?: Types.ObjectId;
   assignedTo?: Types.ObjectId;
   escalatedTo?: Types.ObjectId;
   escalatedAt?: Date;

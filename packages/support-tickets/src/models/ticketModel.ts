@@ -80,6 +80,8 @@ const supportTicketSchema = new Schema<ISupportTicketDocument>(
     },
     subject: { type: String, required: true, maxlength: 200 },
     description: { type: String, required: true },
+    // TKT-INV-02: staff the complaint is about (staff_complaint category)
+    subjectStaffId: { type: Schema.Types.ObjectId, ref: 'User' },
     assignedTo: { type: Schema.Types.ObjectId, ref: 'User' },
     escalatedTo: { type: Schema.Types.ObjectId, ref: 'User' },
     escalatedAt: { type: Date },

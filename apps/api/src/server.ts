@@ -794,6 +794,23 @@ async function bootstrap(): Promise<void> {
     auditLog: auditLogDI,
   });
 
+  // ─── Redis connection opts (shared by all BullMQ queues) ─────────────────
+  // Hoisted here because the WhatsApp media queue (used inline by the
+  // onInboundMedia DI hook for createWhatsAppRoutes) needs them, and the
+  // route factory must be constructed before the other queues below.
+  const redisConnectionOpts = {
+    host: config.REDIS_HOST,
+    port: config.REDIS_PORT,
+    password: config.REDIS_PASSWORD || undefined,
+  };
+
+  const defaultJobOptions = {
+    attempts: 3,
+    backoff: { type: 'exponential' as const, delay: 5000 },
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 500 },
+  };
+
   // Declared before createWhatsAppRoutes so the onInboundMedia hook can
   // close over the queue. Actual worker is registered further below, near
   // the other BullMQ workers.
@@ -907,19 +924,8 @@ async function bootstrap(): Promise<void> {
     },
   });
 
-  // ─── Redis connection opts (shared by all BullMQ queues) ─────────────────
-  const redisConnectionOpts = {
-    host: config.REDIS_HOST,
-    port: config.REDIS_PORT,
-    password: config.REDIS_PASSWORD || undefined,
-  };
-
-  const defaultJobOptions = {
-    attempts: 3,
-    backoff: { type: 'exponential' as const, delay: 5000 },
-    removeOnComplete: { count: 100 },
-    removeOnFail: { count: 500 },
-  };
+  // redisConnectionOpts and defaultJobOptions are declared earlier (hoisted
+  // for the whatsapp-media queue); reuse them here.
 
   // Analytics Engine — stateless init + routes
   const analyticsConfig = analyticsEngine.init({

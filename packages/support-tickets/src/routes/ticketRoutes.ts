@@ -105,8 +105,11 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       if (q.page) params.page = parseInt(q.page, 10);
       if (q.limit) params.limit = parseInt(q.limit, 10);
 
-      // Clients only see own tickets
-      if (user.userType >= 5) params.userId = user.userId;
+      // Clients only see own tickets; clients must not see internal notes
+      if (user.userType >= 5) {
+        params.userId = user.userId;
+        params.filterInternal = true;
+      }
 
       const result = await listTickets(params as never);
       res.status(200).json({ status: 200, data: result });
@@ -191,26 +194,35 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
       if (!handleValidation(req, res)) return;
       const user = (req as AuthRequest).user!;
 
-      const ticket = await assignTicket(
-        req.params.id as unknown as Types.ObjectId,
-        req.body.staffId as unknown as Types.ObjectId,
-      );
+      try {
+        const ticket = await assignTicket(
+          req.params.id as unknown as Types.ObjectId,
+          req.body.staffId as unknown as Types.ObjectId,
+        );
 
-      if (!ticket) {
-        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
-        return;
+        if (!ticket) {
+          res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+          return;
+        }
+
+        await deps.auditLog.log({
+          actor: user.userId,
+          action: 'ticket.assigned',
+          resource: 'SupportTicket',
+          resourceId: ticket._id,
+          severity: 'info',
+          metadata: { assignedTo: req.body.staffId, ticketNumber: ticket.ticketNumber },
+        });
+
+        res.status(200).json({ status: 200, data: { ticket } });
+      } catch (err) {
+        const error = err as Error & { statusCode?: number; code?: string };
+        res.status(error.statusCode ?? 500).json({
+          status: error.statusCode ?? 500,
+          code: error.code,
+          message: error.message,
+        });
       }
-
-      await deps.auditLog.log({
-        actor: user.userId,
-        action: 'ticket.assigned',
-        resource: 'SupportTicket',
-        resourceId: ticket._id,
-        severity: 'info',
-        metadata: { assignedTo: req.body.staffId, ticketNumber: ticket.ticketNumber },
-      });
-
-      res.status(200).json({ status: 200, data: { ticket } });
     },
   );
 

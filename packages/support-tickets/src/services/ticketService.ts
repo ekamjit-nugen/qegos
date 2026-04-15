@@ -15,6 +15,7 @@ import {
 } from '../types';
 import {
   calculateSlaDeadline,
+  calculateFirstResponseDeadline,
   isSlaBreached,
   isSlaImminent,
   getEscalationTriggerTime,
@@ -47,12 +48,28 @@ export interface CreateTicketParams {
   description: string;
   source?: TicketSource;
   assignedTo?: Types.ObjectId;
+  subjectStaffId?: Types.ObjectId;
 }
 
 export async function createTicket(params: CreateTicketParams): Promise<ISupportTicketDocument> {
   const priority = params.priority ?? 'normal';
   const now = new Date();
   const slaDeadline = calculateSlaDeadline(now, priority);
+
+  // TKT-INV-02: block creating a staff_complaint pre-assigned to its subject.
+  if (
+    params.category === 'staff_complaint'
+    && params.subjectStaffId
+    && params.assignedTo
+    && params.subjectStaffId.equals(params.assignedTo)
+  ) {
+    const err = new Error(
+      'Cannot assign staff_complaint ticket to the staff member it is about',
+    ) as Error & { statusCode: number; code: string };
+    err.statusCode = 400;
+    err.code = 'STAFF_COMPLAINT_SELF_ASSIGN';
+    throw err;
+  }
 
   const ticket = await TicketModel.create({
     userId: params.userId,
@@ -64,6 +81,7 @@ export async function createTicket(params: CreateTicketParams): Promise<ISupport
     description: params.description,
     source: params.source ?? 'portal',
     assignedTo: params.assignedTo,
+    subjectStaffId: params.subjectStaffId,
     slaDeadline,
     messages: [{
       senderId: params.userId,
@@ -105,12 +123,14 @@ export interface ListTicketsParams {
   slaBreached?: boolean;
   page?: number;
   limit?: number;
+  /** TKT-INV-03: strip internal messages from each returned ticket (set for clients). */
+  filterInternal?: boolean;
 }
 
 export async function listTickets(
   params: ListTicketsParams,
 ): Promise<{ tickets: ISupportTicketDocument[]; total: number; page: number; pages: number }> {
-  const { page = 1, limit = 20, ...filters } = params;
+  const { page = 1, limit = 20, filterInternal, ...filters } = params;
   const query: Record<string, unknown> = {};
 
   if (filters.status) query.status = filters.status;
@@ -127,6 +147,13 @@ export async function listTickets(
       .limit(limit),
     TicketModel.countDocuments(query),
   ]);
+
+  // TKT-INV-03: Clients must never see internal (staff-only) messages.
+  if (filterInternal) {
+    for (const t of tickets) {
+      t.messages = t.messages.filter((m) => !m.isInternal);
+    }
+  }
 
   return { tickets, total, page, pages: Math.ceil(total / limit) };
 }
@@ -166,8 +193,21 @@ export async function assignTicket(
   const ticket = await TicketModel.findById(ticketId);
   if (!ticket) return null;
 
-  // TKT-INV-02: Staff complaint cannot be assigned to complained-about staff
-  // (The caller must enforce this — we just set the assignment)
+  // TKT-INV-02: a staff_complaint must never be routed to the staff member
+  // it is about. Enforced here — callers cannot forget.
+  if (
+    ticket.category === 'staff_complaint'
+    && ticket.subjectStaffId
+    && ticket.subjectStaffId.equals(staffId)
+  ) {
+    const err = new Error(
+      'Cannot assign staff_complaint ticket to the staff member it is about',
+    ) as Error & { statusCode: number; code: string };
+    err.statusCode = 400;
+    err.code = 'STAFF_COMPLAINT_SELF_ASSIGN';
+    throw err;
+  }
+
   ticket.assignedTo = staffId;
   if (ticket.status === 'open') ticket.status = 'assigned';
 
@@ -420,8 +460,9 @@ export async function checkSlaBreaches(): Promise<{
 
     // First response breach
     if (!ticket.firstResponseAt && !ticket.firstResponseBreached) {
-      // Check first response SLA based on priority
-      const frDeadline = getEscalationTriggerTime(ticket.createdAt, ticket.priority);
+      // Check first response SLA based on priority (uses `firstResponseMinutes`,
+      // NOT `escalationTriggerMinutes` which is for unassigned-urgent routing)
+      const frDeadline = calculateFirstResponseDeadline(ticket.createdAt, ticket.priority);
       if (now.getTime() > frDeadline.getTime()) {
         ticket.firstResponseBreached = true;
         await ticket.save();
