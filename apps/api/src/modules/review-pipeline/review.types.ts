@@ -37,7 +37,9 @@ export interface IReviewAssignment {
   changesRequested: IChangeRequest[];
   changesResolvedCount: number;
   approvedAt?: Date;
+  approvedBy?: Types.ObjectId;
   rejectedAt?: Date;
+  rejectedBy?: Types.ObjectId;
   rejectedReason?: string;
   reviewRound: number;
   timeToReview?: number; // minutes

@@ -262,21 +262,35 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
       );
     }
 
-    review.status = 'approved';
-    review.approvedAt = new Date();
-
-    // Calculate time to review
+    // Atomic claim: only one concurrent approve can flip in_review → approved.
+    // Without this, two reviewers hitting the endpoint simultaneously both pass
+    // the status check above and both write `approved` — the second one's
+    // approvedBy/approvedAt silently overwrites the first.
     const createdAt = review.createdAt ?? new Date();
-    review.timeToReview = Math.round(
+    const timeToReview = Math.round(
       (Date.now() - new Date(createdAt).getTime()) / (1000 * 60),
     );
 
-    await review.save();
+    const claimed = await ReviewAssignmentModel.findOneAndUpdate(
+      { _id: review._id, status: 'in_review' },
+      {
+        $set: {
+          status: 'approved',
+          approvedAt: new Date(),
+          approvedBy: reviewerId,
+          timeToReview,
+        },
+      },
+      { new: true },
+    );
+    if (!claimed) {
+      throw AppError.conflict('Review was already actioned by another reviewer');
+    }
 
     // Order unlocked for lodgement — status stays at Review(5), but review is approved
     // The order can now transition 5→6 (Completed)
 
-    return review;
+    return claimed;
   }
 
   // ─── Request Changes (RVW-INV-05) ─────────────────────────────────────
@@ -330,8 +344,15 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
 
     review.status = 'rejected';
     review.rejectedAt = new Date();
+    review.rejectedBy = reviewerId as unknown as IReviewAssignmentDocument['rejectedBy'];
     review.rejectedReason = reason;
     await review.save();
+
+    // Order must come out of Review(5) — otherwise a rejected order is stuck
+    // and the preparer can't act on it. Mirror requestChanges: route back to
+    // InProgress(4) so the preparer can address the rejection reason and
+    // resubmit (or the order can be cancelled via the order state machine).
+    await setOrderStatus(orderId, 4);
 
     return review;
   }

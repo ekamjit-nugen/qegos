@@ -54,7 +54,9 @@ const reviewAssignmentSchema = new Schema<IReviewAssignmentDocument>(
     changesRequested: [changeRequestSchema],
     changesResolvedCount: { type: Number, default: 0 },
     approvedAt: { type: Date },
+    approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     rejectedAt: { type: Date },
+    rejectedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     rejectedReason: { type: String },
     reviewRound: { type: Number, default: 1 },
     timeToReview: { type: Number }, // minutes
