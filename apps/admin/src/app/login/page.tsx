@@ -2,6 +2,7 @@
 
 import { useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, Form, Input, Button, Typography, App, Table, Tag } from 'antd';
 import type { FormInstance } from 'antd';
 import { LockOutlined, MailOutlined, SafetyOutlined, LoginOutlined } from '@ant-design/icons';
@@ -182,6 +183,11 @@ export default function LoginPage(): ReactNode {
                 Sign In
               </Button>
             </Form.Item>
+            <div style={{ textAlign: 'center' }}>
+              <Link href="/forgot-password">
+                <Button type="link">Forgot password?</Button>
+              </Link>
+            </div>
           </Form>
         ) : (
           <Form layout="vertical" onFinish={handleMfa} autoComplete="off">

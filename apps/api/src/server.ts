@@ -59,6 +59,9 @@ import * as broadcastEngine from '@nugen/broadcast-engine';
 import * as fileStorage from '@nugen/file-storage';
 import { createPortalRoutes } from './modules/client-portal/portal.routes';
 import { createFormFillRoutes } from './modules/client-portal/formFill.routes';
+import { createPayOrderRoutes } from './modules/client-portal/payOrder.routes';
+import { createCollectPaymentRoutes } from './modules/order-management/collectPayment.routes';
+import { createFormDraftModel } from './modules/client-portal/formDraft.model';
 import { createAppointmentBookingRoutes } from './modules/client-portal/appointmentBooking.routes';
 import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
 import { reconcileStorageUsage } from '@nugen/file-storage';
@@ -673,6 +676,9 @@ async function bootstrap(): Promise<void> {
     CreditTransactionModel,
   });
 
+  // Form Draft model for save-as-you-go form filling
+  const FormDraftModel = createFormDraftModel(connection);
+
   // Client-facing Form Fill routes (mounted under /portal)
   const formFillRouter = createFormFillRoutes({
     FormMappingModel,
@@ -680,12 +686,37 @@ async function bootstrap(): Promise<void> {
     OrderModel: OrderModel as never,
     SalesModel: SalesModel as never,
     CounterModel: CounterModel as never,
+    FormDraftModel,
     authenticate: auth.authenticate,
     promoCodeService,
     creditService: creditServiceInstance,
   });
   // Mount form fill routes under the portal prefix
   portalRouter.use(formFillRouter);
+
+  // Client-facing Pay Now routes (credits + promo + Stripe)
+  const payOrderRouter = createPayOrderRoutes({
+    OrderModel: OrderModel as never,
+    PaymentModel,
+    GatewayConfigModel,
+    providers,
+    authenticate: auth.authenticate,
+    promoCodeService,
+    creditService: creditServiceInstance,
+  });
+  portalRouter.use(payOrderRouter);
+
+  // Staff-facing Collect Payment on Behalf of Client (admin/CRM)
+  const collectPaymentRouter = createCollectPaymentRoutes({
+    OrderModel: OrderModel as never,
+    PaymentModel,
+    GatewayConfigModel,
+    providers,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    promoCodeService,
+    creditService: creditServiceInstance,
+  });
 
   // Client-facing Appointment Booking routes (mounted under /portal)
   const appointmentBookingRouter = createAppointmentBookingRoutes({
@@ -970,6 +1001,7 @@ async function bootstrap(): Promise<void> {
     billingDisputeRouter,
     leadRouter,
     orderRouter,
+    collectPaymentRouter,
     salesRouter,
     formMappingRouter,
     consentFormRouter,

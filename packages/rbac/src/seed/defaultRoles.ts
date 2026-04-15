@@ -51,6 +51,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('privacy', ['manage'], 'all'),
       perm('portal', ['manage', 'admin'], 'all'),
       perm('sales', ['create', 'update'], 'all'),
+      perm('notifications', ['create', 'read', 'update', 'delete'], 'all'),
+      perm('form_drafts', ['read', 'delete'], 'all'),
     ],
   },
   {
@@ -86,6 +88,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('privacy', ['manage'], 'all'),
       perm('portal', ['manage', 'admin'], 'all'),
       perm('sales', ['create', 'update'], 'all'),
+      perm('notifications', ['create', 'read', 'update', 'delete'], 'all'),
+      perm('form_drafts', ['read', 'delete'], 'all'),
     ],
   },
   {
@@ -95,7 +99,7 @@ export const defaultRoles: RoleSeed[] = [
     permissions: [
       perm('users', ['read'], 'all'),
       perm('orders', ['create', 'read', 'update', 'delete'], 'all'),
-      perm('payments', ['read'], 'all'),
+      perm('payments', ['create', 'read', 'update'], 'all'),
       perm('leads', ['create', 'read', 'update', 'delete'], 'all'),
       perm('lead_activities', ['create', 'read', 'update', 'delete'], 'all'),
       perm('broadcasts', ['create', 'read', 'update'], 'all'),
@@ -120,6 +124,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('privacy', ['manage'], 'all'),
       perm('portal', ['manage'], 'all'),
       perm('sales', ['create', 'update'], 'all'),
+      perm('notifications', ['create', 'read', 'update'], 'all'),
+      perm('form_drafts', ['read'], 'all'),
     ],
   },
   {
@@ -129,7 +135,7 @@ export const defaultRoles: RoleSeed[] = [
     permissions: [
       perm('users', ['read'], 'assigned'),
       perm('orders', ['create', 'read', 'update', 'delete'], 'assigned'),
-      perm('payments', ['read'], 'assigned'),
+      perm('payments', ['create', 'read', 'update'], 'assigned'),
       perm('leads', ['create', 'read', 'update', 'delete'], 'all'),
       perm('lead_activities', ['create', 'read', 'update', 'delete'], 'all'),
       perm('broadcasts', ['read'], 'all'),
@@ -146,6 +152,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('tax_result', ['create', 'read', 'update'], 'assigned'),
       perm('portal', ['manage'], 'assigned'),
       perm('sales', ['create', 'update'], 'assigned'),
+      perm('notifications', ['create', 'read'], 'assigned'),
+      perm('form_drafts', ['read'], 'assigned'),
     ],
   },
   {
@@ -155,10 +163,10 @@ export const defaultRoles: RoleSeed[] = [
     permissions: [
       perm('users', ['read'], 'assigned'),
       perm('orders', ['read', 'update'], 'assigned'),
-      perm('payments', ['read'], 'assigned'),
+      perm('payments', ['create', 'read'], 'assigned'),
       perm('leads', ['create', 'read', 'update', 'delete'], 'assigned'),
       perm('lead_activities', ['create', 'read', 'update', 'delete'], 'assigned'),
-      perm('vault_documents', ['read'], 'assigned'),
+      perm('vault_documents', ['read', 'update'], 'assigned'),
       perm('analytics', ['read'], 'own'),
       perm('reviews', ['read'], 'own'),
       perm('chat', ['read', 'update'], 'assigned'),
@@ -168,6 +176,8 @@ export const defaultRoles: RoleSeed[] = [
       perm('billing_disputes', ['read'], 'assigned'),
       perm('tax_estimate', ['create', 'read'], 'assigned'),
       perm('tax_result', ['read'], 'assigned'),
+      perm('notifications', ['read'], 'assigned'),
+      perm('form_drafts', ['read'], 'assigned'),
     ],
   },
   {

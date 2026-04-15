@@ -5,11 +5,24 @@ import {
   Card,
   Chip,
   ProgressBar,
+  FAB,
+  Snackbar,
   useTheme,
 } from 'react-native-paper';
+import * as DocumentPicker from 'expo-document-picker';
+import { useQueryClient } from '@tanstack/react-query';
 import { useVaultDocuments, useVaultYears, useStorageUsage } from '@/hooks/useVault';
+import { useVaultUpload } from '@/hooks/useVaultUpload';
 import type { VaultDocument } from '@/types/vault';
 import { VaultSkeleton } from '@/components/ScreenSkeleton';
+
+function currentFinancialYear(): string {
+  // Australian FY (Jul–Jun): if month >= July, FY is currentYear-(currentYear+1)
+  const now = new Date();
+  const m = now.getMonth();
+  const y = now.getFullYear();
+  return m >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -32,6 +45,43 @@ export default function VaultScreen(): React.ReactNode {
   const storage = storageQuery.data?.data;
   const years = yearsQuery.data?.data ?? [];
   const documents = documentsQuery.data?.data ?? [];
+
+  const queryClient = useQueryClient();
+  const upload = useVaultUpload();
+  const [snackbar, setSnackbar] = useState<string>('');
+
+  async function handleUpload(): Promise<void> {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      upload.mutate(
+        {
+          uri: asset.uri,
+          name: asset.name,
+          mimeType: asset.mimeType ?? 'application/octet-stream',
+          size: asset.size,
+          financialYear: selectedYear ?? currentFinancialYear(),
+          category: 'other',
+        },
+        {
+          onSuccess: () => {
+            setSnackbar(`Uploaded ${asset.name}`);
+            void queryClient.invalidateQueries({ queryKey: ['vault'] });
+          },
+          onError: (err) => {
+            setSnackbar(err.message || 'Upload failed');
+          },
+        },
+      );
+    } catch (err) {
+      setSnackbar(err instanceof Error ? err.message : 'Failed to pick file');
+    }
+  }
 
   function renderDocument({
     item,
@@ -122,6 +172,18 @@ export default function VaultScreen(): React.ReactNode {
           }
         />
       )}
+
+      <FAB
+        icon="upload"
+        label={upload.isPending ? 'Uploading…' : 'Upload'}
+        onPress={handleUpload}
+        loading={upload.isPending}
+        disabled={upload.isPending}
+        style={styles.fab}
+      />
+      <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar('')} duration={3000}>
+        {snackbar}
+      </Snackbar>
     </View>
   );
 }
@@ -179,5 +241,10 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     padding: 40,
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
   },
 });

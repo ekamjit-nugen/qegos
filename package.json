@@ -2,15 +2,15 @@
   "name": "qegos",
   "version": "0.1.0",
   "private": true,
-  "description": "QEGOS — Tax preparation, filing, and client management platform for the Australian market",
+  "description": "QEGOS \u2014 Tax preparation, filing, and client management platform for the Australian market",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "node api.js && tsc --build",
     "build:clean": "tsc --build --clean && tsc --build",
-    "dev": "npm run dev --workspace=apps/api",
+    "dev": "node api.js && npm run dev --workspace=apps/api",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",

@@ -168,6 +168,7 @@ export function finalizeApp(
     // Phase 3: Lead & Order Core + Review Pipeline
     leadRouter?: express.Router;
     orderRouter?: express.Router;
+    collectPaymentRouter?: express.Router;
     salesRouter?: express.Router;
     formMappingRouter?: express.Router;
     consentFormRouter?: express.Router;
@@ -242,6 +243,10 @@ export function finalizeApp(
   }
   if (routes.orderRouter) {
     app.use(`${prefix}/orders`, routes.orderRouter);
+  }
+  if (routes.collectPaymentRouter) {
+    // Staff "Collect Payment on Behalf of Client" — mounted alongside orderRouter
+    app.use(`${prefix}/orders`, routes.collectPaymentRouter);
   }
   if (routes.salesRouter) {
     app.use(`${prefix}/sales`, routes.salesRouter);
