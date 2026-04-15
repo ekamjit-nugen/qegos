@@ -107,9 +107,9 @@ describe('Referral Engine — Types & Constants', () => {
     }
   });
 
-  test('rewarded and expired are terminal states', () => {
-    expect(REFERRAL_STATUS_TRANSITIONS.rewarded).toHaveLength(0);
+  test('expired is terminal; rewarded only transitions to expired (12-month expiry cron)', () => {
     expect(REFERRAL_STATUS_TRANSITIONS.expired).toHaveLength(0);
+    expect(REFERRAL_STATUS_TRANSITIONS.rewarded).toEqual(['expired']);
   });
 
   test('expired is reachable from all non-terminal states', () => {

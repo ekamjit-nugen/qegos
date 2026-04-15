@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Typecheck is the load-bearing gate. `npm run build` walks the
+      # project-reference graph and emits dist/ for every package + app;
+      # a type error anywhere in the monorepo fails the job.
+      - name: Build (typecheck + emit)
+        run: npm run build
+
+      - name: Test
+        run: npm test -- --ci --runInBand
+        env:
+          # Jest suites that wire up BullMQ/Mongoose don't need a real
+          # backend; harmless defaults keep them from probing localhost.
+          NODE_ENV: test
+
+  style:
+    # Lint + prettier are informational today — the codebase has ~790 eslint
+    # errors (curly-if, prefer-const, etc.) and ~605 prettier diffs that are
+    # safe but unshipped. Wire the job in so regressions are visible, but
+    # don't gate merges on it until the backlog is cleared. Flip
+    # `continue-on-error` to false once both targets are green.
+    name: Style (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check

@@ -70,8 +70,8 @@ describe('Document Management — Validators', () => {
     expect(uploadProofValidation).toHaveLength(1);
   });
 
-  test('createSigningValidation has 4 chains', () => {
-    expect(createSigningValidation).toHaveLength(4);
+  test('createSigningValidation has 6 chains', () => {
+    expect(createSigningValidation).toHaveLength(6);
   });
 
   test('sendForSignValidation has 2 chains', () => {

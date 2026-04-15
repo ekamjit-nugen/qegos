@@ -36,6 +36,7 @@ const config: Config = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       diagnostics: false,
+      tsconfig: '<rootDir>/tsconfig.base.json',
     }],
   },
 };
