@@ -300,10 +300,32 @@ async function bootstrap(): Promise<void> {
   const {
     ConfigModel: WhatsAppConfigModel,
     MessageModel: WhatsAppMessageModel,
-  } = whatsappConnector.init(connection, {
-    accessToken: config.WHATSAPP_API_TOKEN,
-    phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
-    webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+  } = whatsappConnector.init(
+    connection,
+    {
+      accessToken: config.WHATSAPP_API_TOKEN,
+      phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
+      webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+    },
+    // 1h Redis cache for Meta `message_templates` listing
+    redisClient as never,
+  );
+
+  // Wire the media-download pipeline. The package owns the business logic;
+  // the queue + worker lives in this app so downloads retry across process
+  // restarts and share the dead-letter plumbing with other workers.
+  whatsappConnector.initMediaService({
+    MessageModel: WhatsAppMessageModel as never,
+    uploadMedia: fileStorage.uploadToS3,
+    scanMedia: async (buffer: Buffer) => {
+      const status = await fileStorage.scanBuffer(buffer);
+      // VirusScanStatus is 'pending' | 'clean' | 'infected' | 'error'.
+      // Coerce 'pending' (shouldn't occur for a sync scan) to 'error' so the
+      // media service treats it as fail-open per its own policy.
+      return {
+        status: status === 'pending' ? 'error' : status,
+      };
+    },
   });
 
   // Phase 2: Xero Integration — Models
@@ -772,6 +794,18 @@ async function bootstrap(): Promise<void> {
     auditLog: auditLogDI,
   });
 
+  // Declared before createWhatsAppRoutes so the onInboundMedia hook can
+  // close over the queue. Actual worker is registered further below, near
+  // the other BullMQ workers.
+  const whatsappMediaQueue = new Queue('whatsapp-media', {
+    connection: redisConnectionOpts,
+    defaultJobOptions: {
+      ...defaultJobOptions,
+      attempts: 5,
+      backoff: { type: 'exponential', delay: 2000 },
+    },
+  });
+
   const whatsappRouter = whatsappConnector.createWhatsAppRoutes({
     ConfigModel: WhatsAppConfigModel,
     MessageModel: WhatsAppMessageModel,
@@ -782,6 +816,10 @@ async function bootstrap(): Promise<void> {
       accessToken: config.WHATSAPP_API_TOKEN,
       phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
       webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+    },
+    // Meta CDN URLs expire in ~5 minutes — enqueue, don't download inline.
+    onInboundMedia: async (messageId: string) => {
+      await whatsappMediaQueue.add('downloadMedia', { messageId });
     },
   });
 
@@ -1300,6 +1338,26 @@ async function bootstrap(): Promise<void> {
   ticketWorker.on('failed', (job, err) => {
     jobLogger.warn('Job failed', { queue: 'support-tickets', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
     void moveToDeadLetter('support-tickets', job, err);
+  });
+
+  // WhatsApp media download worker. Handles the queue fed by the inbound
+  // webhook's onInboundMedia hook above. Retries 5x with exponential
+  // backoff; exhausted jobs move to the DLQ.
+  const whatsappMediaWorker = new Worker(
+    'whatsapp-media',
+    async (job: Job): Promise<void> => {
+      const { messageId } = job.data as { messageId: string };
+      await whatsappConnector.processMediaDownload(messageId);
+    },
+    { connection: redisConnectionOpts },
+  );
+
+  whatsappMediaWorker.on('completed', (job) => {
+    jobLogger.info('Job completed', { queue: 'whatsapp-media', jobName: job.name });
+  });
+  whatsappMediaWorker.on('failed', (job, err) => {
+    jobLogger.warn('Job failed', { queue: 'whatsapp-media', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    void moveToDeadLetter('whatsapp-media', job, err);
   });
 
   // Privacy Act: Data lifecycle cron jobs

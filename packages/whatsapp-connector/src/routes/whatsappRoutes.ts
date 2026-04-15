@@ -114,15 +114,25 @@ export function createWhatsAppRoutes(deps: WhatsAppRouteDeps): Router {
 
             // Process inbound messages
             for (const msg of value.messages ?? []) {
-              await logInboundMessage({
+              const mediaId = msg.image?.id || msg.document?.id;
+              const logged = await logInboundMessage({
                 contactMobile: msg.from,
                 contactType: 'unknown',
                 waMessageId: msg.id,
                 messageType: msg.type as never,
                 content: msg.text?.body,
-                mediaOriginalUrl: msg.image?.id || msg.document?.id,
+                mediaOriginalUrl: mediaId,
                 mediaMimeType: msg.image?.mime_type || msg.document?.mime_type,
               });
+
+              // Kick off async media download — Meta CDN URLs expire quickly.
+              if (mediaId && deps.onInboundMedia) {
+                try {
+                  await deps.onInboundMedia((logged._id as Types.ObjectId).toString());
+                } catch {
+                  // Enqueue failures must not break webhook processing.
+                }
+              }
             }
 
             // Process delivery status updates

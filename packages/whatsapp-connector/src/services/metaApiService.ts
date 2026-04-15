@@ -1,4 +1,4 @@
-import type { WhatsAppConnectorConfig } from '../types';
+import type { WhatsAppConnectorConfig, WhatsAppCacheClient } from '../types';
 import { toMetaFormat } from '../types';
 
 // ─── Module State ───────────────────────────────────────────────────────────
@@ -6,11 +6,17 @@ import { toMetaFormat } from '../types';
 let accessToken: string;
 let phoneNumberId: string;
 let apiBaseUrl: string;
+let cache: WhatsAppCacheClient | null = null;
+const TEMPLATE_CACHE_TTL_SECONDS = 3600; // 1h — templates change rarely
 
-export function initMetaApiService(config: WhatsAppConnectorConfig): void {
+export function initMetaApiService(
+  config: WhatsAppConnectorConfig,
+  cacheClient?: WhatsAppCacheClient,
+): void {
   accessToken = config.accessToken ?? '';
   phoneNumberId = config.phoneNumberId ?? '';
   apiBaseUrl = config.apiBaseUrl ?? 'https://graph.facebook.com/v18.0';
+  cache = cacheClient ?? null;
 }
 
 // ─── Send Template Message (WHA-INV-02) ─────────────────────────────────────
@@ -128,6 +134,19 @@ export async function downloadMedia(
 export async function listTemplates(
   businessAccountId: string,
 ): Promise<Array<{ name: string; status: string; language: string }>> {
+  const cacheKey = `whatsapp:templates:${businessAccountId}`;
+
+  if (cache) {
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached) as Array<{ name: string; status: string; language: string }>;
+      }
+    } catch {
+      // Cache hiccup — fall through to live fetch.
+    }
+  }
+
   const url = `${apiBaseUrl}/${businessAccountId}/message_templates`;
 
   const response = await fetch(url, {
@@ -139,6 +158,15 @@ export async function listTemplates(
   }
 
   const data = await response.json() as { data: Array<{ name: string; status: string; language: string }> };
+
+  if (cache) {
+    try {
+      await cache.set(cacheKey, JSON.stringify(data.data), 'EX', TEMPLATE_CACHE_TTL_SECONDS);
+    } catch {
+      // Non-fatal: caller gets the fresh data either way.
+    }
+  }
+
   return data.data;
 }
 

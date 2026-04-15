@@ -68,6 +68,7 @@ export interface IWhatsAppMessage {
   mediaUrl?: string;
   mediaOriginalUrl?: string;
   mediaMimeType?: string;
+  mediaDownloadedAt?: Date;
   status: WhatsAppMessageStatus;
   failureReason?: string;
   leadActivityId?: Types.ObjectId;
@@ -105,4 +106,33 @@ export interface WhatsAppRouteDeps {
   config: WhatsAppConnectorConfig;
   /** Broadcast DND check function (WHA-INV-07) */
   checkDnd?: (contact: string, channel: string) => Promise<boolean>;
+  /**
+   * Called after an inbound message with media is logged. Should enqueue
+   * a worker job that calls {@link processMediaDownload} — Meta CDN URLs
+   * expire within ~5 minutes, so synchronous download on the webhook path
+   * is tempting but risky (blocks the 200 ack). Fire-and-forget.
+   */
+  onInboundMedia?: (messageId: string) => void | Promise<void>;
+}
+
+/**
+ * Minimal Redis shape used for template listing cache. Matches `ioredis`
+ * but typed narrowly so the package doesn't depend on ioredis directly.
+ */
+export interface WhatsAppCacheClient {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, mode: 'EX', seconds: number): Promise<unknown>;
+}
+
+/**
+ * Media-download dependencies injected at bootstrap. Kept separate from
+ * route-deps because media download runs in a worker process, not a
+ * request handler.
+ */
+export interface WhatsAppMediaDeps {
+  MessageModel: import('mongoose').Model<IWhatsAppMessageDocument>;
+  /** Upload buffer to S3/blob storage; returns the stored object key. */
+  uploadMedia: (buffer: Buffer, key: string, mimeType: string) => Promise<string>;
+  /** Optional virus scan applied before upload. Infected payloads are dropped. */
+  scanMedia?: (buffer: Buffer) => Promise<{ status: 'clean' | 'infected' | 'error' }>;
 }

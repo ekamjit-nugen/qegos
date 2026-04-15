@@ -27,8 +27,9 @@ const whatsappMessageSchema = new Schema<IWhatsAppMessageDocument>(
     templateParams: [{ type: String }],
     content: { type: String },
     mediaUrl: { type: String }, // S3 URL for downloaded media
-    mediaOriginalUrl: { type: String }, // Meta CDN URL (expires)
+    mediaOriginalUrl: { type: String }, // Meta media ID (used to fetch the CDN URL)
     mediaMimeType: { type: String },
+    mediaDownloadedAt: { type: Date }, // Set once uploadToS3 succeeds
     status: {
       type: String,
       required: true,

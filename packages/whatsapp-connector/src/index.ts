@@ -1,5 +1,10 @@
 import type { Connection, Model } from 'mongoose';
-import type { IWhatsAppConfigDocument, IWhatsAppMessageDocument, WhatsAppConnectorConfig } from './types';
+import type {
+  IWhatsAppConfigDocument,
+  IWhatsAppMessageDocument,
+  WhatsAppConnectorConfig,
+  WhatsAppCacheClient,
+} from './types';
 import { createWhatsAppConfigModel } from './models/whatsappConfigModel';
 import { createWhatsAppMessageModel } from './models/whatsappMessageModel';
 import { initWhatsAppService } from './services/whatsappService';
@@ -17,12 +22,13 @@ export interface WhatsAppConnectorInitResult {
 export function init(
   connection: Connection,
   config: WhatsAppConnectorConfig,
+  cache?: WhatsAppCacheClient,
 ): WhatsAppConnectorInitResult {
   const ConfigModel = createWhatsAppConfigModel(connection);
   const MessageModel = createWhatsAppMessageModel(connection);
 
   initWhatsAppService(MessageModel, ConfigModel);
-  initMetaApiService(config);
+  initMetaApiService(config, cache);
 
   return { ConfigModel, MessageModel };
 }
@@ -41,6 +47,8 @@ export type {
   WhatsAppQualityRating,
   WhatsAppConnectorConfig,
   WhatsAppRouteDeps,
+  WhatsAppCacheClient,
+  WhatsAppMediaDeps,
 } from './types';
 
 export {
@@ -75,6 +83,12 @@ export {
 } from './services/whatsappService';
 
 export { createWhatsAppRoutes } from './routes/whatsappRoutes';
+
+export {
+  initMediaService,
+  processMediaDownload,
+} from './services/mediaService';
+export type { MediaDownloadResult } from './services/mediaService';
 
 export {
   sendTemplateValidation,
