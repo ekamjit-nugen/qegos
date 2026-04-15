@@ -149,7 +149,7 @@ qegos/
 - **No CI.** No GitHub Actions for build/lint/test. Adding it is Phase-0 hygiene.
 - **Money-path integration tests missing.** No end-to-end tests for Pay Now, Collect Payment, or webhook reconciliation. Regressions here cost real dollars.
 - **`apps/api/src/server.ts` is 1600+ lines.** It assembles every module's DI by hand. A per-module bootstrap split would shrink it and make onboarding sane.
-- **`as never` / `as unknown as X` casts remain** at Mongoose `Model<T>` boundaries in `server.ts` (≈80 casts). These are structural generics mismatches, not DI contract drift. The DI contract drift (previously ~46 casts on `checkPermission` / `auditLog`) has been eliminated.
+- **`as never` casts remain** at Mongoose `Model<T>` boundaries in `server.ts` (~47 casts, down from ~80). These are structural generics mismatches against narrow `Model<IFooDocument>` fields in per-module `*RouteDeps` interfaces. Tier-1 packages and several Tier-2 modules have been widened to `Model<any>` at the DI boundary; completing the remaining route-deps interfaces is a mechanical future pass.
 - **Shallow modules**: chat-engine, whatsapp-connector, support-tickets, referral-engine, reputation-mgmt, tax-calendar, form-mapping, review-pipeline (depth-wise, not wiring-wise).
 - **Mobile Stripe flow has not been verified on a real device.**
 - **No unit tests in packages, no integration tests in the API.** Add a test harness before claiming coverage.
