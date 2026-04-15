@@ -14,8 +14,8 @@ import { createReviewRoutes as createReputationRoutes } from './review.routes';
 
 export interface ReputationMgmtDeps {
   connection: Connection;
-  OrderModel: Model<unknown>;
-  UserModel: Model<unknown>;
+  OrderModel: Model<any>;
+  UserModel: Model<any>;
 }
 
 export interface ReputationMgmtResult extends BootstrapResult {

@@ -20,7 +20,7 @@ const auditLog = {
     });
   },
 };
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { IAppointmentDocument, IStaffAvailabilityDocument } from '../appointment-scheduling/appointment.types';
 import { createAppointmentService } from '../appointment-scheduling/appointment.service';
 import type { IOrderDocument2 } from '../order-management/order.types';
@@ -35,7 +35,7 @@ export interface AppointmentBookingRouteDeps {
   AppointmentModel: Model<IAppointmentDocument>;
   StaffAvailabilityModel: Model<IStaffAvailabilityDocument>;
   OrderModel: Model<IOrderDocument2>;
-  UserModel: Model<Document>;
+  UserModel: Model<any>;
   authenticate: () => import('express').RequestHandler;
   getSetting?: (key: string) => Promise<unknown>;
 }
@@ -91,7 +91,7 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
   const appointmentService = createAppointmentService({
     AppointmentModel,
     StaffAvailabilityModel,
-    OrderModel: OrderModel as unknown as Model<Document>,
+    OrderModel: OrderModel as unknown as Model<any>,
     UserModel,
     getSetting,
   });

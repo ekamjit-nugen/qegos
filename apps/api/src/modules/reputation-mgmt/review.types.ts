@@ -64,8 +64,8 @@ export function getNpsCategory(score: number): 'promoter' | 'passive' | 'detract
 
 export interface ReviewRouteDeps {
   ReviewModel: import('mongoose').Model<IReviewDocument>;
-  OrderModel: import('mongoose').Model<Document>;
-  UserModel: import('mongoose').Model<Document>;
+  OrderModel: import('mongoose').Model<any>;
+  UserModel: import('mongoose').Model<any>;
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
 }

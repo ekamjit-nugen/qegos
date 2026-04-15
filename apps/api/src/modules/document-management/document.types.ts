@@ -1,4 +1,4 @@
-import type { Model, Document, Types } from 'mongoose';
+import type { Model, Types } from 'mongoose';
 import type { Request, RequestHandler } from 'express';
 import type { CheckPermissionFn } from '@nugen/rbac';
 import type { AuditLogDI } from '@nugen/audit-log';
@@ -114,8 +114,8 @@ export interface AuthRequest extends Request {
 // ─── Route Dependencies ────────────────────────────────────────────────────
 
 export interface DocumentRouteDeps {
-  OrderModel: Model<Document>;
-  UserModel: Model<Document>;
+  OrderModel: Model<any>;
+  UserModel: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
   auditLog: AuditLogDI;

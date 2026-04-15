@@ -10,12 +10,12 @@ import type { AppContext, BootstrapResult } from '../../bootstrap/context';
 import { createWorkloadRoutes } from './workload.routes';
 
 export interface StaffWorkloadDeps {
-  UserModel: Model<unknown>;
-  LeadModel: Model<unknown>;
-  OrderModel: Model<unknown>;
-  ReviewAssignmentModel: Model<unknown>;
-  SupportTicketModel: Model<unknown>;
-  AppointmentModel: Model<unknown>;
+  UserModel: Model<any>;
+  LeadModel: Model<any>;
+  OrderModel: Model<any>;
+  ReviewAssignmentModel: Model<any>;
+  SupportTicketModel: Model<any>;
+  AppointmentModel: Model<any>;
 }
 
 export function bootstrapStaffWorkload(

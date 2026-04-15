@@ -1,4 +1,4 @@
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import * as crypto from 'crypto';
 import {
   uploadToS3,
@@ -17,7 +17,7 @@ import type { AuditLogDI } from '@nugen/audit-log';
 // ─── Service Interface ─────────────────────────────────────────────────────
 
 export interface DocumentServiceDeps {
-  OrderModel: Model<Document>;
+  OrderModel: Model<any>;
   auditLog: AuditLogDI;
 }
 

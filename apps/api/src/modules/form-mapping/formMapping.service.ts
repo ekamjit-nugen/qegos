@@ -26,7 +26,7 @@ import { validateAuthoredSchema } from './formMapping.schema';
 export interface FormMappingServiceDeps {
   FormMappingModel: Model<IFormMappingDocument>;
   FormMappingVersionModel: Model<IFormMappingVersionDocument>;
-  SalesModel?: Model<Record<string, unknown>>;
+  SalesModel?: Model<any>;
   connection: Connection;
 }
 

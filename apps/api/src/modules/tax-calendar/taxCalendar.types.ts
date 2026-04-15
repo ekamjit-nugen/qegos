@@ -105,8 +105,8 @@ export const FEDERAL_HOLIDAYS_FIXED: Array<{ month: number; day: number; name: s
 export interface TaxCalendarRouteDeps {
   TaxDeadlineModel: import('mongoose').Model<ITaxDeadlineDocument>;
   DeadlineReminderModel: import('mongoose').Model<IDeadlineReminderDocument>;
-  OrderModel: import('mongoose').Model<Document>;
-  UserModel: import('mongoose').Model<Document>;
+  OrderModel: import('mongoose').Model<any>;
+  UserModel: import('mongoose').Model<any>;
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
 }

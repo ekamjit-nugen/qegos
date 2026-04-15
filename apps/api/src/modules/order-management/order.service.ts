@@ -17,7 +17,7 @@ export interface OrderServiceDeps {
   OrderModel: Model<IOrderDocument2>;
   SalesModel: Model<ISalesDocument>;
   ReviewAssignmentModel?: Model<IReviewAssignmentDocument>;
-  UserModel?: Model<Record<string, unknown>>;
+  UserModel?: Model<any>;
   CounterModel?: Model<ICounterDocument>;
 }
 

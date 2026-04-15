@@ -5,8 +5,8 @@ import { DEFAULT_REVIEW_CHECKLIST } from './review.types';
 
 export interface ReviewServiceDeps {
   ReviewAssignmentModel: Model<IReviewAssignmentDocument>;
-  OrderModel: Model<Record<string, unknown>>;
-  UserModel: Model<Record<string, unknown>>;
+  OrderModel: Model<any>;
+  UserModel: Model<any>;
   /**
    * Fix for B-3.8, T-3.12: Optional callback to transition order status
    * through the order service's validated transitionStatus path.

@@ -50,7 +50,7 @@ interface AuthenticatedRequest extends Request {
 export interface FormMappingRouteDeps {
   FormMappingModel: Model<IFormMappingDocument>;
   FormMappingVersionModel: Model<IFormMappingVersionDocument>;
-  SalesModel?: Model<Record<string, unknown>>;
+  SalesModel?: Model<any>;
   connection: import('mongoose').Connection;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;

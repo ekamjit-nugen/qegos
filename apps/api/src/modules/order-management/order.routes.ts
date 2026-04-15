@@ -42,9 +42,9 @@ interface AuthenticatedRequest extends Request {
 export interface OrderRouteDeps {
   OrderModel: Model<IOrderDocument2>;
   SalesModel: Model<ISalesDocument>;
-  ReviewAssignmentModel?: Model<Record<string, unknown>>;
+  ReviewAssignmentModel?: Model<any>;
   CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
-  UserModel?: Model<Record<string, unknown>>;
+  UserModel?: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
 }

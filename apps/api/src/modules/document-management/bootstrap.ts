@@ -10,8 +10,8 @@ import type { AppContext, BootstrapResult } from '../../bootstrap/context';
 import { createDocumentRoutes, createZohoWebhookRoute } from './document.routes';
 
 export interface DocumentManagementDeps {
-  OrderModel: Model<unknown>;
-  UserModel: Model<unknown>;
+  OrderModel: Model<any>;
+  UserModel: Model<any>;
   zohoSignConfig: {
     clientId: string;
     clientSecret: string;

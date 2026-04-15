@@ -1,4 +1,4 @@
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { RequestHandler } from 'express';
 import type { CheckPermissionFn } from '@nugen/rbac';
 
@@ -99,12 +99,12 @@ export interface AssignmentResult {
 // ─── Route Dependencies ─────────────────────────────────────────────────────
 
 export interface WorkloadRouteDeps {
-  UserModel: Model<Document>;
-  LeadModel: Model<Document>;
-  OrderModel: Model<Document>;
-  ReviewAssignmentModel: Model<Document>;
-  SupportTicketModel: Model<Document>;
-  AppointmentModel: Model<Document>;
+  UserModel: Model<any>;
+  LeadModel: Model<any>;
+  OrderModel: Model<any>;
+  ReviewAssignmentModel: Model<any>;
+  SupportTicketModel: Model<any>;
+  AppointmentModel: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
   config?: WorkloadConfig;

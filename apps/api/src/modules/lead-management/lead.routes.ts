@@ -56,8 +56,8 @@ export interface LeadRouteDeps {
   LeadReminderModel: Model<ILeadReminderDocument>;
   connection: Connection;
   CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
-  UserModel?: Model<Record<string, unknown>>;
-  OrderModel?: Model<Record<string, unknown>>;
+  UserModel?: Model<any>;
+  OrderModel?: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
 }

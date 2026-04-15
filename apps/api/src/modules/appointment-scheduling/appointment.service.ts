@@ -1,4 +1,4 @@
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type {
   IAppointmentDocument,
   IStaffAvailabilityDocument,
@@ -12,8 +12,8 @@ import { ACTIVE_STATUSES, STATUS_TRANSITIONS, TERMINAL_STATUSES, timesOverlap, t
 interface AppointmentServiceDeps {
   AppointmentModel: Model<IAppointmentDocument>;
   StaffAvailabilityModel: Model<IStaffAvailabilityDocument>;
-  OrderModel: Model<Document>;
-  UserModel: Model<Document>;
+  OrderModel: Model<any>;
+  UserModel: Model<any>;
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;
   /** Optional: provide a function to read platform settings for slot duration */
   getSetting?: (key: string) => Promise<unknown>;

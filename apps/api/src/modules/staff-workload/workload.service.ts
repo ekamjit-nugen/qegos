@@ -1,4 +1,4 @@
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type {
   WorkloadConfig,
   WorkloadWeights,
@@ -14,12 +14,12 @@ import {
 } from './workload.types';
 
 interface WorkloadServiceDeps {
-  UserModel: Model<Document>;
-  LeadModel: Model<Document>;
-  OrderModel: Model<Document>;
-  ReviewAssignmentModel: Model<Document>;
-  SupportTicketModel: Model<Document>;
-  AppointmentModel: Model<Document>;
+  UserModel: Model<any>;
+  LeadModel: Model<any>;
+  OrderModel: Model<any>;
+  ReviewAssignmentModel: Model<any>;
+  SupportTicketModel: Model<any>;
+  AppointmentModel: Model<any>;
 }
 
 export interface WorkloadServiceResult {

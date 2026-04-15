@@ -21,8 +21,8 @@ export interface LeadServiceDeps {
   LeadReminderModel: Model<ILeadReminderDocument>;
   connection: Connection;
   CounterModel?: Model<ICounterDocument>;
-  UserModel?: Model<Record<string, unknown>>;
-  OrderModel?: Model<Record<string, unknown>>;
+  UserModel?: Model<any>;
+  OrderModel?: Model<any>;
 }
 
 export interface LeadServiceResult {

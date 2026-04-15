@@ -106,8 +106,8 @@ export interface CalendarDayEntry {
 export interface AppointmentRouteDeps {
   AppointmentModel: import('mongoose').Model<IAppointmentDocument>;
   StaffAvailabilityModel: import('mongoose').Model<IStaffAvailabilityDocument>;
-  OrderModel: import('mongoose').Model<Document>;
-  UserModel: import('mongoose').Model<Document>;
+  OrderModel: import('mongoose').Model<any>;
+  UserModel: import('mongoose').Model<any>;
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;

@@ -38,8 +38,8 @@ interface AuthenticatedRequest extends Request {
 
 export interface ReviewRouteDeps {
   ReviewAssignmentModel: Model<IReviewAssignmentDocument>;
-  OrderModel: Model<Record<string, unknown>>;
-  UserModel: Model<Record<string, unknown>>;
+  OrderModel: Model<any>;
+  UserModel: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
 }
