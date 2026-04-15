@@ -5,12 +5,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Layout, Menu, Typography, Button, Avatar, Dropdown, theme } from 'antd';
 import {
   LogoutOutlined,
+  LockOutlined,
   UserOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { menuItems } from './menuConfig';
+import { menuItems, filterMenuByUserType, type AdminMenuItem } from './menuConfig';
 import { useAuth } from '@/lib/auth/useAuth';
 import { ProtectedRoute } from '@/lib/auth/ProtectedRoute';
 import { fullName } from '@/lib/utils/format';
@@ -27,7 +28,7 @@ function getInitials(firstName?: string, lastName?: string): string {
 
 // Convert menuConfig format to Ant Design Menu items
 function buildMenuItems(
-  items: typeof menuItems,
+  items: AdminMenuItem[],
   onNavigate: (path: string) => void,
 ): MenuProps['items'] {
   return items.map((item, idx) => {
@@ -53,10 +54,10 @@ function buildMenuItems(
   });
 }
 
-function getSelectedKey(pathname: string): string[] {
+function getSelectedKey(pathname: string, items: AdminMenuItem[]): string[] {
   // Find matching path from flat list of all menu items
   const allPaths: string[] = [];
-  for (const item of menuItems) {
+  for (const item of items) {
     if (item.path) allPaths.push(item.path);
     if (item.children) {
       for (const child of item.children) {
@@ -71,9 +72,9 @@ function getSelectedKey(pathname: string): string[] {
   return match ? [match] : ['/'];
 }
 
-function getOpenKeys(): string[] {
+function getOpenKeys(items: AdminMenuItem[]): string[] {
   // Open all sub-menus by default
-  return menuItems
+  return items
     .filter((item) => item.children && item.children.length > 0)
     .map((_, idx) => `group-${idx}`);
 }
@@ -94,9 +95,10 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
     router.push(path);
   }, [router]);
 
-  const antMenuItems = buildMenuItems(menuItems, handleNavigate);
-  const selectedKeys = getSelectedKey(pathname);
-  const [openKeys, setOpenKeys] = useState<string[]>(getOpenKeys());
+  const visibleMenuItems = filterMenuByUserType(menuItems, user?.userType);
+  const antMenuItems = buildMenuItems(visibleMenuItems, handleNavigate);
+  const selectedKeys = getSelectedKey(pathname, visibleMenuItems);
+  const [openKeys, setOpenKeys] = useState<string[]>(getOpenKeys(visibleMenuItems));
 
   const userDropdownItems: MenuProps['items'] = [
     {
@@ -108,6 +110,12 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
       key: 'settings',
       icon: <SettingOutlined />,
       label: 'Settings',
+    },
+    {
+      key: 'change-password',
+      icon: <LockOutlined />,
+      label: 'Change Password',
+      onClick: () => { router.push('/change-password'); },
     },
     { type: 'divider' },
     {

@@ -47,6 +47,13 @@ export default function MoreScreen(): React.ReactNode {
           left={(props) => <List.Icon {...props} icon="account-outline" />}
           onPress={() => router.push('/profile')}
         />
+        <Divider />
+        <List.Item
+          title="Change Password"
+          description="Update your account password"
+          left={(props) => <List.Icon {...props} icon="lock-outline" />}
+          onPress={() => router.push('/change-password' as never)}
+        />
       </List.Section>
 
       <List.Section>

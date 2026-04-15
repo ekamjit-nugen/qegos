@@ -2,6 +2,7 @@
 
 import { useCallback, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, Tabs, Form, Input, Button, Typography, App, Table, Tag } from 'antd';
 import type { FormInstance } from 'antd';
 import { MobileOutlined, MailOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
@@ -68,6 +69,11 @@ function EmailLoginTab({ form }: { form: FormInstance<EmailFormValues> }): React
           Sign In
         </Button>
       </Form.Item>
+      <div style={{ textAlign: 'center' }}>
+        <Link href="/forgot-password">
+          <Button type="link">Forgot password?</Button>
+        </Link>
+      </div>
     </Form>
   );
 }

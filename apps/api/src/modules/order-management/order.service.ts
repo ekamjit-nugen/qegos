@@ -81,7 +81,9 @@ export function createOrderService(deps: OrderServiceDeps): OrderServiceResult {
     const order = await OrderModel.create({
       ...data,
       orderNumber,
-      userId,
+      // Staff creating on behalf of client may pass an explicit userId in the body;
+      // fall back to the actor's userId for self-serve flows.
+      userId: data.userId ?? userId,
       lineItems,
       totalAmount,
       discountPercent,

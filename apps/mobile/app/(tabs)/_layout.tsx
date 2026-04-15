@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -19,6 +20,8 @@ function TabIcon({
 
 export default function TabLayout(): React.ReactNode {
   const theme = useTheme();
+  const notifUnread = useUnreadNotificationCount();
+  const moreBadge = notifUnread.data?.data?.count ?? 0;
 
   return (
     <Tabs
@@ -76,6 +79,7 @@ export default function TabLayout(): React.ReactNode {
         name="more"
         options={{
           title: 'More',
+          tabBarBadge: moreBadge > 0 ? moreBadge : undefined,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <TabIcon name="menu" color={color} size={size} />
           ),

@@ -27,11 +27,23 @@ export default function TaxSummaryScreen(): React.ReactNode {
   const { data, isLoading, isError } = useTaxSummaries();
 
   const summaries = data?.data ?? [];
+  // Sort by financial year DESC so [0] is current
+  const sorted = [...summaries].sort((a, b) => b.financialYear.localeCompare(a.financialYear));
+  const current = sorted[0];
+  const previous = sorted[1];
 
   function formatCurrency(cents: number): string {
     const abs = Math.abs(cents);
     const formatted = `$${(abs / 100).toFixed(2)}`;
     return cents < 0 ? `-${formatted}` : formatted;
+  }
+
+  function deltaChip(curr: number, prev: number | undefined): string {
+    if (prev === undefined || prev === 0) return '';
+    const delta = curr - prev;
+    const pct = (delta / Math.abs(prev)) * 100;
+    const sign = delta >= 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}%`;
   }
 
   function renderSummary({
@@ -123,10 +135,52 @@ export default function TaxSummaryScreen(): React.ReactNode {
       </Appbar.Header>
 
       <FlatList
-        data={summaries}
+        data={sorted}
         keyExtractor={(item: TaxSummary) => item._id}
         renderItem={renderSummary}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          current && previous ? (
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text variant="titleMedium" style={styles.fy}>
+                  Year over Year
+                </Text>
+                <Text variant="bodySmall" style={styles.dimText}>
+                  FY {current.financialYear} vs FY {previous.financialYear}
+                </Text>
+                <Divider style={styles.divider} />
+                <View style={styles.row}>
+                  <Text variant="bodyMedium">Income</Text>
+                  <Text variant="bodyMedium">
+                    {formatCurrency(current.totalIncome)}{' '}
+                    <Chip compact textStyle={styles.chipText} style={{ backgroundColor: current.totalIncome >= previous.totalIncome ? '#4CAF50' : '#F44336' }}>
+                      {deltaChip(current.totalIncome, previous.totalIncome)}
+                    </Chip>
+                  </Text>
+                </View>
+                <View style={styles.row}>
+                  <Text variant="bodyMedium">Deductions</Text>
+                  <Text variant="bodyMedium">
+                    {formatCurrency(current.totalDeductions)}{' '}
+                    <Chip compact textStyle={styles.chipText} style={{ backgroundColor: '#2196F3' }}>
+                      {deltaChip(current.totalDeductions, previous.totalDeductions)}
+                    </Chip>
+                  </Text>
+                </View>
+                <View style={styles.row}>
+                  <Text variant="bodyMedium">Refund/Owing</Text>
+                  <Text variant="bodyMedium">
+                    {formatCurrency(current.refundOrOwing)}{' '}
+                    <Chip compact textStyle={styles.chipText} style={{ backgroundColor: current.refundOrOwing >= previous.refundOrOwing ? '#4CAF50' : '#F44336' }}>
+                      {deltaChip(current.refundOrOwing, previous.refundOrOwing)}
+                    </Chip>
+                  </Text>
+                </View>
+              </Card.Content>
+            </Card>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.center}>
             <Text variant="bodyLarge">No tax summaries available</Text>

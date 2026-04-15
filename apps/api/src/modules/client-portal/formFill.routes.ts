@@ -4,7 +4,8 @@
  * These routes allow authenticated clients to:
  * 1. Browse available form mappings (published defaults)
  * 2. Fetch a specific form schema for rendering
- * 3. Submit a filled form → creates an Order
+ * 3. Save / resume form drafts (auto-save on each step)
+ * 4. Submit a filled form → creates an Order
  */
 
 import { Router, type Request, type Response } from 'express';
@@ -26,6 +27,7 @@ import { OrderStatus } from '../order-management/order.types';
 import type { ICounterDocument } from '../../database/counter.model';
 import type { PromoCodeServiceResult } from '../promo-code/promoCode.service';
 import type { CreditServiceResult } from '../credit/credit.service';
+import type { IFormDraftDocument } from './formDraft.model';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,7 @@ export interface FormFillRouteDeps {
   OrderModel: Model<IOrderDocument2>;
   SalesModel: Model<ISalesDocument>;
   CounterModel: Model<ICounterDocument>;
+  FormDraftModel: Model<IFormDraftDocument>;
   authenticate: () => import('express').RequestHandler;
   promoCodeService?: PromoCodeServiceResult;
   creditService?: CreditServiceResult;
@@ -61,12 +64,28 @@ const submitFormValidation = [
   body('answers').isObject().withMessage('Form answers are required'),
   body('promoCode').optional().isString().trim(),
   body('useCredits').optional().isBoolean(),
+  body('draftId').optional().isMongoId().withMessage('Valid draft ID required'),
 ];
 
 const validatePromoValidation = [
   body('code').isString().trim().notEmpty().withMessage('Promo code is required'),
   body('orderAmount').isInt({ min: 0 }).withMessage('Order amount must be non-negative integer (cents)'),
   body('salesItemId').optional().isMongoId(),
+];
+
+const saveDraftValidation = [
+  body('mappingId').isMongoId().withMessage('Valid mapping ID is required'),
+  body('versionNumber').isInt({ min: 1 }).withMessage('Version number is required'),
+  body('financialYear')
+    .isString()
+    .matches(/^\d{4}-\d{4}$/)
+    .withMessage('Financial year must be YYYY-YYYY format'),
+  body('currentStep').isInt({ min: 0, max: 10 }).withMessage('Step must be 0-10'),
+  body('answers').optional().isObject(),
+  body('personalDetails').optional().isObject(),
+  body('serviceTitle').isString().trim().notEmpty(),
+  body('servicePrice').isInt({ min: 0 }),
+  body('formTitle').isString().trim().notEmpty(),
 ];
 
 // ─── Route Factory ─────────────────────────────────────────────────────────
@@ -79,6 +98,7 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
     OrderModel,
     SalesModel,
     CounterModel,
+    FormDraftModel,
     promoCodeService,
     creditService,
   } = deps;
@@ -88,6 +108,10 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
     ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
     : deps.authenticate;
   router.use(authMiddleware);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FORM MAPPINGS (available for client)
+  // ══════════════════════════════════════════════════════════════════════════
 
   // ── GET /form-mappings/available ──────────────────────────────────────
   // List published default form mappings clients can fill
@@ -209,8 +233,199 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
     },
   );
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // DRAFT MANAGEMENT — save progress, resume later
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── GET /form-fill/drafts — list user's drafts ────────────────────────
+
+  router.get('/form-fill/drafts', async (req: Request, res: Response): Promise<void> => {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.userId ?? authReq.user?._id;
+    if (!userId) {
+      res.status(401).json({ status: 401, message: 'Authentication required' });
+      return;
+    }
+
+    try {
+      const drafts = await FormDraftModel.find({
+        userId,
+        isDeleted: false,
+      })
+        .sort({ updatedAt: -1 })
+        .lean();
+
+      res.status(200).json({
+        status: 200,
+        data: {
+          drafts: drafts.map((d) => ({
+            _id: String(d._id),
+            mappingId: String(d.mappingId),
+            versionNumber: d.versionNumber,
+            financialYear: d.financialYear,
+            currentStep: d.currentStep,
+            serviceTitle: d.serviceTitle,
+            servicePrice: d.servicePrice,
+            formTitle: d.formTitle,
+            answers: d.answers,
+            personalDetails: d.personalDetails,
+            updatedAt: d.updatedAt,
+            createdAt: d.createdAt,
+          })),
+        },
+      });
+    } catch (err) {
+      const error = err as Error & { statusCode?: number };
+      res.status(error.statusCode ?? 500).json({
+        status: error.statusCode ?? 500,
+        message: error.message,
+      });
+    }
+  });
+
+  // ── PUT /form-fill/drafts — upsert a draft (save/auto-save) ──────────
+
+  router.put(
+    '/form-fill/drafts',
+    ...saveDraftValidation,
+    async (req: Request, res: Response): Promise<void> => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(422).json({ status: 422, errors: errors.array() });
+        return;
+      }
+
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.userId ?? authReq.user?._id;
+      if (!userId) {
+        res.status(401).json({ status: 401, message: 'Authentication required' });
+        return;
+      }
+
+      try {
+        const {
+          mappingId,
+          versionNumber,
+          financialYear,
+          currentStep,
+          answers,
+          personalDetails,
+          serviceTitle,
+          servicePrice,
+          formTitle,
+        } = req.body as {
+          mappingId: string;
+          versionNumber: number;
+          financialYear: string;
+          currentStep: number;
+          answers?: Record<string, unknown>;
+          personalDetails?: Record<string, unknown>;
+          serviceTitle: string;
+          servicePrice: number;
+          formTitle: string;
+        };
+
+        const draft = await FormDraftModel.findOneAndUpdate(
+          {
+            userId,
+            mappingId,
+            financialYear,
+            isDeleted: false,
+          },
+          {
+            $set: {
+              versionNumber,
+              currentStep,
+              answers: answers ?? {},
+              personalDetails: personalDetails ?? {},
+              serviceTitle,
+              servicePrice,
+              formTitle,
+            },
+            $setOnInsert: {
+              userId,
+              mappingId,
+              financialYear,
+              isDeleted: false,
+            },
+          },
+          {
+            upsert: true,
+            new: true,
+            lean: true,
+          },
+        );
+
+        res.status(200).json({
+          status: 200,
+          data: {
+            draft: {
+              _id: String(draft._id),
+              mappingId: String(draft.mappingId),
+              versionNumber: draft.versionNumber,
+              financialYear: draft.financialYear,
+              currentStep: draft.currentStep,
+              updatedAt: draft.updatedAt,
+            },
+          },
+        });
+      } catch (err) {
+        const error = err as Error & { statusCode?: number };
+        res.status(error.statusCode ?? 500).json({
+          status: error.statusCode ?? 500,
+          message: error.message,
+        });
+      }
+    },
+  );
+
+  // ── DELETE /form-fill/drafts/:id — delete a draft ─────────────────────
+
+  router.delete(
+    '/form-fill/drafts/:id',
+    param('id').isMongoId(),
+    async (req: Request, res: Response): Promise<void> => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(422).json({ status: 422, errors: errors.array() });
+        return;
+      }
+
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.userId ?? authReq.user?._id;
+      if (!userId) {
+        res.status(401).json({ status: 401, message: 'Authentication required' });
+        return;
+      }
+
+      try {
+        const result = await FormDraftModel.findOneAndUpdate(
+          { _id: req.params.id, userId, isDeleted: false },
+          { $set: { isDeleted: true } },
+        );
+
+        if (!result) {
+          res.status(404).json({ status: 404, message: 'Draft not found' });
+          return;
+        }
+
+        res.status(200).json({ status: 200, message: 'Draft deleted' });
+      } catch (err) {
+        const error = err as Error & { statusCode?: number };
+        res.status(error.statusCode ?? 500).json({
+          status: error.statusCode ?? 500,
+          message: error.message,
+        });
+      }
+    },
+  );
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FORM SUBMISSION
+  // ══════════════════════════════════════════════════════════════════════════
+
   // ── POST /form-fill/submit ────────────────────────────────────────────
-  // Submit filled form → creates an Order
+  // Submit filled form → creates an Order, deletes draft if draftId provided
 
   router.post(
     '/form-fill/submit',
@@ -232,7 +447,7 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
       try {
         const {
           mappingId, versionNumber, financialYear, personalDetails, answers,
-          promoCode: promoCodeInput, useCredits,
+          promoCode: promoCodeInput, useCredits, draftId,
         } = req.body as {
           mappingId: string;
           versionNumber: number;
@@ -247,6 +462,7 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
           answers: Record<string, unknown>;
           promoCode?: string;
           useCredits?: boolean;
+          draftId?: string;
         };
 
         // 1. Validate form mapping exists and is published
@@ -363,6 +579,16 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
         // 9. Deduct credits if applied
         if (creditApplied > 0 && creditService) {
           await creditService.useCredit(userId, creditApplied, String(order._id));
+        }
+
+        // 10. Clean up the draft (soft-delete) if draftId provided
+        if (draftId) {
+          await FormDraftModel.findOneAndUpdate(
+            { _id: draftId, userId, isDeleted: false },
+            { $set: { isDeleted: true } },
+          ).catch(() => {
+            // non-critical: draft cleanup failure is acceptable
+          });
         }
 
         res.status(201).json({
