@@ -517,7 +517,7 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       }
 
       // Fix for T-3.11: Use injected UserModel instead of connection.model()
-      const InjectedUserModel = deps.UserModel ?? connection.model('User');
+      const InjectedUserModel = (deps.UserModel ?? connection.model('User')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
       const user = await InjectedUserModel.create(
         [
           {
@@ -540,7 +540,7 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       const userId = user[0]._id.toString();
 
       // Fix for T-3.11, B-3.13: Use injected OrderModel and atomic counter
-      const InjectedOrderModel = deps.OrderModel ?? connection.model('Order');
+      const InjectedOrderModel = (deps.OrderModel ?? connection.model('Order')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
       if (!CounterModel) {
         throw new Error('CounterModel is required for atomic order number generation');
       }
@@ -635,12 +635,12 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       }
 
       // Fix for T-3.11: Use injected UserModel
-      const InjectedUserModel = deps.UserModel ?? connection.model('User');
+      const InjectedUserModel = (deps.UserModel ?? connection.model('User')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
       const user = await InjectedUserModel.findById(userId).session(session);
       if (!user) throw AppError.notFound('User');
 
       // Fix for T-3.11, B-3.13: Use injected OrderModel and atomic counter
-      const InjectedOrderModel = deps.OrderModel ?? connection.model('Order');
+      const InjectedOrderModel = (deps.OrderModel ?? connection.model('Order')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
       if (!CounterModel) {
         throw new Error('CounterModel is required for atomic order number generation');
       }
@@ -753,8 +753,8 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       // Apply field selections from secondary to primary
       for (const [field, selection] of Object.entries(fieldSelections)) {
         if (selection === 'secondary') {
-          const value = (secondary as Record<string, unknown>)[field];
-          (primary as Record<string, unknown>)[field] = value;
+          const value = (secondary as unknown as Record<string, unknown>)[field];
+          (primary as unknown as Record<string, unknown>)[field] = value;
         }
       }
 

@@ -181,6 +181,22 @@ async function bootstrap(): Promise<void> {
   // Audit log
   const { AuditLogModel } = auditLog.init(connection);
 
+  // DI adapter: bridges the strict service signatures to the loose
+  // `AuditLogDI` shape that route factories consume. Lets us pass a single
+  // canonical value instead of re-casting `auditLog.log as never` at every
+  // DI call-site.
+  const auditLogDI: auditLog.AuditLogDI = {
+    log: async (entry): Promise<void> => {
+      await auditLog.log(entry as unknown as auditLog.AuditEntry);
+    },
+    logFromRequest: async (req, entry): Promise<void> => {
+      await auditLog.logFromRequest(
+        req,
+        entry as unknown as Parameters<typeof auditLog.logFromRequest>[1],
+      );
+    },
+  };
+
   // Tax rule config model (Phase 0 — legacy)
   const TaxRuleConfigModel = createTaxRuleConfigModel(connection);
 
@@ -522,10 +538,7 @@ async function bootstrap(): Promise<void> {
     providers,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
   });
 
   const billingDisputeRouter = createBillingDisputeRoutes({
@@ -612,10 +625,7 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
     providers: broadcastProviders,
     redisClient,
     config: {
@@ -632,10 +642,7 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
     s3Service: {
       upload: fileStorage.uploadToS3,
       delete: fileStorage.deleteFromS3,
@@ -736,10 +743,7 @@ async function bootstrap(): Promise<void> {
     CannedResponseModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
     config: { encryptionKey: config.ENCRYPTION_KEY },
   });
 
@@ -748,10 +752,7 @@ async function bootstrap(): Promise<void> {
     CounterModel: CounterModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
   });
 
   const whatsappRouter = whatsappConnector.createWhatsAppRoutes({
@@ -759,10 +760,7 @@ async function bootstrap(): Promise<void> {
     MessageModel: WhatsAppMessageModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
     config: {
       accessToken: config.WHATSAPP_API_TOKEN,
       phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
@@ -788,10 +786,7 @@ async function bootstrap(): Promise<void> {
     redisClient,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
     config: xeroConfig,
   });
 
@@ -847,10 +842,7 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI,
     providers: notificationProviders,
     redisClient,
     config: {
@@ -895,10 +887,7 @@ async function bootstrap(): Promise<void> {
     redisClient,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: {
-      log: auditLog.log,
-      logFromRequest: auditLog.logFromRequest,
-    },
+    auditLog: auditLogDI as unknown as Record<string, unknown>,
     config: analyticsConfig,
     exportQueue: analyticsExportQueue,
   });
@@ -918,7 +907,7 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    notificationSend: notificationEngine.send as (params: Record<string, unknown>) => Promise<unknown>,
+    notificationSend: notificationEngine.send as unknown as (params: Record<string, unknown>) => Promise<unknown>,
     getSetting: settingsService.getSetting,
   });
 
@@ -947,7 +936,7 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: { log: auditLog.log },
+    auditLog: auditLogDI,
     zohoSignConfig,
   });
   const zohoWebhookRouter = createZohoWebhookRoute({
@@ -955,7 +944,7 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel as never,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    auditLog: { log: auditLog.log },
+    auditLog: auditLogDI,
     zohoSignConfig,
   });
 
@@ -1038,7 +1027,7 @@ async function bootstrap(): Promise<void> {
       LeadModel, LeadActivityModel, LeadReminderModel, connection, CounterModel,
       UserModel: UserModel as never, OrderModel: OrderModel as never,
     }).calculateScore,
-    smartAssignBulk: getWorkloadService()?.smartAssignBulk,
+    smartAssignBulk: getWorkloadService()?.smartAssignBulk as unknown as ((count: number, request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] }) => Promise<{ staffId: string }[]>) | undefined,
   });
 
   // ─── BullMQ Retry Hardening ──────────────────────────────────────────────
@@ -1503,6 +1492,7 @@ async function bootstrap(): Promise<void> {
             redisClient,
             authenticate: auth.authenticate,
             checkPermission: rbac.check,
+            auditLog: auditLogDI as unknown as Record<string, unknown>,
             config: analyticsConfig,
           });
           break;

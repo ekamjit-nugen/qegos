@@ -49,7 +49,7 @@ export interface AnalyticsRouteDeps {
 
   // Middleware
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
 
   // Audit logging (shape varies per product)
   auditLog: Record<string, unknown>;

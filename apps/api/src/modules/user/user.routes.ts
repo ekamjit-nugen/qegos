@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
-import { validate, objectId, pagination, search, email, phone, requiredString } from '@nugen/validator';
+import { validate, objectId, pagination, search, email, requiredString } from '@nugen/validator';
 import type { check as CheckFn } from '@nugen/rbac';
 import type { authenticate as AuthFn, AuthenticatedRequest } from '@nugen/auth';
 import * as _auditLog from '@nugen/audit-log';

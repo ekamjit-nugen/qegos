@@ -98,6 +98,6 @@ export interface ReferralRouteDeps {
   LeadModel: import('mongoose').Model<Document>;
   CounterModel: import('mongoose').Model<Document>;
   authenticate: () => import('express').RequestHandler;
-  checkPermission: (resource: string, action: string) => import('express').RequestHandler;
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
   creditService?: import('../credit/credit.service').CreditServiceResult;
 }

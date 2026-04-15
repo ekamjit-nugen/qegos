@@ -356,6 +356,10 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
           },
         );
 
+        if (!draft) {
+          res.status(500).json({ status: 500, message: 'Failed to save draft' });
+          return;
+        }
         res.status(200).json({
           status: 200,
           data: {

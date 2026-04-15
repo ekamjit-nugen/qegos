@@ -3,6 +3,7 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as auditLog from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import type { IBillingDisputeDocument, DisputeStatus } from './billingDispute.types';
 import {
   initBillingService,
@@ -31,7 +32,7 @@ interface AuthenticatedRequest extends Request {
 export interface BillingDisputeRouteDeps {
   BillingDisputeModel: Model<IBillingDisputeDocument>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Router {

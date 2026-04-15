@@ -1,4 +1,4 @@
-import type { Model, FilterQuery } from 'mongoose';
+import type { Model } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
 import type { IReviewAssignmentDocument, IChangeRequest } from './review.types';
 import { DEFAULT_REVIEW_CHECKLIST } from './review.types';

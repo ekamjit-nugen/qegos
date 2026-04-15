@@ -1,5 +1,18 @@
 import type { Document, Types } from 'mongoose';
-import type { Request } from 'express';
+import type { Request, RequestHandler } from 'express';
+
+/**
+ * Canonical signature for the `checkPermission` middleware factory.
+ *
+ * Exported from `@nugen/rbac` so every consuming route's `*RouteDeps`
+ * interface can reference the same shape instead of duplicating
+ * `(resource: string, action: string) => RequestHandler` inline
+ * (which loses the `PermissionAction` union narrowing).
+ */
+export type CheckPermissionFn = (
+  resource: string,
+  action: PermissionAction,
+) => RequestHandler;
 
 export type PermissionAction =
   | 'create'
@@ -8,7 +21,9 @@ export type PermissionAction =
   | 'delete'
   | 'assign'
   | 'export'
-  | 'bulk_action';
+  | 'bulk_action'
+  | 'manage'
+  | 'admin';
 
 export type PermissionScope = 'all' | 'assigned' | 'own' | 'none';
 

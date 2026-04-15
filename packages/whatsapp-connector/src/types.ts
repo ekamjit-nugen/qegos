@@ -100,11 +100,8 @@ export interface WhatsAppRouteDeps {
   ConfigModel: import('mongoose').Model<IWhatsAppConfigDocument>;
   MessageModel: import('mongoose').Model<IWhatsAppMessageDocument>;
   authenticate: import('express').RequestHandler;
-  checkPermission: (...args: unknown[]) => import('express').RequestHandler;
-  auditLog: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest: import('express').RequestHandler;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog: import('@nugen/audit-log').AuditLogDI;
   config: WhatsAppConnectorConfig;
   /** Broadcast DND check function (WHA-INV-07) */
   checkDnd?: (contact: string, channel: string) => Promise<boolean>;

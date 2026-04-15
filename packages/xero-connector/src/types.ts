@@ -123,10 +123,7 @@ export interface XeroRouteDeps {
   PaymentModel: import('mongoose').Model<Document>;
   redisClient: import('ioredis').Redis;
   authenticate: () => import('express').RequestHandler;
-  checkPermission: (resource: string, action: string) => import('express').RequestHandler;
-  auditLog: {
-    log: (...args: unknown[]) => Promise<void>;
-    logFromRequest: (req: unknown, data: Record<string, unknown>) => Promise<void>;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog: import('@nugen/audit-log').AuditLogDI;
   config: XeroConnectorConfig;
 }

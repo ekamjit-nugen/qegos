@@ -162,8 +162,6 @@ export function enableQueryProfiler(
 
   // Hook into Mongoose debug mode for query timing
   connection.set('debug', (collectionName: string, methodName: string, ...methodArgs: unknown[]) => {
-    const start = Date.now();
-
     // We can't intercept the actual completion, but we can log the query start.
     // For actual timing, use MongoDB profiler or Mongoose plugins.
     const filter = (methodArgs[0] as Record<string, unknown>) ?? {};
@@ -248,8 +246,8 @@ export function queryTimingPlugin(schema: import('mongoose').Schema): void {
     const start = (this as unknown as Record<string, number>)._queryStart;
     if (start && store) {
       const duration = Date.now() - start;
-      const pipeline = this.pipeline();
-      const firstMatch = pipeline.find((s: Record<string, unknown>) => '$match' in s);
+      const pipeline = this.pipeline() as unknown as Array<Record<string, unknown>>;
+      const firstMatch = pipeline.find((s) => '$match' in s);
       const docs = Array.isArray(result) ? result.length : 0;
 
       store.add({
@@ -289,6 +287,7 @@ export async function explainQuery(
     indexEfficiency: number;
   };
 }> {
+  if (!connection.db) throw new Error('No active database connection');
   const col = connection.db.collection(collection);
 
   let cursor = col.find(filter);

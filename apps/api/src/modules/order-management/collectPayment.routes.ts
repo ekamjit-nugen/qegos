@@ -12,6 +12,7 @@ import { Router, type Request, type Response, type RequestHandler } from 'expres
 import { body, param, validationResult } from 'express-validator';
 import type { Model } from 'mongoose';
 import * as _auditLog from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import {
   routePayment,
   generatePaymentNumber,
@@ -44,7 +45,7 @@ export interface CollectPaymentRouteDeps {
   GatewayConfigModel: Model<IGatewayConfigDocument>;
   providers: Map<PaymentGateway, IPaymentProvider>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
   promoCodeService?: PromoCodeServiceResult;
   creditService?: CreditServiceResult;
 }

@@ -359,11 +359,8 @@ export interface BroadcastRouteDeps {
   LeadModel: Model<Document>;
   UserModel: Model<Document>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
-  auditLog?: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest?: (req: unknown, entry: Record<string, unknown>) => Promise<void>;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog?: import('@nugen/audit-log').AuditLogDI;
   providers: Map<SingleChannel, IChannelProvider>;
   redisClient: unknown; // ioredis instance
   config: BroadcastEngineConfig;

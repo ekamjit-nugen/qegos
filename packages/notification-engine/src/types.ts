@@ -244,11 +244,8 @@ export interface NotificationRouteDeps {
   NotificationPreferenceModel: Model<INotificationPreferenceDocument>;
   UserModel: Model<Document>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
-  auditLog?: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest?: (req: unknown, entry: Record<string, unknown>) => Promise<void>;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog?: import('@nugen/audit-log').AuditLogDI;
   providers: Map<NotificationChannel, INotificationChannelProvider>;
   redisClient: unknown;
   config: NotificationEngineConfig;

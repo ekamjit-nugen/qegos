@@ -12,6 +12,7 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import { getRequestId } from '../../lib/requestContext';
 
 import type { IConsentFormDocument, CreateConsentFormInput } from './consentForm.types';
@@ -38,7 +39,7 @@ interface AuthenticatedRequest extends Request {
 export interface ConsentFormRouteDeps {
   ConsentFormModel: Model<IConsentFormDocument>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 const RESOURCE = 'consent_forms';

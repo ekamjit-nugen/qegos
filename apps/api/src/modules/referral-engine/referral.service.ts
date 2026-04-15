@@ -277,7 +277,7 @@ export async function listMyReferrals(
     ReferralModel.countDocuments({ referrerId: userId }),
   ]);
 
-  return { referrals: referrals as IReferralDocument[], total };
+  return { referrals: referrals as unknown as IReferralDocument[], total };
 }
 
 // ─── Dashboard (Admin) ─────────────────────────────────────────────────────

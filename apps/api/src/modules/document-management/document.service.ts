@@ -12,14 +12,13 @@ import {
   MAX_DOCUMENTS_PER_ORDER,
 } from './document.types';
 import * as zohoSign from './zohoSign.service';
+import type { AuditLogDI } from '@nugen/audit-log';
 
 // ─── Service Interface ─────────────────────────────────────────────────────
 
 export interface DocumentServiceDeps {
   OrderModel: Model<Document>;
-  auditLog: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-  };
+  auditLog: AuditLogDI;
 }
 
 export interface DocumentServiceResult {

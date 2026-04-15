@@ -54,7 +54,7 @@ export function createWorkloadService(
 
     const staff = await deps.UserModel.find(staffFilter)
       .select('_id firstName lastName email userType')
-      .lean() as Array<{ _id: unknown; firstName?: string; lastName?: string; email?: string; userType: number }>;
+      .lean() as unknown as Array<{ _id: unknown; firstName?: string; lastName?: string; email?: string; userType: number }>;
 
     if (staff.length === 0) return [];
 

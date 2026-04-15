@@ -1,4 +1,5 @@
 import type { Document, Types } from 'mongoose';
+import type { Request } from 'express';
 
 export type AuditAction =
   | 'create'
@@ -23,7 +24,13 @@ export type AuditAction =
   | 'reject'
   | 'execute';
 
-export type AuditSeverity = 'info' | 'warning' | 'critical';
+export type AuditSeverity =
+  | 'info'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'warning'
+  | 'critical';
 
 export type AuditActorType =
   | 'super_admin'
@@ -87,4 +94,22 @@ export interface AuditMiddlewareOptions {
   resource: string;
   getActorId?: (doc: Document) => string;
   getSeverity?: (action: string) => AuditSeverity;
+}
+
+/**
+ * Canonical DI shape for audit logging, exported so every consuming
+ * `*RouteDeps` interface can reference it instead of duplicating
+ * `{ log: (entry: Record<string, unknown>) => Promise<void> }` inline.
+ *
+ * Kept intentionally loose at the DI boundary: route handlers build
+ * entries as plain records; the real `@nugen/audit-log` service
+ * accepts strict `AuditEntry`. The consuming app bridges the two
+ * with a thin adapter at injection time (see `apps/api/src/server.ts`).
+ */
+export interface AuditLogDI {
+  log: (entry: Record<string, unknown>) => Promise<void>;
+  logFromRequest: (
+    req: Request,
+    entry: Record<string, unknown>,
+  ) => Promise<void>;
 }

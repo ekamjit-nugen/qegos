@@ -4,6 +4,7 @@ import { asyncHandler } from '@nugen/error-handler';
 import { AppError } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as auditLog from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import type { IErasureRequestDocument, IDataExportDocument } from '@nugen/data-lifecycle';
 import {
   createErasureRequest,
@@ -11,7 +12,6 @@ import {
   approveErasureRequest,
   rejectErasureRequest,
   executeErasure,
-  getErasureRequest,
   createExportRequest,
   executeExport,
   listExports,
@@ -36,7 +36,7 @@ export interface PrivacyRouteDeps {
   ErasureRequestModel: Model<IErasureRequestDocument>;
   DataExportModel: Model<IDataExportDocument>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 export function createPrivacyRoutes(deps: PrivacyRouteDeps): Router {

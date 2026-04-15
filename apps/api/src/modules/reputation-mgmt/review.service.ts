@@ -7,7 +7,6 @@ import { getNpsCategory } from './review.types';
 
 let ReviewModel: Model<IReviewDocument>;
 let OrderModel: Model<any>;
-let UserModel: Model<any>;
 
 export function initReviewService(deps: {
   ReviewModel: Model<IReviewDocument>;
@@ -16,7 +15,8 @@ export function initReviewService(deps: {
 }): void {
   ReviewModel = deps.ReviewModel;
   OrderModel = deps.OrderModel;
-  UserModel = deps.UserModel;
+  // UserModel reserved for future use
+  void deps.UserModel;
 }
 
 // ─── Request Review ─────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ export async function listReviews(
     ReviewModel.countDocuments(filter),
   ]);
 
-  return { reviews: reviews as IReviewDocument[], total };
+  return { reviews: reviews as unknown as IReviewDocument[], total };
 }
 
 // ─── Public Reviews ─────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ export async function getPublicReviews(
     ReviewModel.countDocuments(filter),
   ]);
 
-  return { reviews: reviews as IReviewDocument[], total };
+  return { reviews: reviews as unknown as IReviewDocument[], total };
 }
 
 // ─── Stats (Admin) ──────────────────────────────────────────────────────────

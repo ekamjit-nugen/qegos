@@ -109,7 +109,7 @@ export interface AppointmentRouteDeps {
   OrderModel: import('mongoose').Model<Document>;
   UserModel: import('mongoose').Model<Document>;
   authenticate: () => import('express').RequestHandler;
-  checkPermission: (resource: string, action: string) => import('express').RequestHandler;
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;
   /** Optional: provide a function to read platform settings (e.g. slot duration) */
   getSetting?: (key: string) => Promise<unknown>;

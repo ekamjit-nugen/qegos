@@ -6,7 +6,6 @@
  * Idempotent: checks for existing records before inserting.
  * Only runs in development/test environments.
  */
-import bcrypt from 'bcryptjs';
 import { loadConfig } from '../config/env';
 import { connectDatabase, getConnection, disconnectDatabase } from './connection';
 import { createUserModel } from '../modules/user/user.model';
@@ -36,10 +35,6 @@ function log(msg: string): void {
 
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
-}
-
-function _randomItem<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 // ─── Main Seed Function ────────────────────────────────────────────────────
@@ -87,14 +82,7 @@ async function seed(): Promise<void> {
   });
 
   // Support ticket models
-  const { TicketModel: SupportTicketModel } = supportTickets.init(connection, {
-    slaConfig: {
-      critical: 4 * 60,
-      high: 8 * 60,
-      medium: 24 * 60,
-      low: 48 * 60,
-    },
-  });
+  const { TicketModel: SupportTicketModel } = supportTickets.init(connection);
 
   // Notification engine models — pass minimal config for seed
   const { NotificationModel } = notificationEngine.init(

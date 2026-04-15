@@ -108,11 +108,8 @@ export interface DataLifecycleRouteDeps {
   ErasureRequestModel: Model<IErasureRequestDocument>;
   DataExportModel: Model<IDataExportDocument>;
   authenticate: import('express').RequestHandler;
-  checkPermission: (...args: unknown[]) => import('express').RequestHandler;
-  auditLog: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest: import('express').RequestHandler;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog: import('@nugen/audit-log').AuditLogDI;
   modelConfigs: Map<string, ModelFieldConfig>;
   config: DataLifecycleConfig;
 }

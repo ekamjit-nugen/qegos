@@ -67,5 +67,5 @@ export interface ReviewRouteDeps {
   OrderModel: import('mongoose').Model<Document>;
   UserModel: import('mongoose').Model<Document>;
   authenticate: () => import('express').RequestHandler;
-  checkPermission: (resource: string, action: string) => import('express').RequestHandler;
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
 }

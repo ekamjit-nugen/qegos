@@ -95,11 +95,8 @@ export interface ChatEngineRouteDeps {
   MessageModel: import('mongoose').Model<IChatMessageDocument>;
   CannedResponseModel: import('mongoose').Model<ICannedResponseDocument>;
   authenticate: import('express').RequestHandler;
-  checkPermission: (...args: unknown[]) => import('express').RequestHandler;
-  auditLog: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest: import('express').RequestHandler;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog: import('@nugen/audit-log').AuditLogDI;
   config: ChatEngineConfig;
 }
 

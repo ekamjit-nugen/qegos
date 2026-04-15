@@ -66,7 +66,7 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
               update: { $set: { assignedTo: assignments[i % assignments.length].staffId } },
             },
           }));
-          await LeadModel.bulkWrite(bulkOps);
+          await LeadModel.bulkWrite(bulkOps as never);
           return { processed: unassigned.length };
         }
       } catch {
@@ -112,7 +112,7 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
         update: { $set: { assignedTo: eligible[i % eligible.length]._id } },
       },
     }));
-    await LeadModel.bulkWrite(bulkOps);
+    await LeadModel.bulkWrite(bulkOps as never);
 
     return { processed: unassigned.length };
   }

@@ -15,7 +15,6 @@ import { seedTaxDeadlines } from './taxCalendar.seed';
 import {
   validateCreateDeadline,
   validateUpdateDeadline,
-  validateDeadlineId,
   validateListParams,
 } from './taxCalendar.validators';
 

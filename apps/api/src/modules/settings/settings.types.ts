@@ -67,5 +67,5 @@ export const DEFAULT_SETTINGS = getDefaultSettings();
 export interface SettingsRouteDeps {
   SettingModel: import('mongoose').Model<ISettingDocument>;
   authenticate: () => import('express').RequestHandler;
-  checkPermission: (resource: string, action: string) => import('express').RequestHandler;
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
 }

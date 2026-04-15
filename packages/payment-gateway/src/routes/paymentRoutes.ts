@@ -2,6 +2,8 @@ import { Router, type Request, type Response, type RequestHandler } from 'expres
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
+import type { CheckPermissionFn } from '@nugen/rbac';
+import type { AuditLogDI } from '@nugen/audit-log';
 // Fix for S-3.19: Removed @nugen/audit-log import — audit logging injected via deps
 import type {
   IPaymentDocument,
@@ -37,11 +39,9 @@ import {
 
 import type Stripe from 'stripe';
 
-/** Fix for S-3.19: Audit log interface injected from consuming app */
-export interface AuditLogDeps {
-  log: (params: Record<string, unknown>) => Promise<void>;
-  logFromRequest: (req: Request, params: Record<string, unknown>) => Promise<void>;
-}
+/** Fix for S-3.19: Audit log interface injected from consuming app.
+ * @deprecated Use `AuditLogDI` from `@nugen/audit-log`. Kept as alias for back-compat. */
+export type AuditLogDeps = AuditLogDI;
 
 export interface PaymentRouteDeps {
   PaymentModel: Model<IPaymentDocument>;
@@ -49,9 +49,9 @@ export interface PaymentRouteDeps {
   GatewayConfigModel: Model<IGatewayConfigDocument>;
   providers: Map<PaymentGateway, IPaymentProvider>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
   /** Fix for S-3.19: Injected audit logger instead of direct @nugen/audit-log import */
-  auditLog?: AuditLogDeps;
+  auditLog?: AuditLogDI;
 }
 
 /**

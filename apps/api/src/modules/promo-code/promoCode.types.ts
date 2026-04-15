@@ -64,7 +64,7 @@ export interface PromoCodeRouteDeps {
   PromoCodeModel: import('mongoose').Model<IPromoCodeDocument>;
   PromoCodeUsageModel: import('mongoose').Model<IPromoCodeUsageDocument>;
   authenticate: () => import('express').RequestHandler;
-  checkPermission: (resource: string, action: string) => import('express').RequestHandler;
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
 }
 
 // ─── Service DTOs ──────────────────────────────────────────────────────────

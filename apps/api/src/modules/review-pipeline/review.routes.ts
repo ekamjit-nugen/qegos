@@ -4,6 +4,7 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import { getRequestId } from '../../lib/requestContext';
 
 // Fix for B-3.45: Wrap audit log to catch failures instead of silent void
@@ -40,7 +41,7 @@ export interface ReviewRouteDeps {
   OrderModel: Model<Record<string, unknown>>;
   UserModel: Model<Record<string, unknown>>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 export function createReviewRoutes(deps: ReviewRouteDeps): Router {

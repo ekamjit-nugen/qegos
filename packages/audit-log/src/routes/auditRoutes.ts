@@ -1,13 +1,32 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Request, type Response, type RequestHandler } from 'express';
 import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate, pagination, dateRange } from '@nugen/validator';
 import type { IAuditLogDocument } from '../types';
 
+/**
+ * Inline subset of the canonical `CheckPermissionFn` from `@nugen/rbac`,
+ * duplicated here to avoid audit-log depending on rbac at the package
+ * level (both are Tier 1 foundation packages).
+ */
+type CheckPermissionLike = (
+  resource: string,
+  action:
+    | 'create'
+    | 'read'
+    | 'update'
+    | 'delete'
+    | 'assign'
+    | 'export'
+    | 'bulk_action'
+    | 'manage'
+    | 'admin',
+) => RequestHandler;
+
 export interface AuditRouteDeps {
   AuditLogModel: Model<IAuditLogDocument>;
-  authenticate: () => unknown;
-  checkPermission: (resource: string, action: string) => unknown;
+  authenticate: () => RequestHandler;
+  checkPermission: CheckPermissionLike;
 }
 
 export function createAuditRoutes(deps: AuditRouteDeps): Router {

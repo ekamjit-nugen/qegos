@@ -202,11 +202,8 @@ export interface FileStorageRouteDeps {
   TaxYearSummaryModel: import('mongoose').Model<ITaxYearSummaryDocument>;
   UserModel: import('mongoose').Model<Document>;
   authenticate: import('express').RequestHandler;
-  checkPermission: (...args: unknown[]) => import('express').RequestHandler;
-  auditLog: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-    logFromRequest: import('express').RequestHandler;
-  };
+  checkPermission: import('@nugen/rbac').CheckPermissionFn;
+  auditLog: import('@nugen/audit-log').AuditLogDI;
   s3Service: {
     upload: (buffer: Buffer, key: string, mimeType: string) => Promise<string>;
     delete: (key: string) => Promise<void>;

@@ -225,10 +225,13 @@ export async function ensurePerformanceIndexes(connection: Connection): Promise<
   const skipped: string[] = [];
   const errors: Array<{ index: string; error: string }> = [];
 
+  if (!connection.db) throw new Error('No active database connection');
+  const db = connection.db;
+
   for (const def of PERFORMANCE_INDEXES) {
     const indexName = def.options?.name ?? Object.keys(def.keys).join('_');
     try {
-      const collection = connection.db.collection(def.collection);
+      const collection = db.collection(def.collection);
 
       // Check if index already exists
       const existingIndexes = await collection.indexes();
@@ -264,12 +267,14 @@ export async function ensurePerformanceIndexes(connection: Connection): Promise<
 export async function listAllIndexes(connection: Connection): Promise<
   Array<{ collection: string; indexes: Array<{ name: string; keys: Record<string, unknown> }> }>
 > {
-  const collections = await connection.db.listCollections().toArray();
+  if (!connection.db) throw new Error('No active database connection');
+  const db = connection.db;
+  const collections = await db.listCollections().toArray();
   const results = [];
 
   for (const col of collections) {
     try {
-      const indexes = await connection.db.collection(col.name).indexes();
+      const indexes = await db.collection(col.name).indexes();
       results.push({
         collection: col.name,
         indexes: indexes.map((idx) => ({

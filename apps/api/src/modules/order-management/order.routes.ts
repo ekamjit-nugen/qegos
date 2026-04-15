@@ -4,6 +4,7 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import { getRequestId } from '../../lib/requestContext';
 
 // Fix for B-3.45: Wrap audit log to catch failures instead of silent void
@@ -45,7 +46,7 @@ export interface OrderRouteDeps {
   CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
   UserModel?: Model<Record<string, unknown>>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 export function createOrderRoutes(deps: OrderRouteDeps): Router {
@@ -351,7 +352,7 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
 export interface SalesRouteDeps {
   SalesModel: Model<ISalesDocument>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 export function createSalesRoutes(deps: SalesRouteDeps): Router {

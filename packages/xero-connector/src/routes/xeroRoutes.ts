@@ -89,7 +89,7 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
     OrderModel: OrderModel as never,
     PaymentModel: PaymentModel as never,
     redisClient,
-    auditLog: { log: auditLog.log },
+    auditLog,
   });
 
   // ─── WEBHOOK: POST /webhooks — Xero real-time event delivery ─────────────

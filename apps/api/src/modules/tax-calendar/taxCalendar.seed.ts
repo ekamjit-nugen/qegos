@@ -9,7 +9,7 @@ export async function seedTaxDeadlines(
   TaxDeadlineModel: Model<ITaxDeadlineDocument>,
   financialYear: string,
 ): Promise<number> {
-  const [startYear, endYear] = financialYear.split('-').map(Number);
+  const [, endYear] = financialYear.split('-').map(Number);
 
   const deadlines: Array<Partial<ITaxDeadlineDocument>> = [
     // Individual filing deadline — October 31

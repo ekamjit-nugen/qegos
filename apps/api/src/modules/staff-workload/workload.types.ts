@@ -1,5 +1,6 @@
 import type { Model, Document } from 'mongoose';
 import type { RequestHandler } from 'express';
+import type { CheckPermissionFn } from '@nugen/rbac';
 
 // ─── Scoring Weights ────────────────────────────────────────────────────────
 
@@ -105,6 +106,6 @@ export interface WorkloadRouteDeps {
   SupportTicketModel: Model<Document>;
   AppointmentModel: Model<Document>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
   config?: WorkloadConfig;
 }

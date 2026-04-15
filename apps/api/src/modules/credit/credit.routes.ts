@@ -2,13 +2,14 @@ import { Router, type Request, type Response, type RequestHandler } from 'expres
 import { param, query } from 'express-validator';
 import { validationResult } from 'express-validator';
 import type { Model } from 'mongoose';
+import type { CheckPermissionFn } from '@nugen/rbac';
 import type { ICreditTransactionDocument } from './credit.types';
 import { createCreditService } from './credit.service';
 
 interface CreditRouteDeps {
   CreditTransactionModel: Model<ICreditTransactionDocument>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 interface AuthRequest extends Request {

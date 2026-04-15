@@ -29,7 +29,7 @@ export function initCalendarService(deps: {
 // ─── Upcoming Deadlines (Client) ────────────────────────────────────────────
 
 export async function getUpcomingDeadlines(
-  userId: string,
+  _userId: string,
   userType?: string,
 ): Promise<ITaxDeadlineDocument[]> {
   const now = new Date();
@@ -80,7 +80,7 @@ export async function listDeadlines(
     TaxDeadlineModel.countDocuments(filter),
   ]);
 
-  return { deadlines: deadlines as ITaxDeadlineDocument[], total };
+  return { deadlines: deadlines as unknown as ITaxDeadlineDocument[], total };
 }
 
 // ─── Create Deadline (Admin) ────────────────────────────────────────────────

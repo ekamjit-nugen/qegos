@@ -1,5 +1,7 @@
 import type { Model, Document, Types } from 'mongoose';
 import type { Request, RequestHandler } from 'express';
+import type { CheckPermissionFn } from '@nugen/rbac';
+import type { AuditLogDI } from '@nugen/audit-log';
 
 // ─── Zoho Sign Configuration ───────────────────────────────────────────────
 
@@ -115,9 +117,7 @@ export interface DocumentRouteDeps {
   OrderModel: Model<Document>;
   UserModel: Model<Document>;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
-  auditLog: {
-    log: (entry: Record<string, unknown>) => Promise<void>;
-  };
+  checkPermission: CheckPermissionFn;
+  auditLog: AuditLogDI;
   zohoSignConfig: ZohoSignConfig;
 }

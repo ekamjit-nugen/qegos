@@ -79,7 +79,7 @@ export async function createSigningRequest(params: {
   }));
 
   const formData = new FormData();
-  const blob = new Blob([params.fileBuffer], { type: 'application/pdf' });
+  const blob = new Blob([new Uint8Array(params.fileBuffer)], { type: 'application/pdf' });
   formData.append('file', blob, params.fileName);
 
   const requestData = {

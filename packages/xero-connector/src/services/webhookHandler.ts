@@ -33,9 +33,7 @@ export interface WebhookHandlerDeps {
   OrderModel: Model<Document>;
   PaymentModel: Model<Document>;
   redisClient: Redis;
-  auditLog: {
-    log: (...args: unknown[]) => Promise<void>;
-  };
+  auditLog: import('@nugen/audit-log').AuditLogDI;
 }
 
 // ─── Module State ───────────────────────────────────────────────────────────

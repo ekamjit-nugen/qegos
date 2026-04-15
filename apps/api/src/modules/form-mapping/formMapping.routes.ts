@@ -12,6 +12,7 @@ import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
 import { getRequestId } from '../../lib/requestContext';
 import type { AuditAction, AuditActorType } from '@nugen/audit-log';
+import type { CheckPermissionFn } from '@nugen/rbac';
 
 import type {
   IFormMappingDocument,
@@ -52,7 +53,7 @@ export interface FormMappingRouteDeps {
   SalesModel?: Model<Record<string, unknown>>;
   connection: import('mongoose').Connection;
   authenticate: () => RequestHandler;
-  checkPermission: (resource: string, action: string) => RequestHandler;
+  checkPermission: CheckPermissionFn;
 }
 
 const RESOURCE = 'form_mappings';
@@ -64,7 +65,7 @@ const RESOURCE = 'form_mappings';
 function renameSchemaToJsonSchema<T extends Record<string, unknown>>(body: T): T {
   if (body && typeof body === 'object' && 'schema' in body) {
     const { schema, ...rest } = body as Record<string, unknown>;
-    return { ...rest, jsonSchema: schema } as T;
+    return { ...rest, jsonSchema: schema } as unknown as T;
   }
   return body;
 }
@@ -156,7 +157,7 @@ export function createFormMappingRoutes(deps: FormMappingRouteDeps): Router {
       const authReq = req as AuthenticatedRequest;
       const body = renameSchemaToJsonSchema(
         req.body as Record<string, unknown>,
-      ) as Parameters<typeof service.createMapping>[0];
+      ) as unknown as Parameters<typeof service.createMapping>[0];
       const { mapping, version } = await service.createMapping(body, authReq.user.userId);
       writeAudit(
         authReq,
