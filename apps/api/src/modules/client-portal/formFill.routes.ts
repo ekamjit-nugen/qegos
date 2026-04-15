@@ -22,6 +22,8 @@ const auditLog = {
 };
 import type { Model, Types } from 'mongoose';
 import type { IFormMappingDocument, IFormMappingVersionDocument } from '../form-mapping/formMapping.types';
+import { validateAnswers } from '../form-mapping/formMapping.schema';
+import type { FormMappingSchema } from '../form-mapping/formMapping.types';
 import type { IOrderDocument2, ISalesDocument } from '../order-management/order.types';
 import { OrderStatus } from '../order-management/order.types';
 import type { ICounterDocument } from '../../database/counter.model';
@@ -485,6 +487,28 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
 
         if (!version) {
           res.status(404).json({ status: 404, message: 'Form version not found or not published' });
+          return;
+        }
+
+        // 1a. Validate submitted answers against the published JSON schema.
+        // Without this, a client can POST arbitrary keys/types and they'll
+        // be snapshotted into `order.formAnswers` where downstream code
+        // (review pipeline, ATO prefill) assumes schema-conformance.
+        const ansCheck = validateAnswers(
+          version.jsonSchema as unknown as FormMappingSchema,
+          answers,
+        );
+        if (!ansCheck.valid) {
+          res.status(422).json({
+            status: 422,
+            code: 'ANSWERS_SCHEMA_MISMATCH',
+            message: 'Submitted answers do not match the form schema',
+            errors: ansCheck.errors.map((e) => ({
+              path: e.instancePath,
+              keyword: e.keyword,
+              message: e.message,
+            })),
+          });
           return;
         }
 

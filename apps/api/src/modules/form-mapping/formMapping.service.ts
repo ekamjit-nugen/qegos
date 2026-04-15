@@ -282,23 +282,51 @@ export function createFormMappingService(
         });
       }
 
-      // New version number = max existing + 1
-      const highest = await FormMappingVersionModel.findOne({ mappingId })
-        .sort({ version: -1 })
-        .lean();
-      const nextVersion = (highest?.version ?? 0) + 1;
+      // New version number = max existing + 1. Two concurrent forks can
+      // compute the same nextVersion and race on the unique index
+      // `{mappingId, version}`; retry a few times on E11000 instead of
+      // surfacing a 500. If we exhaust retries the caller gets a clean
+      // 409 rather than a duplicate-key stack trace.
+      const MAX_ATTEMPTS = 5;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const highest = await FormMappingVersionModel.findOne({ mappingId })
+          .sort({ version: -1 })
+          .select('version')
+          .lean();
+        const nextVersion = (highest?.version ?? 0) + 1;
 
-      const forked = await FormMappingVersionModel.create({
-        mappingId: source.mappingId,
-        version: nextVersion,
-        status: 'draft',
-        lifecycleStatus: null,
-        isDefault: false,
-        jsonSchema: source.jsonSchema,
-        uiOrder: [...source.uiOrder],
-        notes: input.notes,
+        try {
+          const forked = await FormMappingVersionModel.create({
+            mappingId: source.mappingId,
+            version: nextVersion,
+            status: 'draft',
+            lifecycleStatus: null,
+            isDefault: false,
+            jsonSchema: source.jsonSchema,
+            uiOrder: [...source.uiOrder],
+            notes: input.notes,
+          });
+          return forked;
+        } catch (err: unknown) {
+          if ((err as { code?: number }).code === 11000 && attempt < MAX_ATTEMPTS - 1) {
+            continue; // another admin claimed this version — recompute
+          }
+          if ((err as { code?: number }).code === 11000) {
+            throw new AppError({
+              statusCode: 409,
+              code: FORM_MAPPING_ERROR_CODES.DRAFT_EXISTS,
+              message: 'Concurrent fork collision — please retry',
+            });
+          }
+          throw err;
+        }
+      }
+      // Unreachable (loop either returns or throws) but keeps TS happy.
+      throw new AppError({
+        statusCode: 409,
+        code: FORM_MAPPING_ERROR_CODES.DRAFT_EXISTS,
+        message: 'Fork retry exhausted',
       });
-      return forked;
     },
 
     async publishVersion(mappingId, version, actorId) {
