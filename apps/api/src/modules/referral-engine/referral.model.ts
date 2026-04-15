@@ -1,6 +1,12 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { IReferralDocument, IReferralConfigDocument } from './referral.types';
-import { REFERRAL_STATUSES, REFERRAL_REWARD_TYPES, REFERRAL_CHANNELS, DEFAULT_REFERRAL_CONFIG } from './referral.types';
+import type { IReferralDocument, IReferralConfigDocument, ReferralStatus } from './referral.types';
+import {
+  REFERRAL_STATUSES,
+  REFERRAL_REWARD_TYPES,
+  REFERRAL_CHANNELS,
+  REFERRAL_STATUS_TRANSITIONS,
+  DEFAULT_REFERRAL_CONFIG,
+} from './referral.types';
 
 // ─── Referral Schema ───────────────────────────────────────────────────────
 
@@ -37,6 +43,33 @@ referralSchema.pre('save', function (next) {
   if (this.referralCode) {
     this.referralCode = this.referralCode.toUpperCase();
   }
+  next();
+});
+
+// Snapshot original status after hydration so the pre-save hook can detect
+// invalid transitions (REF-INV status machine). In-memory only.
+referralSchema.post('init', function (this: IReferralDocument & { _originalStatus?: ReferralStatus }) {
+  this._originalStatus = this.status;
+});
+
+// Enforce referral state machine on save(). `updateMany` / `findOneAndUpdate`
+// bypass this hook by design — those callers (processReward atomic claim,
+// expire crons) are the ones that legitimately need the escape hatch.
+referralSchema.pre('save', function (
+  this: IReferralDocument & { _originalStatus?: ReferralStatus },
+  next,
+) {
+  if (this.isNew || !this.isModified('status')) {
+    return next();
+  }
+  const from = this._originalStatus ?? this.status;
+  const to = this.status;
+  if (from === to) return next();
+  const allowed = REFERRAL_STATUS_TRANSITIONS[from] ?? [];
+  if (!allowed.includes(to)) {
+    return next(new Error(`Invalid referral status transition: ${from} -> ${to}`));
+  }
+  this._originalStatus = to;
   next();
 });
 

@@ -1,4 +1,4 @@
-import type { Model, Types } from 'mongoose';
+import type { Model } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
 import type { IReferralDocument, IReferralConfigDocument, ReferralRewardType } from './referral.types';
 import { DEFAULT_REFERRAL_CONFIG } from './referral.types';
@@ -131,6 +131,21 @@ export async function applyReferral(
     throw AppError.badRequest('This user has already been referred');
   }
 
+  // Validate refereeLeadId ownership — refuse to attribute another user's
+  // converted lead to this referral. Unconverted leads (no convertedUserId)
+  // are OK to attach because they haven't been claimed yet.
+  if (refereeLeadId) {
+    const lead = await LeadModel.findById(refereeLeadId)
+      .select('convertedUserId')
+      .lean<{ convertedUserId?: unknown }>();
+    if (!lead) {
+      throw AppError.notFound('Referee lead');
+    }
+    if (lead.convertedUserId && String(lead.convertedUserId) !== String(refereeUserId)) {
+      throw AppError.badRequest('Referee lead does not belong to this user');
+    }
+  }
+
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + config.referralExpiryDays);
 
@@ -189,9 +204,27 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
 
   if (rewardedCount >= config.maxReferralsPerClient) return null;
 
+  // ─── Atomically claim the referral BEFORE issuing credits (REF-INV idempotency).
+  // Filter on `referrerRewarded: false` so concurrent callers race on a single
+  // write — only the winner proceeds to addCredit. Without this, a retry or
+  // duplicate webhook could issue the reward twice.
+  const claimed = await ReferralModel.findOneAndUpdate(
+    { _id: referral._id, referrerRewarded: false },
+    {
+      $set: {
+        status: 'rewarded',
+        referrerRewarded: true,
+        refereeRewarded: true,
+        refereeOrderId: order._id,
+      },
+    },
+    { new: true },
+  );
+  if (!claimed) return null; // another caller already processed
+
   // ─── Issue Rewards Based on Config ────────────────────────────────────────
-  const referrerId = String(referral.referrerId);
-  const refereeId = String(referral.refereeId);
+  const referrerId = String(claimed.referrerId);
+  const refereeId = String(claimed.refereeId);
 
   if (config.rewardType === 'credit_balance' && creditService) {
     // REF-INV-04: Credits expire after 12 months
@@ -204,8 +237,8 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
         referrerId,
         config.referrerRewardValue,
         'referral_reward',
-        `Referral reward: ${referral.referralCode} (referrer)`,
-        referral._id.toString(),
+        `Referral reward: ${claimed.referralCode} (referrer)`,
+        claimed._id.toString(),
         expiresAt,
       );
     }
@@ -216,8 +249,8 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
         refereeId,
         config.refereeRewardValue,
         'referral_reward',
-        `Referral reward: ${referral.referralCode} (referee)`,
-        referral._id.toString(),
+        `Referral reward: ${claimed.referralCode} (referee)`,
+        claimed._id.toString(),
         expiresAt,
       );
     }
@@ -231,8 +264,8 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
         referrerId,
         config.referrerRewardValue,
         'referral_reward',
-        `Referral flat discount: ${referral.referralCode} (referrer)`,
-        referral._id.toString(),
+        `Referral flat discount: ${claimed.referralCode} (referrer)`,
+        claimed._id.toString(),
         expiresAt,
       );
     }
@@ -242,21 +275,16 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
         refereeId,
         config.refereeRewardValue,
         'referral_reward',
-        `Referral flat discount: ${referral.referralCode} (referee)`,
-        referral._id.toString(),
+        `Referral flat discount: ${claimed.referralCode} (referee)`,
+        claimed._id.toString(),
         expiresAt,
       );
     }
   }
   // discount_percent type: stored on referral for application at checkout (no credit issued)
+  // State flip already happened atomically above via findOneAndUpdate; returning the claimed doc.
 
-  referral.status = 'rewarded';
-  referral.referrerRewarded = true;
-  referral.refereeRewarded = true;
-  referral.refereeOrderId = order._id as Types.ObjectId;
-  await referral.save();
-
-  return referral;
+  return claimed;
 }
 
 // ─── List My Referrals ──────────────────────────────────────────────────────

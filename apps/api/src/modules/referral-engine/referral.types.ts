@@ -15,11 +15,12 @@ export const REFERRAL_STATUSES: ReferralStatus[] = [
 ];
 
 export const REFERRAL_STATUS_TRANSITIONS: Record<ReferralStatus, ReferralStatus[]> = {
-  pending: ['signed_up', 'expired'],
-  signed_up: ['order_created', 'expired'],
-  order_created: ['completed', 'expired'],
+  pending: ['signed_up', 'order_created', 'completed', 'rewarded', 'expired'],
+  signed_up: ['order_created', 'completed', 'rewarded', 'expired'],
+  order_created: ['completed', 'rewarded', 'expired'],
   completed: ['rewarded', 'expired'],
-  rewarded: [],
+  // REF-INV-04: credit_balance rewards expire after 12 months (expireCreditRewards cron)
+  rewarded: ['expired'],
   expired: [],
 };
 

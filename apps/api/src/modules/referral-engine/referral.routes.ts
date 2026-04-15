@@ -142,10 +142,13 @@ export function createReferralRoutes(deps: ReferralRouteDeps): Router {
     }),
   );
 
-  // ─── POST /process-reward — Process reward for order (system) ─────────────
+  // ─── POST /process-reward — Process reward for order (staff/system) ──────
+  // Gated behind referrals:update — issues real money (credits). Clients must
+  // never call this directly; order completion flow or cron triggers it.
   router.post(
     '/process-reward',
     authenticate() as RequestHandler,
+    checkPermission('referrals', 'update') as RequestHandler,
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { orderId } = req.body as { orderId: string };
       const referral = await processReward(orderId);
