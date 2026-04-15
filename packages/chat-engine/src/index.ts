@@ -45,6 +45,7 @@ export type {
   CannedResponseCategory,
   ChatEngineConfig,
   ChatEngineRouteDeps,
+  OfflineNotifyFn,
   ServerToClientEvents,
   ClientToServerEvents,
 } from './types';
@@ -105,6 +106,7 @@ export {
   emitMessageRead,
   emitConversationResolved,
   getSocketServer,
+  isUserOnline,
 } from './socket/chatSocketHandler';
 
 export type { ChatSocketConfig, ChatSocketServer } from './socket/chatSocketHandler';

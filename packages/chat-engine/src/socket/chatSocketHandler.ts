@@ -175,3 +175,15 @@ export function emitConversationResolved(conversationId: string): void {
 export function getSocketServer(): ChatSocketServer | null {
   return io;
 }
+
+/**
+ * True iff at least one live socket is joined to the user's personal room
+ * (`user:{userId}`). Used by REST routes to decide whether to fall back to
+ * push notification delivery. Returns `false` if Socket.io isn't initialized
+ * (e.g. in tests) — callers should treat that as "offline, please notify".
+ */
+export async function isUserOnline(userId: string): Promise<boolean> {
+  if (!io) return false;
+  const sockets = await io.in(`user:${userId}`).fetchSockets();
+  return sockets.length > 0;
+}

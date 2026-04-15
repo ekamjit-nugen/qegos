@@ -37,6 +37,10 @@ const chatMessageSchema = new Schema<IChatMessageDocument>(
 chatMessageSchema.index({ conversationId: 1, createdAt: -1 });
 chatMessageSchema.index({ senderId: 1 });
 
+// Text search over sanitized content. `contentOriginal` holds the encrypted
+// TFN-bearing original — never indexed. `content` is the TFN-redacted copy.
+chatMessageSchema.index({ content: 'text' }, { name: 'content_text' });
+
 // ─── Factory ────────────────────────────────────────────────────────────────
 
 export function createChatMessageModel(

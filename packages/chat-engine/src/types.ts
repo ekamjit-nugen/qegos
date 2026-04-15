@@ -90,6 +90,23 @@ export interface ChatEngineConfig {
 
 // ─── Route Dependencies ─────────────────────────────────────────────────────
 
+/**
+ * Offline-fallback push notifier.
+ *
+ * Called when a new chat message is delivered but the recipient has no live
+ * Socket.io connection. The chat-engine stays decoupled from
+ * `@nugen/notification-engine` — the app wires its `send()` implementation
+ * in at bootstrap. Returning a promise lets chat log delivery failures but
+ * chat does not await the result (fire-and-forget by design).
+ */
+export type OfflineNotifyFn = (params: {
+  recipientUserId: string;
+  recipientType: 'client' | 'staff';
+  conversationId: string;
+  senderName?: string;
+  preview: string;
+}) => Promise<void> | void;
+
 export interface ChatEngineRouteDeps {
   ConversationModel: import('mongoose').Model<IChatConversationDocument>;
   MessageModel: import('mongoose').Model<IChatMessageDocument>;
@@ -98,6 +115,11 @@ export interface ChatEngineRouteDeps {
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   auditLog: import('@nugen/audit-log').AuditLogDI;
   config: ChatEngineConfig;
+  /**
+   * Optional push-notification hook called when the recipient isn't
+   * connected via Socket.io. Omit to disable offline delivery.
+   */
+  notifyOffline?: OfflineNotifyFn;
 }
 
 // ─── Socket.io Events ───────────────────────────────────────────────────────

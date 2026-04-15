@@ -748,6 +748,20 @@ async function bootstrap(): Promise<void> {
     checkPermission: rbac.check,
     auditLog: auditLogDI,
     config: { encryptionKey: config.ENCRYPTION_KEY },
+    // Offline-fallback: if the recipient has no live socket, push a
+    // notification so mobile/email gets the ping. Fire-and-forget upstream.
+    notifyOffline: async ({ recipientUserId, recipientType, conversationId, preview }) => {
+      await notificationEngine.send({
+        recipientId: recipientUserId,
+        recipientType,
+        type: 'chat_message',
+        title: 'New message',
+        body: preview,
+        channels: ['push', 'in_app'],
+        relatedResource: 'ChatConversation',
+        relatedResourceId: conversationId,
+      });
+    },
   });
 
   const ticketRouter = supportTickets.createTicketRoutes({

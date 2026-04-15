@@ -27,6 +27,12 @@ import {
   createCannedResponse,
 } from '../services/chatService';
 import { initTfnRedaction } from '../services/tfnRedaction';
+import {
+  emitNewMessage,
+  emitMessageRead,
+  emitConversationResolved,
+  isUserOnline,
+} from '../socket/chatSocketHandler';
 
 interface AuthRequest extends Request {
   user?: { userId: string; userType: number; roleId: string };
@@ -144,6 +150,50 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
         mimeType: req.body.mimeType,
       });
 
+      // Real-time delivery: broadcast to anyone joined to the conversation room.
+      emitNewMessage(
+        message.conversationId.toString(),
+        message.toObject() as never,
+      );
+
+      // Offline fallback: if the recipient isn't connected via Socket.io,
+      // fire a push notification. Fire-and-forget — delivery failures must
+      // not block the REST response. Sender is never notified about their
+      // own message.
+      if (deps.notifyOffline) {
+        void (async (): Promise<void> => {
+          try {
+            const conv = await deps.ConversationModel.findById(message.conversationId).lean<{
+              userId: unknown;
+              staffId?: unknown;
+            }>();
+            if (!conv) return;
+            const senderIdStr = user.userId;
+            const senderIsClient = user.userType >= 5;
+            const recipientId = senderIsClient
+              ? conv.staffId?.toString()
+              : conv.userId?.toString();
+            if (!recipientId || recipientId === senderIdStr) return;
+            const online = await isUserOnline(recipientId);
+            if (online) return;
+            // `content` is TFN-redacted (chatService.sendMessage → tfnRedaction).
+            const preview = message.content.length > 120
+              ? `${message.content.slice(0, 117)}...`
+              : message.content;
+            await deps.notifyOffline!({
+              recipientUserId: recipientId,
+              recipientType: senderIsClient ? 'staff' : 'client',
+              conversationId: message.conversationId.toString(),
+              preview,
+            });
+          } catch (err) {
+            // Log-and-swallow: chat must not fail because of notification plumbing.
+            // eslint-disable-next-line no-console
+            console.error('[chat-engine] notifyOffline failed:', err);
+          }
+        })();
+      }
+
       res.status(201).json({ status: 201, data: { message } });
     },
   );
@@ -161,6 +211,12 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
         res.status(404).json({ status: 404, code: 'NOT_FOUND' });
         return;
       }
+
+      emitMessageRead(
+        message.conversationId.toString(),
+        (message._id as Types.ObjectId).toString(),
+        message.readAt ?? new Date(),
+      );
 
       res.status(200).json({ status: 200, data: { message } });
     },
@@ -180,6 +236,8 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
         res.status(404).json({ status: 404, code: 'NOT_FOUND' });
         return;
       }
+
+      emitConversationResolved((conv._id as Types.ObjectId).toString());
 
       res.status(200).json({ status: 200, data: { conversation: conv } });
     },
