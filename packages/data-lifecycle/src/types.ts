@@ -77,8 +77,12 @@ export interface RetentionPolicyConfig {
 export interface ModelFieldConfig {
   /** Display name for the model in exports */
   displayName: string;
-  /** The Mongoose model instance */
-  model: Model<Document>;
+  /** The Mongoose model instance. Typed as Model<any> because Model<T> is
+   *  invariant in Mongoose; `any` at this DI boundary avoids per-config
+   *  `as never` casts in consumers. See docs — same pattern used in
+   *  broadcast-engine / notification-engine. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: Model<any>;
   /** Field that references the user (e.g. 'userId', 'senderId') */
   userIdField: string;
   /** Fields containing PII to anonymize (field → replacement value) */

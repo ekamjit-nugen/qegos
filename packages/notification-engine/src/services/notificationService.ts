@@ -1,4 +1,4 @@
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type {
   INotificationDocument,
   INotificationPreferenceDocument,
@@ -19,7 +19,8 @@ let NotificationModel: Model<INotificationDocument>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let redisClient: any;
 let providers: Map<NotificationChannel, INotificationChannelProvider>;
-let UserModel: Model<Document>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Model<T> invariant; `any` at DI boundary.
+let UserModel: Model<any>;
 
 export function initNotificationService(
   notificationModel: Model<INotificationDocument>,
@@ -27,7 +28,8 @@ export function initNotificationService(
   redis: unknown,
   providerMap: Map<NotificationChannel, INotificationChannelProvider>,
   _config: NotificationEngineConfig,
-  externalModels: { UserModel: Model<Document> },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  externalModels: { UserModel: Model<any> },
 ): void {
   NotificationModel = notificationModel;
   redisClient = redis;

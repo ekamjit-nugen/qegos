@@ -1,4 +1,4 @@
-import type { Model, Document, Types } from 'mongoose';
+import type { Model, Types } from 'mongoose';
 import type {
   AudienceType,
   AudienceFilters,
@@ -10,15 +10,24 @@ import type {
 } from '../types';
 
 // ─── Module State ────────────────────────────────────────────────────────────
+// Note: LeadModel/UserModel typed as Model<any> because Mongoose's Model<T>
+// is invariant over T; using `any` at this DI boundary avoids forcing every
+// consumer to cast `Model<ISpecificUser>` with `as never`. The package only
+// calls structural methods (findById, find, countDocuments), never reads
+// typed fields off result docs.
 
-let LeadModel: Model<Document>;
-let UserModel: Model<Document>;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+let LeadModel: Model<any>;
+let UserModel: Model<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 let OptOutModel: Model<IOptOutDocument>;
 let ConsentModel: Model<IConsentRecordDocument>;
 
 export function initAudienceService(
-  leadModel: Model<Document>,
-  userModel: Model<Document>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  leadModel: Model<any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  userModel: Model<any>,
   optOutModel: Model<IOptOutDocument>,
   consentModel: Model<IConsentRecordDocument>,
 ): void {
@@ -89,8 +98,8 @@ async function hasConsent(
 
 // ─── Extract Contact Info ────────────────────────────────────────────────────
 
-function extractMergeData(doc: Document): Record<string, string> {
-  const obj = doc.toObject() as Record<string, unknown>;
+function extractMergeData(doc: { toObject: () => Record<string, unknown> }): Record<string, string> {
+  const obj = doc.toObject();
   const result: Record<string, string> = {};
   const fields = [
     'firstName', 'lastName', 'leadNumber', 'orderNumber',

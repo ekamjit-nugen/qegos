@@ -5,15 +5,15 @@
  * merged by staffId via in-memory Map.
  */
 
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { DateRangeParams, StaffBenchmarkEntry } from '../types';
 
 export interface StaffBenchmarkDeps {
-  OrderModel: Model<Document>;
-  LeadActivityModel: Model<Document>;
-  ReviewAssignmentModel: Model<Document>;
-  SupportTicketModel: Model<Document>;
-  UserModel: Model<Document>;
+  OrderModel: Model<any>;
+  LeadActivityModel: Model<any>;
+  ReviewAssignmentModel: Model<any>;
+  SupportTicketModel: Model<any>;
+  UserModel: Model<any>;
 }
 
 /**

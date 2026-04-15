@@ -1,4 +1,4 @@
-import type { Connection, Model, Document } from 'mongoose';
+import type { Connection, Model } from 'mongoose';
 import type Redis from 'ioredis';
 import { createCampaignModel } from './models/campaignModel';
 import { createTemplateModel } from './models/templateModel';
@@ -34,8 +34,10 @@ export function init(
   _redisClient: Redis,
   config: BroadcastEngineConfig,
   externalModels: {
-    LeadModel: Model<Document>;
-    UserModel: Model<Document>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DI boundary; see types.ts.
+    LeadModel: Model<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    UserModel: Model<any>;
   },
 ): BroadcastEngineInitResult {
   // Create models

@@ -1,4 +1,4 @@
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { Redis } from 'ioredis';
 import type { IXeroSyncLogDocument, IXeroConfigDocument } from '../types';
 
@@ -29,9 +29,14 @@ export interface XeroWebhookPayload {
 export interface WebhookHandlerDeps {
   XeroSyncLogModel: Model<IXeroSyncLogDocument>;
   XeroConfigModel: Model<IXeroConfigDocument>;
-  UserModel: Model<Document>;
-  OrderModel: Model<Document>;
-  PaymentModel: Model<Document>;
+  // Mongoose Model<T> is invariant — `any` at DI boundary lets consumers
+  // pass Model<ISpecificDoc> without `as never`. Webhook handler only uses
+  // structural methods on these models.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  UserModel: Model<any>;
+  OrderModel: Model<any>;
+  PaymentModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   redisClient: Redis;
   auditLog: import('@nugen/audit-log').AuditLogDI;
 }

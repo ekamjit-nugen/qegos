@@ -1,4 +1,4 @@
-import type { Connection, Model, Document } from 'mongoose';
+import type { Connection, Model } from 'mongoose';
 import type Redis from 'ioredis';
 import { createNotificationModel } from './models/notificationModel';
 import { createNotificationPreferenceModel } from './models/notificationPreferenceModel';
@@ -29,7 +29,8 @@ export function init(
   redisClient: Redis,
   config: NotificationEngineConfig,
   externalModels: {
-    UserModel: Model<Document>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Model<T> invariant; `any` at DI boundary. See types.ts.
+    UserModel: Model<any>;
   },
 ): NotificationEngineInitResult {
   // Create models

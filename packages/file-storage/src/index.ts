@@ -1,4 +1,4 @@
-import type { Connection, Model, Document } from 'mongoose';
+import type { Connection, Model } from 'mongoose';
 import type { FileStorageConfig, IVaultDocumentDocument, ITaxYearSummaryDocument } from './types';
 import { createVaultDocumentModel } from './models/vaultDocumentModel';
 import { createTaxYearSummaryModel } from './models/taxYearSummaryModel';
@@ -24,7 +24,8 @@ export function init(
   connection: Connection,
   config: FileStorageConfig,
   externalModels: {
-    UserModel: Model<Document>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Model<T> invariant; `any` at DI boundary avoids `as never` in consumers.
+    UserModel: Model<any>;
   },
 ): FileStorageInitResult {
   // Create models

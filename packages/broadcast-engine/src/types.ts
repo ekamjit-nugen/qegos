@@ -356,8 +356,10 @@ export interface BroadcastRouteDeps {
   MessageModel: Model<IBroadcastMessageDocument>;
   OptOutModel: Model<IOptOutDocument>;
   ConsentModel: Model<IConsentRecordDocument>;
-  LeadModel: Model<Document>;
-  UserModel: Model<Document>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Model<T> is invariant in Mongoose; `any` at DI boundaries avoids per-call-site `as never` casts in consumers. Only used for models whose document fields are not accessed by this package.
+  LeadModel: Model<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UserModel: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   auditLog?: import('@nugen/audit-log').AuditLogDI;

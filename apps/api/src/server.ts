@@ -260,8 +260,8 @@ async function bootstrap(): Promise<void> {
     businessAbn: config.BUSINESS_ABN,
     unsubscribeBaseUrl: config.UNSUBSCRIBE_BASE_URL,
   }, {
-    LeadModel: LeadModel as never,
-    UserModel: UserModel as never,
+    LeadModel,
+    UserModel,
   });
 
   // Phase 6: File Storage & Client Portal
@@ -277,7 +277,7 @@ async function bootstrap(): Promise<void> {
     clamavHost: config.CLAMAV_HOST,
     clamavPort: config.CLAMAV_PORT,
   }, {
-    UserModel: UserModel as never,
+    UserModel,
   });
 
   // Phase 7: Communication Suite
@@ -362,7 +362,7 @@ async function bootstrap(): Promise<void> {
   const privacyModelConfigs = new Map<string, ModelFieldConfig>([
     ['User', {
       displayName: 'User Account',
-      model: UserModel as never,
+      model: UserModel,
       userIdField: '_id',
       piiFields: {
         firstName: '[REDACTED]',
@@ -380,7 +380,7 @@ async function bootstrap(): Promise<void> {
     }],
     ['Lead', {
       displayName: 'Lead Records',
-      model: LeadModel as never,
+      model: LeadModel,
       userIdField: 'convertedUserId',
       piiFields: {
         firstName: '[REDACTED]',
@@ -392,7 +392,7 @@ async function bootstrap(): Promise<void> {
     }],
     ['Order', {
       displayName: 'Orders',
-      model: OrderModel as never,
+      model: OrderModel,
       userIdField: 'userId',
       piiFields: {
         'personalDetails.firstName': '[REDACTED]',
@@ -410,48 +410,48 @@ async function bootstrap(): Promise<void> {
     }],
     ['VaultDocument', {
       displayName: 'Vault Documents',
-      model: VaultDocumentModel as never,
+      model: VaultDocumentModel,
       userIdField: 'userId',
       piiFields: {},
       hardDelete: true,
     }],
     ['TaxYearSummary', {
       displayName: 'Tax Year Summaries',
-      model: TaxYearSummaryModel as never,
+      model: TaxYearSummaryModel,
       userIdField: 'userId',
       piiFields: {},
       hardDelete: true,
     }],
     ['ChatConversation', {
       displayName: 'Chat Conversations',
-      model: ChatConversationModel as never,
+      model: ChatConversationModel,
       userIdField: 'userId',
       piiFields: {},
       hardDelete: true,
     }],
     ['ChatMessage', {
       displayName: 'Chat Messages',
-      model: ChatMessageModel as never,
+      model: ChatMessageModel,
       userIdField: 'senderId',
       piiFields: { content: '[REDACTED]', contentOriginal: '' },
       exportExclude: ['contentOriginal'],
     }],
     ['SupportTicket', {
       displayName: 'Support Tickets',
-      model: SupportTicketModel as never,
+      model: SupportTicketModel,
       userIdField: 'userId',
       piiFields: {},
     }],
     ['TaxEstimateLog', {
       displayName: 'Tax Estimate Logs',
-      model: TaxEstimateLogModel as never,
+      model: TaxEstimateLogModel,
       userIdField: 'userId',
       piiFields: {},
       hardDelete: true,
     }],
     ['TaxReturnResult', {
       displayName: 'Tax Return Results',
-      model: TaxReturnResultModel as never,
+      model: TaxReturnResultModel,
       userIdField: 'userId',
       piiFields: {},
       hardDelete: true,
@@ -841,7 +841,7 @@ async function bootstrap(): Promise<void> {
   const notificationRouter = notificationEngine.createNotificationRoutes({
     NotificationModel,
     NotificationPreferenceModel,
-    UserModel: UserModel as never,
+    UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
     auditLog: auditLogDI,
@@ -877,15 +877,15 @@ async function bootstrap(): Promise<void> {
   });
 
   const analyticsRouter = analyticsEngine.createAnalyticsRoutes({
-    OrderModel: OrderModel as never,
-    PaymentModel: PaymentModel as never,
-    LeadModel: LeadModel as never,
-    LeadActivityModel: LeadActivityModel as never,
-    CampaignModel: BroadcastCampaignModel as never,
-    ReviewAssignmentModel: ReviewAssignmentModel as never,
-    SupportTicketModel: SupportTicketModel as never,
-    TaxYearSummaryModel: TaxYearSummaryModel as never,
-    UserModel: UserModel as never,
+    OrderModel,
+    PaymentModel,
+    LeadModel,
+    LeadActivityModel,
+    CampaignModel: BroadcastCampaignModel,
+    ReviewAssignmentModel,
+    SupportTicketModel,
+    TaxYearSummaryModel,
+    UserModel,
     redisClient,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
@@ -1476,15 +1476,15 @@ async function bootstrap(): Promise<void> {
       switch (job.name) {
         case 'computeExecutiveSummary':
           await analyticsEngine.computeExecutiveSummary({
-            OrderModel: OrderModel as never,
-            PaymentModel: PaymentModel as never,
-            LeadModel: LeadModel as never,
-            LeadActivityModel: LeadActivityModel as never,
-            CampaignModel: BroadcastCampaignModel as never,
-            ReviewAssignmentModel: ReviewAssignmentModel as never,
-            SupportTicketModel: SupportTicketModel as never,
-            TaxYearSummaryModel: TaxYearSummaryModel as never,
-            UserModel: UserModel as never,
+            OrderModel,
+            PaymentModel,
+            LeadModel,
+            LeadActivityModel,
+            CampaignModel: BroadcastCampaignModel,
+            ReviewAssignmentModel,
+            SupportTicketModel,
+            TaxYearSummaryModel,
+            UserModel,
             redisClient,
             authenticate: auth.authenticate,
             checkPermission: rbac.check,

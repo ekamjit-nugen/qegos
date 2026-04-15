@@ -242,7 +242,8 @@ export interface NotificationEngineInitResult {
 export interface NotificationRouteDeps {
   NotificationModel: Model<INotificationDocument>;
   NotificationPreferenceModel: Model<INotificationPreferenceDocument>;
-  UserModel: Model<Document>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Model<T> invariant; `any` at DI boundary avoids `as never` in consumers.
+  UserModel: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   auditLog?: import('@nugen/audit-log').AuditLogDI;

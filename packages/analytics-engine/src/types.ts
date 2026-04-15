@@ -5,7 +5,7 @@
  * Product-agnostic: consuming app provides model refs via AnalyticsRouteDeps.
  */
 
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { RequestHandler } from 'express';
 import type { Redis } from 'ioredis';
 
@@ -33,16 +33,23 @@ export interface AnalyticsEngineConfig {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export interface AnalyticsRouteDeps {
-  // Models — consumer provides replica-backed models (ANA-INV-01)
-  OrderModel: Model<Document>;
-  PaymentModel: Model<Document>;
-  LeadModel: Model<Document>;
-  LeadActivityModel: Model<Document>;
-  UserModel: Model<Document>;
-  ReviewAssignmentModel: Model<Document>;
-  SupportTicketModel: Model<Document>;
-  TaxYearSummaryModel: Model<Document>;
-  CampaignModel: Model<Document>;
+  // Models — consumer provides replica-backed models (ANA-INV-01).
+  // Typed as Model<any> because Mongoose's Model<T> is invariant in T;
+  // `any` at the DI boundary lets consumers pass Model<ISpecificDoc>
+  // without per-call-site `as never` casts. Analytics services only use
+  // structural aggregation methods (find, aggregate, countDocuments) and
+  // never read typed fields off result documents.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  OrderModel: Model<any>;
+  PaymentModel: Model<any>;
+  LeadModel: Model<any>;
+  LeadActivityModel: Model<any>;
+  UserModel: Model<any>;
+  ReviewAssignmentModel: Model<any>;
+  SupportTicketModel: Model<any>;
+  TaxYearSummaryModel: Model<any>;
+  CampaignModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   // Infrastructure
   redisClient: Redis;

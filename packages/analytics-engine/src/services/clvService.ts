@@ -4,7 +4,7 @@
  * Uses ONLY succeeded/captured payments for CLV calculation.
  */
 
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { DateRangeParams, ClvEntry } from '../types';
 import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
@@ -18,8 +18,8 @@ export interface ClvParams {
  * Compute CLV by grouping payments per user, ranking by total spent.
  */
 export async function getClv(
-  PaymentModel: Model<Document>,
-  UserModel: Model<Document>,
+  PaymentModel: Model<any>,
+  UserModel: Model<any>,
   params: ClvParams = {},
 ): Promise<ClvEntry[]> {
   const { topN = 50, dateRange } = params;

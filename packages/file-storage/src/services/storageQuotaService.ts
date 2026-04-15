@@ -1,15 +1,17 @@
-import type { Model, Document, Types } from 'mongoose';
+import type { Model, Types } from 'mongoose';
 import type { IVaultDocumentDocument, StorageUsage } from '../types';
 import { DEFAULT_STORAGE_QUOTA } from '../types';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
-let UserModel: Model<Document>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Model<T> invariant; `any` at DI boundary.
+let UserModel: Model<any>;
 let VaultDocumentModel: Model<IVaultDocumentDocument>;
 let defaultQuota: number;
 
 export function initStorageQuotaService(
-  userModel: Model<Document>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  userModel: Model<any>,
   vaultDocModel: Model<IVaultDocumentDocument>,
   quota?: number,
 ): void {

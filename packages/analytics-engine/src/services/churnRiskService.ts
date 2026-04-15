@@ -2,15 +2,15 @@
  * Churn Risk Service — Identify clients who filed last FY but not current FY
  */
 
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { ChurnRiskEntry } from '../types';
 
 /**
  * Anti-join: users who had a TaxYearSummary for previousFY but not currentFY.
  */
 export async function getChurnRisk(
-  TaxYearSummaryModel: Model<Document>,
-  UserModel: Model<Document>,
+  TaxYearSummaryModel: Model<any>,
+  UserModel: Model<any>,
   financialYear: string,
 ): Promise<ChurnRiskEntry[]> {
   // Parse current FY to find previous (e.g., "2025-2026" → "2024-2025")

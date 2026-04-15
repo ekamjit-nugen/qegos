@@ -2,7 +2,7 @@
  * Pipeline Health Service — Lead funnel analysis by stage
  */
 
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { DateRangeParams, PipelineStageEntry } from '../types';
 import { LEAD_STATUS_NAMES } from '../constants';
 
@@ -10,8 +10,8 @@ import { LEAD_STATUS_NAMES } from '../constants';
  * Get pipeline health: count, value, conversion rate, avg time per stage.
  */
 export async function getPipelineHealth(
-  LeadModel: Model<Document>,
-  LeadActivityModel: Model<Document>,
+  LeadModel: Model<any>,
+  LeadActivityModel: Model<any>,
   dateRange: DateRangeParams,
 ): Promise<PipelineStageEntry[]> {
   // Count and value by stage

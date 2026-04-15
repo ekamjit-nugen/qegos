@@ -4,14 +4,14 @@
  * Tracks acquisition cost and revenue per marketing channel.
  */
 
-import type { Model, Document } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { DateRangeParams, ChannelRoiEntry } from '../types';
 import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
 export interface ChannelRoiDeps {
-  CampaignModel: Model<Document>;
-  LeadModel: Model<Document>;
-  PaymentModel: Model<Document>;
+  CampaignModel: Model<any>;
+  LeadModel: Model<any>;
+  PaymentModel: Model<any>;
 }
 
 /**
