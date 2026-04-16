@@ -35,6 +35,14 @@
  *     → dry run, prints counts, exits 0
  *   npx ts-node-dev --transpile-only apps/api/src/scripts/payrooRename.ts --apply
  *     → writes the rewrites, then re-counts to confirm 0 stragglers
+ *
+ * Or via npm script (preferred — pulls MONGODB_URI from env):
+ *   npm --prefix apps/api run migrate:payroo            # dry run
+ *   npm --prefix apps/api run migrate:payroo -- --apply # apply
+ *
+ * Deploy runbook with the dev → staging → prod sequence, pre-flight
+ * checklist, and rollback notes:
+ *   docs/runbooks/payroo-rename-migration.md
  */
 
 import { MongoClient, type Db } from 'mongodb';
