@@ -23,6 +23,7 @@ import {
   type PaymentGateway,
 } from '@nugen/payment-gateway';
 import { getRequestId } from '../../lib/requestContext';
+import { runSaga, type SagaStep } from '../../lib/saga';
 import type { PromoCodeServiceResult } from '../promo-code/promoCode.service';
 import type { CreditServiceResult } from '../credit/credit.service';
 import type { IOrderDocument2 } from './order.types';
@@ -240,25 +241,94 @@ export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Route
           creditService,
         );
 
-        // Full credit coverage — apply and mark paid, no gateway call
+        // Full credit coverage — apply and mark paid, no gateway call.
+        // Same saga shape as the client-side Pay Now full-credit branch
+        // (apps/api/src/modules/client-portal/payOrder.routes.ts). Without
+        // a saga: if applyPromoCode or order.save throws after useCredit
+        // succeeded, the client's credits are gone but the order is still
+        // unpaid — the staff would then re-collect, double-charging the
+        // client. This is the same hazard GAP-C03 caught for Pay Now;
+        // the Collect Payment route was a copy-paste with the same hole.
         if (breakdown.finalAmount === 0) {
+          // Snapshot original order state so the order-step compensation
+          // can restore exactly what was there before.
+          const originalOrderSnapshot = {
+            discountAmount: order.discountAmount,
+            promoCode: order.promoCode,
+            creditApplied: order.creditApplied,
+            finalAmount: order.finalAmount,
+            paymentStatus: order.paymentStatus,
+          };
+
+          const steps: SagaStep<void>[] = [];
+
           if (breakdown.creditApplied > 0 && creditService) {
-            await creditService.useCredit(clientUserId, breakdown.creditApplied, String(order._id));
+            steps.push({
+              name: 'useCredit',
+              forward: async () => {
+                await creditService.useCredit(
+                  clientUserId,
+                  breakdown.creditApplied,
+                  String(order._id),
+                );
+              },
+              compensate: async () => {
+                // Refund the deducted credit by adding it back as a
+                // refund_credit transaction tied to the same order.
+                await creditService.addCredit(
+                  clientUserId,
+                  breakdown.creditApplied,
+                  'refund_credit',
+                  `Saga compensation: collect-payment full-credit failed for order ${order.orderNumber}`,
+                  String(order._id),
+                );
+              },
+            });
           }
+
           if (breakdown.promoCode && promoCodeService && breakdown.discountAmount > 0) {
-            await promoCodeService.applyPromoCode(
-              breakdown.promoCode,
-              clientUserId,
-              String(order._id),
-              breakdown.totalAmount,
-            );
+            const promoCodeForSaga = breakdown.promoCode;
+            steps.push({
+              name: 'applyPromoCode',
+              forward: async () => {
+                await promoCodeService.applyPromoCode(
+                  promoCodeForSaga,
+                  clientUserId,
+                  String(order._id),
+                  breakdown.totalAmount,
+                );
+              },
+              compensate: async () => {
+                await promoCodeService.revokePromoCode(
+                  promoCodeForSaga,
+                  clientUserId,
+                  String(order._id),
+                );
+              },
+            });
           }
-          order.discountAmount = breakdown.discountAmount;
-          order.promoCode = breakdown.promoCode;
-          order.creditApplied = breakdown.creditApplied;
-          order.finalAmount = 0;
-          order.paymentStatus = 'succeeded';
-          await order.save();
+
+          steps.push({
+            name: 'markOrderPaid',
+            forward: async () => {
+              order.discountAmount = breakdown.discountAmount;
+              order.promoCode = breakdown.promoCode;
+              order.creditApplied = breakdown.creditApplied;
+              order.finalAmount = 0;
+              order.paymentStatus = 'succeeded';
+              await order.save();
+            },
+            compensate: async () => {
+              order.discountAmount = originalOrderSnapshot.discountAmount;
+              order.promoCode = originalOrderSnapshot.promoCode;
+              order.creditApplied = originalOrderSnapshot.creditApplied;
+              order.finalAmount = originalOrderSnapshot.finalAmount;
+              order.paymentStatus = originalOrderSnapshot.paymentStatus;
+              await order.save();
+            },
+          });
+
+          await runSaga('collectPayment.fullCreditCoverage', steps, undefined);
 
           auditLog.log({
             actor: staffUserId,

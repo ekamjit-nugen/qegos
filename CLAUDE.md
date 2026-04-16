@@ -148,6 +148,7 @@ qegos/
 
 **Known gaps:**
 - **Money-path integration tests** — Pay Now (web), Collect Payment (staff), and the admin full-refund saga all have e2e suites with rollback coverage; webhook reconciliation is wired for Pay Now / Collect Payment.
+- **Partial-Stripe paths in Pay Now and Collect Payment are NOT saga-wrapped.** Only the full-credit (no-gateway) branch is saga-safe. When the order needs a Stripe top-up, the route creates a PaymentIntent, then provisionally deducts credits and applies promo BEFORE persisting the order. If credit/promo/order writes fail mid-flight, or the customer abandons the payment, those provisional deductions are not automatically reversed (the package's webhook reconciler doesn't touch credit/promo — Tier 1 can't depend on Tier 2 services). Real failure mode: customer abandons checkout, credits are gone forever. Fix needs (a) a saga around the partial-path writes with a Stripe-cancel-intent compensation, and (b) a `payment_intent.canceled` / `payment_intent.payment_failed` webhook hook in app-layer code that revokes promo + re-credits.
 - **`apps/api/src/server.ts` is 1600+ lines.** It assembles every module's DI by hand. A per-module bootstrap split would shrink it and make onboarding sane.
 - **`as never` casts in `server.ts`: 4** (down from ~80). Two are deliberate — `@nugen/auth` narrows to `Model<IAuthDocument>` for password/refreshToken/OTP field access, and widening the package would lose type safety there. The remaining two are a Mongoose `$pull` query-operator cast and a comment. All Tier-1 packages and most Tier-2 modules expose `Model<any>` at the DI boundary with eslint-disable comments documenting Mongoose `Model<T>` invariance.
 - **Shallow modules**: chat-engine, whatsapp-connector, support-tickets, referral-engine, reputation-mgmt, tax-calendar, form-mapping, review-pipeline (depth-wise, not wiring-wise).
@@ -169,4 +170,4 @@ qegos/
 | MFA enrollment/verification APIs (GAP-C07) | Partial |
 | Global `mongo-sanitize` middleware (GAP-C14) | ✅ |
 | Privacy Act 1988: data erasure + export workflow (GAP-C01/C02) | ✅ via `@nugen/data-lifecycle` + `privacy` module |
-| Saga / compensating transactions for async flows (GAP-C03) | ✅ via `apps/api/src/lib/saga.ts` (Pay Now full-credit fast path + admin full-refund flow wired; pattern available for other money flows) |
+| Saga / compensating transactions for async flows (GAP-C03) | ✅ via `apps/api/src/lib/saga.ts` (Pay Now full-credit, Collect Payment full-credit, and admin full-refund flows wired; partial-Stripe paths still unwrapped — see "Known gaps") |
