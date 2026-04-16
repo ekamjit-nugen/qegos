@@ -53,6 +53,18 @@ jest.mock('@nugen/payment-gateway', () => {
   };
 });
 
+// ─── Mock @nugen/audit-log so we can assert what gets logged ───────────────
+// The route logs success at one severity, idempotent replay at "warning",
+// failure at "high", and failure-with-compensation-failure at "critical".
+// Capturing the call lets us prove ops will see broken refunds.
+
+const auditLogMock = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('@nugen/audit-log', () => ({
+  log: (...args: unknown[]) => auditLogMock(...args),
+  logFromRequest: jest.fn(),
+}));
+
 // Import AFTER the mock is registered so the route picks up the mocked
 // processRefund instead of the real one.
 // eslint-disable-next-line import/order
@@ -327,6 +339,7 @@ function defaultProcessRefundResult(): Record<string, unknown> {
 describe('E2E: Admin full-refund route — saga compensation', () => {
   beforeEach(() => {
     processRefundMock.mockReset();
+    auditLogMock.mockClear();
   });
 
   it('happy path: Stripe + reCreditUser + revokePromoCode + flipOrderStatus all run, no compensations', async () => {
@@ -476,5 +489,164 @@ describe('E2E: Admin full-refund route — saga compensation', () => {
     expect(promoLog.revokeCalls).toHaveLength(0);
     // Only the status flip happened.
     expect(order.paymentStatus).toBe('partially_refunded');
+  });
+
+  // ── Idempotency guard ──────────────────────────────────────────────────
+  // processRefund's status guard catches the common sequential double-click,
+  // but a true concurrent race can slip both requests past. The route adds
+  // a defensive check: if the order is already in the target refunded
+  // state, the saga has already run for this refund — skip it. Without
+  // this guard, addCredit (which doesn't dedupe on referenceId) would
+  // double-credit the user.
+
+  it('idempotent replay: order already in "refunded" state — saga is skipped, no double-credit', async () => {
+    processRefundMock.mockResolvedValue(defaultProcessRefundResult());
+
+    // Simulate the concurrent-race outcome: the order is ALREADY 'refunded'
+    // by the time this request gets to the saga step (a parallel request
+    // beat us to it).
+    const order = makeOrder({ paymentStatus: 'refunded' });
+    const { app, creditLog, promoLog } = mount({ order });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Concurrent retry',
+      idempotencyKey: 'idem_refund_replay_001',
+    });
+
+    expect(res.status).toBe(200);
+    // Critical: response signals this was a no-op replay.
+    expect(res.body.data.idempotentReplay).toBe(true);
+    expect(res.body.data.domainRestored).toBe(false);
+    expect(res.body.data.orderPaymentStatus).toBe('refunded');
+
+    // The saga did NOT run. No credit was issued, no promo revoked.
+    expect(creditLog.refundCalls).toHaveLength(0);
+    expect(creditLog.useCalls).toHaveLength(0);
+    expect(promoLog.revokeCalls).toHaveLength(0);
+
+    // Order status untouched (already 'refunded').
+    expect(order.paymentStatus).toBe('refunded');
+
+    // Audit log fired with 'warning' severity to flag the replay for ops.
+    const replayLog = auditLogMock.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'object' &&
+        call[0] !== null &&
+        (call[0] as { description?: string }).description?.includes('idempotent retry'),
+    );
+    expect(replayLog).toBeDefined();
+    expect((replayLog![0] as { severity: string }).severity).toBe('warning');
+  });
+
+  // ── Audit log on failure ───────────────────────────────────────────────
+  // The success path audit-logs every refund. Failures are MORE important
+  // to surface (especially saga compensation failures, which leave the
+  // domain partially restored after Stripe sent money back). Without this
+  // audit entry, ops would have no record of the broken refund.
+
+  it('saga failure: audit log fires with high severity', async () => {
+    processRefundMock.mockResolvedValue(defaultProcessRefundResult());
+
+    const order = makeOrder();
+    const { app } = mount({ order, failRevoke: true });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Test failure audit',
+      idempotencyKey: 'idem_refund_audit_fail_001',
+    });
+
+    expect(res.status).toBe(500);
+
+    // The failure path MUST audit-log so ops sees broken refunds.
+    const failureLog = auditLogMock.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'object' &&
+        call[0] !== null &&
+        (call[0] as { description?: string }).description?.includes('FAILED'),
+    );
+    expect(failureLog).toBeDefined();
+    expect((failureLog![0] as { severity: string }).severity).toBe('high');
+    expect((failureLog![0] as { resourceId: string }).resourceId).toBe(PAYMENT_ID);
+  });
+
+  it('saga compensation failure: audit log fires with CRITICAL severity', async () => {
+    processRefundMock.mockResolvedValue(defaultProcessRefundResult());
+
+    // failOrderSave triggers the order.save throw AFTER re-credit + promo
+    // revoke completed. To simulate a compensation failure, we'll make
+    // the credit useCredit (compensation) throw too.
+    const order = makeOrder();
+    let firstCall = true;
+    order.save = async (): Promise<void> => {
+      if (firstCall) {
+        firstCall = false;
+        throw new Error('order.save failed');
+      }
+    };
+
+    // Build a credit service whose useCredit (compensation) throws,
+    // forcing a SagaCompensationError to bubble up.
+    const creditLog: CreditCallLog = { refundCalls: [], useCalls: [] };
+    const promoLog: PromoCallLog = { applyCalls: [], revokeCalls: [] };
+
+    const router = createRefundRoutes({
+      PaymentModel: buildPaymentModel() as never,
+      OrderModel: buildOrderModel(order) as never,
+      providers: new Map([['stripe', buildStripeProviderStub()]]) as never,
+      authenticate: ((): RequestHandler =>
+        (req: Request, _res: Response, next: NextFunction): void => {
+          (req as unknown as Record<string, unknown>).user = {
+            userId: ACTOR_ID,
+            _id: ACTOR_ID,
+            userType: 0,
+          };
+          next();
+        }) as never,
+      checkPermission: ((): ((_req: Request, _res: Response, next: NextFunction) => void) =>
+        (_req: Request, _res: Response, next: NextFunction): void => {
+          next();
+        }) as never,
+      creditService: {
+        getBalance: async () => 0,
+        addCredit: (async (userId: string, amount: number, type: string, description: string) => {
+          creditLog.refundCalls.push({ userId, amount, type, description });
+          return { _id: 'credit_refund_id' } as never;
+        }) as CreditServiceResult['addCredit'],
+        useCredit: (async (userId: string, amount: number, orderId: string) => {
+          creditLog.useCalls.push({ userId, amount, orderId });
+          throw new Error('useCredit compensation failed');
+        }) as CreditServiceResult['useCredit'],
+        getTransactions: (async () => ({
+          transactions: [],
+          total: 0,
+        })) as CreditServiceResult['getTransactions'],
+        expireCredits: (async () => 0) as CreditServiceResult['expireCredits'],
+      },
+      promoCodeService: buildPromoService({ log: promoLog }),
+    });
+
+    const app = express();
+    app.use(express.json());
+    app.use('/api', router);
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Test critical audit',
+      idempotencyKey: 'idem_refund_critical_001',
+    });
+
+    expect(res.status).toBe(500);
+    // useCredit (compensation) was attempted — it threw.
+    expect(creditLog.useCalls).toHaveLength(1);
+
+    const criticalLog = auditLogMock.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'object' &&
+        call[0] !== null &&
+        (call[0] as { description?: string }).description?.includes(
+          'MANUAL RECONCILIATION REQUIRED',
+        ),
+    );
+    expect(criticalLog).toBeDefined();
+    expect((criticalLog![0] as { severity: string }).severity).toBe('critical');
   });
 });

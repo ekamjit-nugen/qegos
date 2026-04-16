@@ -167,6 +167,45 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
             paymentStatus: order.paymentStatus,
           };
 
+          // Idempotency guard. If this admin double-clicks the refund
+          // button (or two operators race), processRefund's status guard
+          // catches the second `payment.status === 'refunded'` call —
+          // BUT a true concurrent race can still slip both through. If
+          // we see the order is already in the target refunded state,
+          // the saga has already run for this refund. Skip it; otherwise
+          // we'd re-credit the user a second time (addCredit doesn't
+          // dedupe on referenceId) and double-revoke the promo.
+          const targetOrderStatus = isFullRefund ? 'refunded' : 'partially_refunded';
+          if (order.paymentStatus === targetOrderStatus) {
+            auditLog.log({
+              actor: actorId,
+              actorType: 'admin',
+              action: 'refund',
+              resource: 'payment',
+              resourceId: paymentId,
+              severity: 'warning',
+              description: `Full-refund route: order ${order.orderNumber} already in "${targetOrderStatus}" state — saga skipped (idempotent retry / concurrent request)`,
+            });
+            res.status(200).json({
+              status: 200,
+              data: {
+                paymentId: String(refundResult.payment._id),
+                paymentNumber: refundResult.payment.paymentNumber,
+                refund: {
+                  refundId: refundResult.refundEntry.refundId,
+                  amount: refundResult.refundEntry.amount,
+                  status: refundResult.refundEntry.status,
+                },
+                totalRefunded: refundResult.payment.refundedAmount,
+                paymentStatus: refundResult.payment.status,
+                orderPaymentStatus: order.paymentStatus,
+                domainRestored: false, // saga skipped — was already restored
+                idempotentReplay: true,
+              },
+            });
+            return;
+          }
+
           const steps: SagaStep<void>[] = [];
 
           // Re-credit only if the order originally consumed credits AND
@@ -261,7 +300,34 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
           },
         });
       } catch (err) {
-        const error = err as Error & { statusCode?: number; code?: string };
+        const error = err as Error & {
+          statusCode?: number;
+          code?: string;
+          compensationFailures?: unknown[];
+        };
+
+        // Audit on failure too. The success path logs every refund;
+        // failures are MORE important to surface — a SagaCompensationError
+        // means Stripe sent the money back but the domain rollback only
+        // partially succeeded, leaving credits/promo in an inconsistent
+        // state that needs manual reconciliation. Without this entry,
+        // ops would have no audit trail for the broken refund.
+        const isCompensationFailure =
+          Array.isArray(error.compensationFailures) && error.compensationFailures.length > 0;
+        auditLog.log({
+          actor: actorId,
+          actorType: 'admin',
+          action: 'refund',
+          resource: 'payment',
+          resourceId: paymentId,
+          severity: isCompensationFailure ? 'critical' : 'high',
+          description: `Full-refund route FAILED on payment ${paymentId}: ${error.message}${
+            isCompensationFailure
+              ? ` — saga compensation also failed (${error.compensationFailures!.length} step(s)); MANUAL RECONCILIATION REQUIRED`
+              : ''
+          }. Reason: ${reason}`,
+        });
+
         res.status(error.statusCode ?? 500).json({
           status: error.statusCode ?? 500,
           code: error.code,
