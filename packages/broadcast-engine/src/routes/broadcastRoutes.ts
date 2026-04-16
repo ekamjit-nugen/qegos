@@ -572,7 +572,10 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
           { $setOnInsert: entry },
           { upsert: true, new: true, rawResult: true },
         );
-        if ((result as any).lastErrorObject?.updatedExisting) {
+        if (
+          (result as { lastErrorObject?: { updatedExisting?: boolean } }).lastErrorObject
+            ?.updatedExisting
+        ) {
           skipped++;
         } else {
           imported++;

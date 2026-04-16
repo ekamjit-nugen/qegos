@@ -48,8 +48,9 @@ function groupByFY(orders: Order[], summaries: TaxYearSummary[]): FYGroup[] {
     map.get(fy)!.orders.push(o);
   }
   for (const s of summaries) {
-    if (!map.has(s.financialYear))
+    if (!map.has(s.financialYear)) {
       map.set(s.financialYear, { financialYear: s.financialYear, orders: [] });
+    }
     map.get(s.financialYear)!.summary = s;
   }
   return Array.from(map.values()).sort((a, b) => b.financialYear.localeCompare(a.financialYear));

@@ -5,10 +5,12 @@ import { callXeroApi, XeroOfflineError } from './xeroClient';
 // ─── Module State ───────────────────────────────────────────────────────────
 
 let XeroSyncLogModel: Model<IXeroSyncLogDocument>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
 let UserModel: Model<any>;
 
 export function initContactSync(
   syncLogModel: Model<IXeroSyncLogDocument>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
   userModel: Model<any>,
 ): void {
   XeroSyncLogModel = syncLogModel;
@@ -24,6 +26,7 @@ export function initContactSync(
 export async function syncContact(
   userId: string,
 ): Promise<{ xeroContactId: string; created: boolean }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- post-.lean() narrowing on Model<any>
   const user = (await UserModel.findById(userId).lean()) as any;
   if (!user) {
     throw new Error('User not found');
@@ -36,8 +39,11 @@ export async function syncContact(
     status: 'success',
   }).lean();
 
-  if ((existingLog as any)?.xeroEntityId) {
-    return { xeroContactId: (existingLog as any).xeroEntityId, created: false };
+  if ((existingLog as { xeroEntityId?: string } | null)?.xeroEntityId) {
+    return {
+      xeroContactId: (existingLog as { xeroEntityId: string }).xeroEntityId,
+      created: false,
+    };
   }
 
   const syncLog = await XeroSyncLogModel.create({
@@ -123,7 +129,7 @@ export async function bulkSyncContacts(): Promise<{ synced: number; failed: numb
 
   for (const user of unsyncedUsers) {
     try {
-      await syncContact((user as any)._id.toString());
+      await syncContact((user as { _id: { toString(): string } })._id.toString());
       synced++;
     } catch {
       failed++;
@@ -163,6 +169,7 @@ async function searchXeroContact(
   return data.Contacts?.[0] ?? null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- user shape comes from Model<any> .lean(); aggregation source varies
 function buildContactPayload(user: Record<string, any>): Record<string, unknown> {
   const contact: Record<string, unknown> = {
     Name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),

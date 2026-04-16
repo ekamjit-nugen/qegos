@@ -72,8 +72,10 @@ export function getNpsCategory(score: number): 'promoter' | 'passive' | 'detract
 
 export interface ReviewRouteDeps {
   ReviewModel: import('mongoose').Model<IReviewDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: import('mongoose').Model<any>;
   UserModel: import('mongoose').Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
 }

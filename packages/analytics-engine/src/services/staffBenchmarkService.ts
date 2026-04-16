@@ -9,11 +9,13 @@ import type { Model } from 'mongoose';
 import type { DateRangeParams, StaffBenchmarkEntry } from '../types';
 
 export interface StaffBenchmarkDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   LeadActivityModel: Model<any>;
   ReviewAssignmentModel: Model<any>;
   SupportTicketModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 /**

@@ -106,10 +106,12 @@ export const DEFAULT_REFERRAL_CONFIG: IReferralConfig = {
 export interface ReferralRouteDeps {
   ReferralModel: import('mongoose').Model<IReferralDocument>;
   ReferralConfigModel: import('mongoose').Model<IReferralConfigDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   UserModel: import('mongoose').Model<any>;
   OrderModel: import('mongoose').Model<any>;
   LeadModel: import('mongoose').Model<any>;
   CounterModel: import('mongoose').Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   creditService?: import('../credit/credit.service').CreditServiceResult;

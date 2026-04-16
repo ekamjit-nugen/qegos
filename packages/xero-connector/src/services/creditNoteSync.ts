@@ -7,11 +7,13 @@ import { callXeroApi, XeroOfflineError } from './xeroClient';
 
 let XeroSyncLogModel: Model<IXeroSyncLogDocument>;
 let XeroConfigModel: Model<IXeroConfigDocument>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IOrderDocument>
 let OrderModel: Model<any>;
 
 export function initCreditNoteSync(
   syncLogModel: Model<IXeroSyncLogDocument>,
   configModel: Model<IXeroConfigDocument>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IOrderDocument>
   orderModel: Model<any>,
 ): void {
   XeroSyncLogModel = syncLogModel;

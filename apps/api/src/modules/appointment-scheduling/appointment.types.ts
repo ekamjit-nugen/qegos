@@ -106,8 +106,10 @@ export interface CalendarDayEntry {
 export interface AppointmentRouteDeps {
   AppointmentModel: import('mongoose').Model<IAppointmentDocument>;
   StaffAvailabilityModel: import('mongoose').Model<IStaffAvailabilityDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: import('mongoose').Model<any>;
   UserModel: import('mongoose').Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   authenticate: () => import('express').RequestHandler;
   checkPermission: import('@nugen/rbac').CheckPermissionFn;
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;

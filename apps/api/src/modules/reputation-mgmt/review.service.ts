@@ -6,12 +6,15 @@ import { getNpsCategory } from './review.types';
 // ─── Module State ───────────────────────────────────────────────────────────
 
 let ReviewModel: Model<IReviewDocument>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IOrderDocument>
 let OrderModel: Model<any>;
 
 export function initReviewService(deps: {
   ReviewModel: Model<IReviewDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }): void {
   ReviewModel = deps.ReviewModel;
   OrderModel = deps.OrderModel;

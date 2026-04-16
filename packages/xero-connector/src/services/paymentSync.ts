@@ -7,14 +7,18 @@ import { callXeroApi, XeroOfflineError } from './xeroClient';
 
 let XeroSyncLogModel: Model<IXeroSyncLogDocument>;
 let XeroConfigModel: Model<IXeroConfigDocument>;
+/* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
 let OrderModel: Model<any>;
 let PaymentModel: Model<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function initPaymentSync(
   syncLogModel: Model<IXeroSyncLogDocument>,
   configModel: Model<IXeroConfigDocument>,
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   orderModel: Model<any>,
   paymentModel: Model<any>,
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 ): void {
   XeroSyncLogModel = syncLogModel;
   XeroConfigModel = configModel;

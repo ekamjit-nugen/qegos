@@ -9,13 +9,16 @@ import { syncContact } from './contactSync';
 
 let XeroSyncLogModel: Model<IXeroSyncLogDocument>;
 let XeroConfigModel: Model<IXeroConfigDocument>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IOrderDocument>
 let OrderModel: Model<any>;
 
 export function initInvoiceSync(
   syncLogModel: Model<IXeroSyncLogDocument>,
   configModel: Model<IXeroConfigDocument>,
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   orderModel: Model<any>,
   _userModel: Model<any>,
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 ): void {
   XeroSyncLogModel = syncLogModel;
   XeroConfigModel = configModel;
@@ -228,7 +231,7 @@ export async function bulkSyncInvoices(): Promise<{ synced: number; failed: numb
 
   for (const order of orders) {
     try {
-      await createInvoice((order as any)._id.toString());
+      await createInvoice((order as { _id: { toString(): string } })._id.toString());
       synced++;
     } catch {
       failed++;

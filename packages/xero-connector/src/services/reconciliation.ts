@@ -5,13 +5,17 @@ import { callXeroApi } from './xeroClient';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
 let OrderModel: Model<any>;
 let PaymentModel: Model<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function initReconciliation(
   _configModel: Model<IXeroConfigDocument>,
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   orderModel: Model<any>,
   paymentModel: Model<any>,
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 ): void {
   OrderModel = orderModel;
   PaymentModel = paymentModel;
@@ -69,16 +73,19 @@ export async function runReconciliation(
       .select('amount')
       .lean();
 
-    const totalCents = (payments as any[]).reduce(
+    const totalCents = (payments as unknown as Array<{ amount: number }>).reduce(
       (sum: number, p: { amount: number }) => sum + p.amount,
       0,
     );
-    qegosPayments.set((order as any)._id.toString(), totalCents);
+    qegosPayments.set(
+      (order as unknown as { _id: { toString(): string } })._id.toString(),
+      totalCents,
+    );
   }
 
   // Get Xero invoice payment totals
   const xeroPayments = await callXeroApi(async (accessToken, tenantId) => {
-    const xeroInvoiceIds = (orders as any[])
+    const xeroInvoiceIds = (orders as unknown as Array<{ xeroInvoiceId: string }>)
       .map((o: { xeroInvoiceId: string }) => o.xeroInvoiceId)
       .filter(Boolean);
 
@@ -127,9 +134,14 @@ export async function runReconciliation(
   };
 
   for (const order of orders) {
-    const orderId = (order as any)._id.toString();
+    const o = order as unknown as {
+      _id: { toString(): string };
+      xeroInvoiceId: string;
+      orderNumber: string;
+    };
+    const orderId = o._id.toString();
     const qegosCents = qegosPayments.get(orderId) ?? 0;
-    const xeroCents = xeroPayments.get((order as any).xeroInvoiceId as string) ?? 0;
+    const xeroCents = xeroPayments.get(o.xeroInvoiceId) ?? 0;
     const diff = Math.abs(qegosCents - xeroCents);
 
     if (diff <= RECONCILIATION_THRESHOLD_CENTS) {
@@ -137,7 +149,7 @@ export async function runReconciliation(
     } else {
       result.mismatched.push({
         orderId,
-        orderNumber: (order as any).orderNumber as string,
+        orderNumber: o.orderNumber,
         qegosAmountCents: qegosCents,
         xeroAmountCents: xeroCents,
         differenceCents: diff,

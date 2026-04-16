@@ -10,12 +10,14 @@ import type {
 import { DEFAULT_WEIGHTS, DEFAULT_CAPACITY, DEFAULT_ELIGIBLE_USER_TYPES } from './workload.types';
 
 interface WorkloadServiceDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   UserModel: Model<any>;
   LeadModel: Model<any>;
   OrderModel: Model<any>;
   ReviewAssignmentModel: Model<any>;
   SupportTicketModel: Model<any>;
   AppointmentModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 export interface WorkloadServiceResult {

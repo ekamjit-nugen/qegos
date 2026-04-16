@@ -374,8 +374,9 @@ export function FileTaxPage(): React.ReactNode {
             setLastSavedAt(new Date());
           },
           onError: () => {
-            if (!opts.silent)
+            if (!opts.silent) {
               void message.error('Failed to auto-save. Your progress may not be saved.');
+            }
           },
         },
       );

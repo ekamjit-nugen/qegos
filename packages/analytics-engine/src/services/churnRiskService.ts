@@ -9,7 +9,9 @@ import type { ChurnRiskEntry } from '../types';
  * Anti-join: users who had a TaxYearSummary for previousFY but not currentFY.
  */
 export async function getChurnRisk(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<ITaxYearSummaryDocument>
   TaxYearSummaryModel: Model<any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
   UserModel: Model<any>,
   financialYear: string,
 ): Promise<ChurnRiskEntry[]> {

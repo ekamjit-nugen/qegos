@@ -56,8 +56,10 @@ export interface LeadRouteDeps {
   LeadReminderModel: Model<ILeadReminderDocument>;
   connection: Connection;
   CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   UserModel?: Model<any>;
   OrderModel?: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
 }

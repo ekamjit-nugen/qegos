@@ -60,8 +60,9 @@ function useRecentActivity(): { data: AuditLog[] | undefined; isLoading: boolean
 
 function getActivityIcon(action: string): ReactNode {
   if (action.includes('create')) return <UserAddOutlined style={{ color: '#52c41a' }} />;
-  if (action.includes('update') || action.includes('change'))
+  if (action.includes('update') || action.includes('change')) {
     return <EditOutlined style={{ color: '#1677ff' }} />;
+  }
   if (action.includes('delete')) return <ClockCircleOutlined style={{ color: '#ff4d4f' }} />;
   if (action.includes('login')) return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
   if (action.includes('status')) return <SwapOutlined style={{ color: '#722ed1' }} />;

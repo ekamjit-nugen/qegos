@@ -94,12 +94,14 @@ export interface AssignmentResult {
 // ─── Route Dependencies ─────────────────────────────────────────────────────
 
 export interface WorkloadRouteDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   UserModel: Model<any>;
   LeadModel: Model<any>;
   OrderModel: Model<any>;
   ReviewAssignmentModel: Model<any>;
   SupportTicketModel: Model<any>;
   AppointmentModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
   config?: WorkloadConfig;

@@ -10,7 +10,9 @@ import { LEAD_STATUS_NAMES } from '../constants';
  * Get pipeline health: count, value, conversion rate, avg time per stage.
  */
 export async function getPipelineHealth(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<ILeadDocument>
   LeadModel: Model<any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<ILeadActivityDocument>
   LeadActivityModel: Model<any>,
   dateRange: DateRangeParams,
 ): Promise<PipelineStageEntry[]> {

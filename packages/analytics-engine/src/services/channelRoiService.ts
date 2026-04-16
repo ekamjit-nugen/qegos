@@ -9,9 +9,11 @@ import type { DateRangeParams, ChannelRoiEntry } from '../types';
 import { REVENUE_PAYMENT_STATUSES } from '../constants';
 
 export interface ChannelRoiDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   CampaignModel: Model<any>;
   LeadModel: Model<any>;
   PaymentModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 /**

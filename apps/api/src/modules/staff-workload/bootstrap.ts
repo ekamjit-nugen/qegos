@@ -10,12 +10,14 @@ import type { AppContext, BootstrapResult } from '../../bootstrap/context';
 import { createWorkloadRoutes } from './workload.routes';
 
 export interface StaffWorkloadDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   UserModel: Model<any>;
   LeadModel: Model<any>;
   OrderModel: Model<any>;
   ReviewAssignmentModel: Model<any>;
   SupportTicketModel: Model<any>;
   AppointmentModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 export function bootstrapStaffWorkload(ctx: AppContext, deps: StaffWorkloadDeps): BootstrapResult {

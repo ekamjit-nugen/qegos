@@ -127,8 +127,10 @@ export interface AuthRequest extends Request {
 // ─── Route Dependencies ────────────────────────────────────────────────────
 
 export interface DocumentRouteDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
   auditLog: AuditLogDI;

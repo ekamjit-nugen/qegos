@@ -10,8 +10,10 @@ import type { AppContext, BootstrapResult } from '../../bootstrap/context';
 import { createDocumentRoutes, createZohoWebhookRoute } from './document.routes';
 
 export interface DocumentManagementDeps {
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   zohoSignConfig: {
     clientId: string;
     clientSecret: string;

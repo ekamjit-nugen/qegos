@@ -10,17 +10,9 @@
 
 import { Router, type Request, type Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
+import type { Model, Types } from 'mongoose';
 import * as _auditLog from '@nugen/audit-log';
 import { getRequestId } from '../../lib/requestContext';
-
-const auditLog = {
-  log: (params: Record<string, unknown>): void => {
-    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
-      // fire-and-forget: audit log failure is non-critical
-    });
-  },
-};
-import type { Model, Types } from 'mongoose';
 import type {
   IFormMappingDocument,
   IFormMappingVersionDocument,
@@ -33,6 +25,14 @@ import type { ICounterDocument } from '../../database/counter.model';
 import type { PromoCodeServiceResult } from '../promo-code/promoCode.service';
 import type { CreditServiceResult } from '../credit/credit.service';
 import type { IFormDraftDocument } from './formDraft.model';
+
+const auditLog = {
+  log: (params: Record<string, unknown>): void => {
+    _auditLog.log({ ...params, requestId: getRequestId() } as never).catch(() => {
+      // fire-and-forget: audit log failure is non-critical
+    });
+  },
+};
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

@@ -5,8 +5,10 @@ import { DEFAULT_REVIEW_CHECKLIST } from './review.types';
 
 export interface ReviewServiceDeps {
   ReviewAssignmentModel: Model<IReviewAssignmentDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   /**
    * Fix for B-3.8, T-3.12: Optional callback to transition order status
    * through the order service's validated transitionStatus path.

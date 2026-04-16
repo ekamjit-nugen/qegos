@@ -18,8 +18,10 @@ import {
 interface AppointmentServiceDeps {
   AppointmentModel: Model<IAppointmentDocument>;
   StaffAvailabilityModel: Model<IStaffAvailabilityDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   notificationSend?: (params: Record<string, unknown>) => Promise<unknown>;
   /** Optional: provide a function to read platform settings for slot duration */
   getSetting?: (key: string) => Promise<unknown>;

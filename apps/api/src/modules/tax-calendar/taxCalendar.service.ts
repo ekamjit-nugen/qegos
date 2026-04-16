@@ -11,14 +11,18 @@ import { FEDERAL_HOLIDAYS_FIXED } from './taxCalendar.types';
 
 let TaxDeadlineModel: Model<ITaxDeadlineDocument>;
 let DeadlineReminderModel: Model<IDeadlineReminderDocument>;
+/* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
 let OrderModel: Model<any>;
 let UserModel: Model<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function initCalendarService(deps: {
   TaxDeadlineModel: Model<ITaxDeadlineDocument>;
   DeadlineReminderModel: Model<IDeadlineReminderDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }): void {
   TaxDeadlineModel = deps.TaxDeadlineModel;
   DeadlineReminderModel = deps.DeadlineReminderModel;

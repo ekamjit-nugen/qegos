@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import { validationResult } from 'express-validator';
+import type { Request, Response } from 'express';
 import * as _auditLog from '@nugen/audit-log';
 import { getRequestId } from '../../lib/requestContext';
-import { validationResult } from 'express-validator';
+import type { AppointmentRouteDeps, AppointmentStatus } from './appointment.types';
+import { createAppointmentService, type AppointmentServiceResult } from './appointment.service';
 
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
@@ -10,9 +13,6 @@ const auditLog = {
     });
   },
 };
-import type { Request, Response } from 'express';
-import type { AppointmentRouteDeps, AppointmentStatus } from './appointment.types';
-import { createAppointmentService, type AppointmentServiceResult } from './appointment.service';
 import {
   createAppointmentValidation,
   updateAppointmentValidation,

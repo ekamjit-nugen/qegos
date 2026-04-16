@@ -14,8 +14,10 @@ import { createReviewRoutes as createReputationRoutes } from './review.routes';
 
 export interface ReputationMgmtDeps {
   connection: Connection;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   OrderModel: Model<any>;
   UserModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 export interface ReputationMgmtResult extends BootstrapResult {

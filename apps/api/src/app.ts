@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import express, { type Request, type Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -122,7 +123,7 @@ export function createApp(): express.Express {
       res.status(200).json({ status: 200, data: { csrfEnabled: false } });
       return;
     }
-    const token = require('crypto').randomBytes(32).toString('hex');
+    const token = randomBytes(32).toString('hex');
     res.cookie('_csrf', token, {
       httpOnly: true,
       secure: config.NODE_ENV === 'production',

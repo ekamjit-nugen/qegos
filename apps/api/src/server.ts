@@ -16,6 +16,10 @@ import * as whatsappConnector from '@nugen/whatsapp-connector';
 import * as notificationEngine from '@nugen/notification-engine';
 import * as analyticsEngine from '@nugen/analytics-engine';
 import * as xeroConnector from '@nugen/xero-connector';
+import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
+import * as dataLifecycle from '@nugen/data-lifecycle';
+import type { ModelFieldConfig } from '@nugen/data-lifecycle';
+import { cleanupExpiredExports, enforceRetentionPolicies } from '@nugen/data-lifecycle';
 import { loadConfig } from './config/env';
 import { connectDatabase, getConnection, disconnectDatabase } from './database/connection';
 import { ensurePerformanceIndexes } from './database/ensureIndexes';
@@ -98,7 +102,6 @@ import { bootstrapStaffWorkload } from './modules/staff-workload/bootstrap';
 import { bootstrapDocumentManagement } from './modules/document-management/bootstrap';
 
 // Phase 2: Xero Integration
-import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
 
 // Settings
 import { createSettingModel, seedDefaultSettings } from './modules/settings/settings.model';
@@ -137,10 +140,7 @@ import { sendReviewReminders } from './modules/reputation-mgmt/review.routes';
 import { bootstrapReputationMgmt } from './modules/reputation-mgmt/bootstrap';
 
 // Privacy Act 1988 Compliance (GAP-C01/C02)
-import * as dataLifecycle from '@nugen/data-lifecycle';
-import type { ModelFieldConfig } from '@nugen/data-lifecycle';
 import { createPrivacyRoutes } from './modules/privacy/privacy.routes';
-import { cleanupExpiredExports, enforceRetentionPolicies } from '@nugen/data-lifecycle';
 
 async function bootstrap(): Promise<void> {
   // 1. Load and validate environment

@@ -18,7 +18,9 @@ export interface ClvParams {
  * Compute CLV by grouping payments per user, ranking by total spent.
  */
 export async function getClv(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IPaymentDocument>
   PaymentModel: Model<any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
   UserModel: Model<any>,
   params: ClvParams = {},
 ): Promise<ClvEntry[]> {

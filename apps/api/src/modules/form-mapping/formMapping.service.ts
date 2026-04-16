@@ -26,6 +26,7 @@ import { validateAuthoredSchema } from './formMapping.schema';
 export interface FormMappingServiceDeps {
   FormMappingModel: Model<IFormMappingDocument>;
   FormMappingVersionModel: Model<IFormMappingVersionDocument>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<ISalesDocument>
   SalesModel?: Model<any>;
   connection: Connection;
 }

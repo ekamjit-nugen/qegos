@@ -17,6 +17,7 @@ export interface OrderServiceDeps {
   OrderModel: Model<IOrderDocument2>;
   SalesModel: Model<ISalesDocument>;
   ReviewAssignmentModel?: Model<IReviewAssignmentDocument>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
   UserModel?: Model<any>;
   CounterModel?: Model<ICounterDocument>;
 }

@@ -12,19 +12,23 @@ import { DEFAULT_REFERRAL_CONFIG } from './referral.types';
 
 let ReferralModel: Model<IReferralDocument>;
 let ReferralConfigModel: Model<IReferralConfigDocument>;
+/* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
 let UserModel: Model<any>;
 let OrderModel: Model<any>;
 let LeadModel: Model<any>;
 let CounterModel: Model<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 let creditService: CreditServiceResult | null = null;
 
 export function initReferralService(deps: {
   ReferralModel: Model<IReferralDocument>;
   ReferralConfigModel: Model<IReferralConfigDocument>;
+  /* eslint-disable @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IFooDocument> */
   UserModel: Model<any>;
   OrderModel: Model<any>;
   LeadModel: Model<any>;
   CounterModel: Model<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   creditService?: CreditServiceResult;
 }): void {
   ReferralModel = deps.ReferralModel;

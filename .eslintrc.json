@@ -5,7 +5,7 @@
     "ecmaVersion": 2022,
     "sourceType": "module"
   },
-  "plugins": ["@typescript-eslint", "import"],
+  "plugins": ["@typescript-eslint", "import", "react-hooks"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -27,12 +27,30 @@
     "no-console": ["warn", { "allow": ["warn", "error"] }],
     "no-var": "error",
     "prefer-const": "error",
-    "eqeqeq": ["error", "always"],
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
     "curly": ["error", "all"],
     "import/order": [
       "error",
       { "groups": ["builtin", "external", "internal", "parent", "sibling", "index"] }
     ]
   },
-  "ignorePatterns": ["node_modules/", "coverage/", "dist/", "*.js", "*.d.ts"]
+  "ignorePatterns": ["node_modules/", "coverage/", "dist/", "*.js", "*.d.ts"],
+  "overrides": [
+    {
+      "files": ["**/__tests__/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off",
+        "@typescript-eslint/no-require-imports": "off",
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": ["packages/*/src/services/providers/**/*.ts", "packages/*/src/providers/**/*.ts"],
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off",
+        "@typescript-eslint/no-require-imports": "off"
+      }
+    }
+  ]
 }

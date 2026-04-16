@@ -10,8 +10,15 @@
 
 import { Router, type Request, type Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
+import type { Model } from 'mongoose';
 import * as _auditLog from '@nugen/audit-log';
 import { getRequestId } from '../../lib/requestContext';
+import type {
+  IAppointmentDocument,
+  IStaffAvailabilityDocument,
+} from '../appointment-scheduling/appointment.types';
+import { createAppointmentService } from '../appointment-scheduling/appointment.service';
+import type { IOrderDocument2 } from '../order-management/order.types';
 
 const auditLog = {
   log: (params: Record<string, unknown>): void => {
@@ -20,13 +27,6 @@ const auditLog = {
     });
   },
 };
-import type { Model } from 'mongoose';
-import type {
-  IAppointmentDocument,
-  IStaffAvailabilityDocument,
-} from '../appointment-scheduling/appointment.types';
-import { createAppointmentService } from '../appointment-scheduling/appointment.service';
-import type { IOrderDocument2 } from '../order-management/order.types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,7 @@ export interface AppointmentBookingRouteDeps {
   AppointmentModel: Model<IAppointmentDocument>;
   StaffAvailabilityModel: Model<IStaffAvailabilityDocument>;
   OrderModel: Model<IOrderDocument2>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
   UserModel: Model<any>;
   authenticate: () => import('express').RequestHandler;
   getSetting?: (key: string) => Promise<unknown>;
@@ -86,6 +87,7 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
   const appointmentService = createAppointmentService({
     AppointmentModel,
     StaffAvailabilityModel,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; downstream service accepts Model<any>
     OrderModel: OrderModel as unknown as Model<any>,
     UserModel,
     getSetting,

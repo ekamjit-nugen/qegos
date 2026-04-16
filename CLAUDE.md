@@ -146,8 +146,7 @@ qegos/
 - `apps/api` passes `tsc --noEmit` with 0 errors.
 
 **Known gaps:**
-- **No CI.** No GitHub Actions for build/lint/test. Adding it is Phase-0 hygiene.
-- **Money-path integration tests missing.** No end-to-end tests for Pay Now, Collect Payment, or webhook reconciliation. Regressions here cost real dollars.
+- **Money-path integration tests** — Pay Now (web) and Collect Payment (staff) both have e2e suites with webhook reconciliation. Refund flow does not.
 - **`apps/api/src/server.ts` is 1600+ lines.** It assembles every module's DI by hand. A per-module bootstrap split would shrink it and make onboarding sane.
 - **`as never` casts in `server.ts`: 4** (down from ~80). Two are deliberate — `@nugen/auth` narrows to `Model<IAuthDocument>` for password/refreshToken/OTP field access, and widening the package would lose type safety there. The remaining two are a Mongoose `$pull` query-operator cast and a comment. All Tier-1 packages and most Tier-2 modules expose `Model<any>` at the DI boundary with eslint-disable comments documenting Mongoose `Model<T>` invariance.
 - **Shallow modules**: chat-engine, whatsapp-connector, support-tickets, referral-engine, reputation-mgmt, tax-calendar, form-mapping, review-pipeline (depth-wise, not wiring-wise).
@@ -164,8 +163,8 @@ qegos/
 | `@nugen/auth`, `@nugen/rbac`, `@nugen/audit-log` | ✅ |
 | Canonical DI types (`CheckPermissionFn`, `AuditLogDI`) exported and consumed | ✅ |
 | `tsc --noEmit` clean in `apps/api` | ✅ |
-| CI on push/PR (build + lint + typecheck + test) | ❌ |
-| Integration tests: Pay Now, Collect Payment, webhook reconciliation | ❌ |
+| CI on push/PR (build + lint + typecheck + test) | ✅ — `.github/workflows/ci.yml`; lint + format are blocking gates |
+| Integration tests: Pay Now, Collect Payment, webhook reconciliation | ✅ — `apps/api/__tests__/e2e/{payNow,collectPayment}Webhook.test.ts` |
 | MFA enrollment/verification APIs (GAP-C07) | Partial |
 | Global `mongo-sanitize` middleware (GAP-C14) | ✅ |
 | Privacy Act 1988: data erasure + export workflow (GAP-C01/C02) | ✅ via `@nugen/data-lifecycle` + `privacy` module |

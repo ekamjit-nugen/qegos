@@ -40,19 +40,21 @@ jobs:
           NODE_ENV: test
 
   style:
-    # Prettier is fully green and is a hard gate (the step fails the job
-    # because `continue-on-error` only suppresses the *job* status, not the
-    # step exit code we read in PR checks). Eslint still has ~251 errors
-    # left after the auto-fix sweep — almost entirely judgment-call type
-    # debt: 120 `no-explicit-any`, 70 `no-unused-vars`, 47
-    # `explicit-function-return-type`, 36 `no-var-requires`. None are
-    # mechanically fixable. Job stays non-blocking until that backlog is
-    # paid down; flip `continue-on-error` to false once `npm run lint`
-    # exits 0.
-    name: Style (non-blocking)
+    # Hard gate as of the no-explicit-any sweep. `npm run lint` is at 0
+    # errors, 33 warnings (all `explicit-function-return-type` in places
+    # where the return type is obvious — left as warnings, not errors).
+    # Prettier is fully green. Conventions documented in CLAUDE.md:
+    #   - `Model<any>` at DI boundaries gets the canonical disable
+    #     comment ("Mongoose Model<T> invariance; app passes Model<IFoo>").
+    #   - Tests are exempt from `no-var-requires` / `no-explicit-any` /
+    #     `explicit-function-return-type` via .eslintrc override.
+    #   - Provider files (lazy `require()` for optional deps) exempt from
+    #     `no-var-requires` / `no-require-imports`.
+    # If lint regresses on a PR, fix the rule violation in the diff —
+    # don't reach for a new disable directive without justifying it.
+    name: Style
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4

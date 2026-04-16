@@ -8,6 +8,7 @@ import * as zohoSign from './zohoSign.service';
 // ─── Service Interface ─────────────────────────────────────────────────────
 
 export interface DocumentServiceDeps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IOrderDocument>
   OrderModel: Model<any>;
   auditLog: AuditLogDI;
 }

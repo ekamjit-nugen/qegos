@@ -42,8 +42,10 @@ interface AuthenticatedRequest extends Request {
 export interface OrderRouteDeps {
   OrderModel: Model<IOrderDocument2>;
   SalesModel: Model<ISalesDocument>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IReviewAssignmentDocument>
   ReviewAssignmentModel?: Model<any>;
   CounterModel?: Model<import('../../database/counter.model').ICounterDocument>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mongoose Model<T> invariance; app passes Model<IUserDocument>
   UserModel?: Model<any>;
   authenticate: () => RequestHandler;
   checkPermission: CheckPermissionFn;
