@@ -284,7 +284,7 @@ The following findings were identified during cross-referencing with an independ
 | `packages/payment-gateway/__tests__/paymentRouter.test.ts` | ~12 | Routing strategies, fallback, retryable classification | Timeout race, round-robin state |
 | `packages/payment-gateway/__tests__/gstCalculator.test.ts` | ~10 | GST calculation, edge cases | Zero quantity, negative input |
 | `packages/payment-gateway/__tests__/idempotencyService.test.ts` | ~8 | Cache check, store, remove | Concurrent access, Redis failure |
-| `packages/payment-gateway/__tests__/webhookProcessor.test.ts` | ~10 | Stripe/Payzoo event processing | Duplicate race, invalid gateway |
+| `packages/payment-gateway/__tests__/webhookProcessor.test.ts` | ~10 | Stripe/Payroo event processing | Duplicate race, invalid gateway |
 | `packages/payment-gateway/__tests__/refundService.test.ts` | ~10 | Refund validation, approval gates | Concurrent refunds, rollback |
 | `apps/api/__tests__/lead.test.ts` | ~30 | Types, enums, transitions, mobile normalization, scoring factors | **NO service tests, NO route tests, NO integration** |
 | `apps/api/__tests__/order.test.ts` | ~25 | Types, enums, transitions, total calculation, GST | **NO service tests, NO route tests, NO integration** |

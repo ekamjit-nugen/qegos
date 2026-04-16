@@ -22,7 +22,7 @@ export interface CollectPricingPayload {
 
 export interface CollectPaymentPayload extends CollectPricingPayload {
   idempotencyKey: string;
-  gateway?: 'stripe' | 'payzoo';
+  gateway?: 'stripe' | 'payroo';
 }
 
 export interface CollectPaymentResult {
@@ -30,7 +30,7 @@ export interface CollectPaymentResult {
   paymentNumber?: string;
   clientSecret?: string;
   publishableKey?: string;
-  gateway?: 'stripe' | 'payzoo';
+  gateway?: 'stripe' | 'payroo';
   amount?: number;
   currency?: string;
   breakdown: PricingBreakdown;

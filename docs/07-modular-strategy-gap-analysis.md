@@ -413,7 +413,7 @@ Phase 0 (Foundation) ──┬──> Phase 1 (Payment) ──> Phase 2 (Xero) �
 
 **MVP Delivers:**
 - RBAC + Auth + Audit Trail
-- Payment processing (Stripe + Payzoo)
+- Payment processing (Stripe + Payroo)
 - Xero integration (invoicing + payment sync)
 - Lead management with full lifecycle
 - Order management with review pipeline
@@ -517,7 +517,7 @@ Redis serves **9 distinct purposes** in this architecture:
 | RL-03 | No rate limit on `/api/v1/chat/messages` | Message sending | Spam flooding a conversation |
 | RL-04 | No global rate limit on admin API calls | Admin endpoints | Compromised admin account can exfiltrate data at full speed |
 | RL-05 | No rate limit on `/api/v1/leads/search` or `/api/v1/chat/search` | Full-text search | Expensive queries, potential DoS |
-| RL-06 | No rate limit on webhook endpoints beyond signature verification | `/webhooks/stripe`, `/webhooks/payzoo`, `/webhooks/whatsapp` | Webhook flood from compromised or misconfigured source |
+| RL-06 | No rate limit on webhook endpoints beyond signature verification | `/webhooks/stripe`, `/webhooks/payroo`, `/webhooks/whatsapp` | Webhook flood from compromised or misconfigured source |
 
 ### 6.6 Circuit Breaker Coverage
 
@@ -525,8 +525,8 @@ NFR-25 mentions circuit breakers for 6 external services but provides no specifi
 
 | Service | Circuit Breaker Needed | Open Threshold | Half-Open Strategy | Fallback |
 |---------|----------------------|----------------|-------------------|----------|
-| Stripe | Yes | 5 failures in 1 min | 1 test call after 30 sec | Payzoo (if enabled) |
-| Payzoo | Yes | 5 failures in 1 min | 1 test call after 30 sec | Stripe (if enabled) |
+| Stripe | Yes | 5 failures in 1 min | 1 test call after 30 sec | Payroo (if enabled) |
+| Payroo | Yes | 5 failures in 1 min | 1 test call after 30 sec | Stripe (if enabled) |
 | Xero | Yes | 5 failures in 1 min | 1 test call after 30 sec | Queue offline (XRO-INV-10) |
 | Twilio (SMS) | Yes | 5 failures in 1 min | 1 test call after 60 sec | Email fallback |
 | Amazon SES | Yes | 5 failures in 1 min | 1 test call after 60 sec | Queue + Slack alert |
@@ -782,7 +782,7 @@ The PRD uses event emitters for key flows but the events are not formally catalo
 | GAP-H15 | Security | Zoho Sign/DocuSign tokens not specified as encrypted | Token exposure risk in database. | Apply same AES-256-GCM pattern as Xero tokens. | S | 0 |
 | GAP-H16 | Scalability | Gmail SMTP as SPOF for transactional email (SPOF-04) | OTP delivery failure = users locked out. | Use SES for all transactional email. Gmail as development/testing only. | M | 0 |
 | GAP-H17 | Security | No WAF mentioned | Unprotected against common web attacks at edge. | Deploy AWS WAF with OWASP rules in front of ALB. | M | 10 |
-| GAP-H18 | Circuit Breakers | Deferred to Phase 10 but needed from Phase 1 | 40 weeks of production without circuit breakers on payment gateways. | Implement circuit breakers for Stripe/Payzoo in Phase 1, Xero in Phase 2. | M | 1-2 |
+| GAP-H18 | Circuit Breakers | Deferred to Phase 10 but needed from Phase 1 | 40 weeks of production without circuit breakers on payment gateways. | Implement circuit breakers for Stripe/Payroo in Phase 1, Xero in Phase 2. | M | 1-2 |
 | GAP-H19 | Data Model | User model too large (30+ fields) | Performance on frequently-read document. Auth fields (refreshTokens with hashed tokens) loaded on every user fetch. | Extract UserAuth sub-document or separate collection. | M | 0 |
 | GAP-H20 | Invariants | SLA clock does not pause during waiting_on_client (INV-12) | False SLA breaches penalizing staff when client is non-responsive. | Add clock pause/resume logic tied to status transitions. | M | 7 |
 | GAP-H21 | Phase Sequencing | Document vault (Phase 6) needed for order processing (Phase 3) | 15+ weeks where orders cannot collect documents through platform. | Move minimal vault upload capability (upload + list + presigned download) to Phase 3. Full vault with OCR, dedup, quotas stays in Phase 6. | M | 3 |
@@ -874,7 +874,7 @@ The PRD uses event emitters for key flows but the events are not formally catalo
 | 2 | Add payment reminder automation (24hr, 3d, 7d, 14d) | GAP-C04 | M |
 | 3 | Add engagement letter workflow | GAP-C09 | M |
 | 4 | Move basic vault upload to Phase 3 | GAP-H21 | M |
-| 5 | Implement circuit breakers for Stripe/Payzoo (Phase 1) and Xero (Phase 2) | GAP-H18 | M |
+| 5 | Implement circuit breakers for Stripe/Payroo (Phase 1) and Xero (Phase 2) | GAP-H18 | M |
 | 6 | Separate Redis connections for critical vs bulk queues | GAP-H07 | M |
 | 7 | Add BillingDispute CRUD APIs | GAP-H12 | M |
 | 8 | Use SES for transactional email instead of Gmail SMTP | GAP-H16 | M |
@@ -957,7 +957,7 @@ The PRD uses event emitters for key flows but the events are not formally catalo
 | S6 | User Profile Management | 498-549 | User model (30+ fields), user APIs |
 | S7 | Order/Tax Return Management | 555-802 | Order model, 9-state lifecycle, review pipeline, sales catalogue |
 | S8 | Tax Calculation & Estimation Engine | 807-1228 | Hybrid model, tax rules, calculator, tax results, amendments, versioning |
-| S9 | Payment Gateway | 1243-1410 | Stripe + Payzoo, gateway abstraction, billing edge cases |
+| S9 | Payment Gateway | 1243-1410 | Stripe + Payroo, gateway abstraction, billing edge cases |
 | S10 | Xero Accounting Integration | 1414-1518 | OAuth, sync workflows, reconciliation |
 | S11 | Document Management & Signing | 1524-1548 | Zoho Sign/DocuSign, upload pipeline |
 | S12 | Lead Management | 1551-1758 | Lead model, 8-state lifecycle, scoring, automation, mobile companion |

@@ -22,7 +22,7 @@ export interface PricingPayload {
 
 export interface PayInitPayload extends PricingPayload {
   idempotencyKey: string;
-  gateway?: 'stripe' | 'payzoo';
+  gateway?: 'stripe' | 'payroo';
 }
 
 export interface PayInitResult {
@@ -30,7 +30,7 @@ export interface PayInitResult {
   paymentNumber: string;
   clientSecret: string;
   publishableKey: string;
-  gateway: 'stripe' | 'payzoo';
+  gateway: 'stripe' | 'payroo';
   amount: number;
   currency: string;
   breakdown: PricingBreakdown;

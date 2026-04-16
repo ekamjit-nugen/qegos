@@ -1,7 +1,7 @@
 {
   "name": "@nugen/payment-gateway",
   "version": "1.0.0",
-  "description": "Gateway abstraction (Stripe, Payzoo), idempotency, webhooks, refunds, GST — product-agnostic payment package",
+  "description": "Gateway abstraction (Stripe, Payroo), idempotency, webhooks, refunds, GST — product-agnostic payment package",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -28,7 +28,7 @@
   "keywords": [
     "payment",
     "stripe",
-    "payzoo",
+    "payroo",
     "gateway",
     "webhooks",
     "idempotency",

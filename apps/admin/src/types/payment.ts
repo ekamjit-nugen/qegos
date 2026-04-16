@@ -39,7 +39,7 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   disputed: 'Disputed',
 };
 
-export type PaymentGateway = 'stripe' | 'payzoo';
+export type PaymentGateway = 'stripe' | 'payroo';
 
 export interface Payment {
   _id: string;

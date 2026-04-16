@@ -56,9 +56,9 @@ const STRIPE_EVENT_MAP: Record<string, PaymentStatus> = {
 };
 
 /**
- * Map Payzoo webhook event types to payment status transitions.
+ * Map Payroo webhook event types to payment status transitions.
  */
-const PAYZOO_EVENT_MAP: Record<string, PaymentStatus> = {
+const PAYROO_EVENT_MAP: Record<string, PaymentStatus> = {
   'payment.completed': 'succeeded',
   'payment.failed': 'failed',
   'payment.cancelled': 'cancelled',
@@ -74,7 +74,7 @@ const PAYZOO_EVENT_MAP: Record<string, PaymentStatus> = {
  */
 async function processWebhookEvent(
   eventId: string,
-  gateway: 'stripe' | 'payzoo',
+  gateway: 'stripe' | 'payroo',
   eventType: string,
   payload: Record<string, unknown>,
   gatewayTxnId: string,
@@ -190,7 +190,7 @@ async function processWebhookEvent(
  * Extract refund amount from webhook payload.
  */
 function extractRefundAmount(
-  gateway: 'stripe' | 'payzoo',
+  gateway: 'stripe' | 'payroo',
   payload: Record<string, unknown>,
 ): number {
   if (gateway === 'stripe') {
@@ -200,7 +200,7 @@ function extractRefundAmount(
     return (object?.amount_refunded as number) ?? 0;
   }
 
-  // Payzoo refund events
+  // Payroo refund events
   return (payload.refundedAmount as number) ?? 0;
 }
 
@@ -230,14 +230,14 @@ export async function processStripeWebhook(
 }
 
 /**
- * Process a Payzoo webhook event.
+ * Process a Payroo webhook event.
  */
-export async function processPayzooWebhook(
+export async function processPayrooWebhook(
   eventId: string,
   eventType: string,
   payload: Record<string, unknown>,
 ): Promise<{ processed: boolean; duplicate: boolean }> {
   const gatewayTxnId = (payload.transactionId as string) ?? '';
 
-  return processWebhookEvent(eventId, 'payzoo', eventType, payload, gatewayTxnId, PAYZOO_EVENT_MAP);
+  return processWebhookEvent(eventId, 'payroo', eventType, payload, gatewayTxnId, PAYROO_EVENT_MAP);
 }

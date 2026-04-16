@@ -16,12 +16,12 @@ import type {
   AuthenticatedPaymentRequest,
 } from '../types';
 import { routePayment } from '../services/paymentRouter';
-import { processStripeWebhook, processPayzooWebhook } from '../services/webhookProcessor';
+import { processStripeWebhook, processPayrooWebhook } from '../services/webhookProcessor';
 import { processRefund } from '../services/refundService';
 import { checkIdempotencyKey, storeIdempotencyResponse } from '../services/idempotencyService';
 import { generatePaymentNumber, isValidTransition } from '../models/paymentModel';
 import { stripeWebhookVerify } from '../middleware/stripeWebhookVerify';
-import { payzooWebhookVerify } from '../middleware/payzooWebhookVerify';
+import { payrooWebhookVerify } from '../middleware/payrooWebhookVerify';
 import { maintenanceMode } from '../middleware/maintenanceMode';
 import {
   createIntentValidation,
@@ -534,10 +534,10 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
     }),
   );
 
-  // ─── 8. POST /webhooks/payzoo — Payzoo webhook (public, HMAC verified) ────
+  // ─── 8. POST /webhooks/payroo — Payroo webhook (public, HMAC verified) ────
   router.post(
-    '/webhooks/payzoo',
-    payzooWebhookVerify(),
+    '/webhooks/payroo',
+    payrooWebhookVerify(),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const payload = req.body as Record<string, unknown>;
       const eventId = payload.eventId as string;
@@ -547,7 +547,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
         throw AppError.badRequest('Missing eventId or eventType in webhook payload');
       }
 
-      const result = await processPayzooWebhook(eventId, eventType, payload);
+      const result = await processPayrooWebhook(eventId, eventType, payload);
 
       if (result.duplicate) {
         res.status(200).json({ received: true, duplicate: true });
@@ -578,7 +578,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
           routingRule: config.routingRule,
           amountThreshold: config.amountThreshold,
           stripeEnabled: config.stripeEnabled,
-          payzooEnabled: config.payzooEnabled,
+          payrooEnabled: config.payrooEnabled,
           fallbackTimeoutMs: config.fallbackTimeoutMs,
           maintenanceMode: config.maintenanceMode,
           maintenanceMessage: config.maintenanceMessage,
@@ -616,7 +616,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
         'routingRule',
         'amountThreshold',
         'stripeEnabled',
-        'payzooEnabled',
+        'payrooEnabled',
         'fallbackTimeoutMs',
         'maintenanceMode',
         'maintenanceMessage',
@@ -651,7 +651,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
           routingRule: config.routingRule,
           amountThreshold: config.amountThreshold,
           stripeEnabled: config.stripeEnabled,
-          payzooEnabled: config.payzooEnabled,
+          payrooEnabled: config.payrooEnabled,
           fallbackTimeoutMs: config.fallbackTimeoutMs,
           maintenanceMode: config.maintenanceMode,
           maintenanceMessage: config.maintenanceMessage,

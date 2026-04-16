@@ -22,8 +22,8 @@ export function createIntentValidation(): ValidationChain[] {
       .withMessage('Idempotency key must be a valid UUID v4'),
     body('gateway')
       .optional()
-      .isIn(['stripe', 'payzoo'])
-      .withMessage('Gateway must be "stripe" or "payzoo"'),
+      .isIn(['stripe', 'payroo'])
+      .withMessage('Gateway must be "stripe" or "payroo"'),
     body('amount')
       .notEmpty()
       .withMessage('Amount is required')
@@ -131,8 +131,8 @@ export function updateConfigValidation(): ValidationChain[] {
   return [
     body('primaryGateway')
       .optional()
-      .isIn(['stripe', 'payzoo'])
-      .withMessage('Primary gateway must be "stripe" or "payzoo"'),
+      .isIn(['stripe', 'payroo'])
+      .withMessage('Primary gateway must be "stripe" or "payroo"'),
     body('routingRule')
       .optional()
       .isIn(['primary_only', 'fallback', 'round_robin', 'amount_based'])
@@ -143,7 +143,7 @@ export function updateConfigValidation(): ValidationChain[] {
       .withMessage('Amount threshold must be a non-negative integer (cents)')
       .toInt(),
     body('stripeEnabled').optional().isBoolean().withMessage('stripeEnabled must be a boolean'),
-    body('payzooEnabled').optional().isBoolean().withMessage('payzooEnabled must be a boolean'),
+    body('payrooEnabled').optional().isBoolean().withMessage('payrooEnabled must be a boolean'),
     body('fallbackTimeoutMs')
       .optional()
       .isInt({ min: 1000, max: 60000 })
@@ -175,8 +175,8 @@ export function getPaymentLogsValidation(): ValidationChain[] {
       .toInt(),
     query('gateway')
       .optional()
-      .isIn(['stripe', 'payzoo'])
-      .withMessage('Gateway must be "stripe" or "payzoo"'),
+      .isIn(['stripe', 'payroo'])
+      .withMessage('Gateway must be "stripe" or "payroo"'),
     query('status')
       .optional()
       .isIn([

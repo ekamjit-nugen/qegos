@@ -47,7 +47,7 @@ QEGOS is a tax preparation, filing, and client management platform for the Austr
 | Push Notifications | Firebase Cloud Messaging (FCM) | Mobile push for all notification types |
 | WhatsApp | Meta Cloud API (WhatsApp Business) | Two-way messaging, template messages, media |
 | Document Signing | Zoho Sign / DocuSign | Tax return signing, engagement letters |
-| Payments | Stripe + Payzoo (via Gateway Abstraction) | Card payments, refunds, multi-gateway routing |
+| Payments | Stripe + Payroo (via Gateway Abstraction) | Card payments, refunds, multi-gateway routing |
 | Accounting | Xero (xero-node SDK, OAuth 2.0) | Invoice sync, payment reconciliation |
 | Internal Alerts | Slack Webhooks | OTP logs, stale lead alerts, failed payments, review alerts |
 | Monitoring | Datadog / CloudWatch | APM, logs, metrics, alerting |
@@ -84,7 +84,7 @@ QEGOS is a tax preparation, filing, and client management platform for the Austr
 | Integration | Purpose | Auth Method | Rate Limits |
 |------------|---------|-------------|-------------|
 | Stripe | Primary payment gateway | API Key (server) + Publishable Key (client) | 100 req/sec |
-| Payzoo | Secondary payment gateway | API Key + HMAC webhook | TBD — document after integration |
+| Payroo | Secondary payment gateway | API Key + HMAC webhook | TBD — document after integration |
 | Xero | Accounting sync | OAuth 2.0 (30-min access token, auto-refresh) | 60 calls/minute per tenant |
 | Twilio | SMS (OTP + broadcast) | Account SID + Auth Token | 10 msg/sec (broadcast), unlimited (OTP) |
 | Amazon SES | Email campaigns | IAM credentials | 100 emails/sec (production) |
@@ -1240,7 +1240,7 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 | TAX-UC-06 | Amendment to prior year | 1. Forgot $3K deductions from FY2023-24 2. Create amendment order (linkedOrderId, same FY) 3. System loads original snap: xyz-789 (FY2023-24 rules) 4. Prepare amended return with FY2023-24 brackets 5. Enter results → auto-diff → additional $900 refund 6. Lodge amendment with ATO |
 | TAX-UC-07 | Reproduce 2-year-old calculation for ATO audit | 1. ATO queries FY2022-23 return 2. Load rulesSnapshotId: old-001 3. POST /tax/recalculate with stored input + old-001 rules 4. Output matches stored result exactly 5. Export as PDF for ATO |
 
-## 9. PAYMENT GATEWAY (STRIPE + PAYZOO)
+## 9. PAYMENT GATEWAY (STRIPE + PAYROO)
 
 ### 9.1 Payment Data Model (payment.js) — SEPARATE COLLECTION
 
@@ -1249,9 +1249,9 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 | paymentNumber | String | auto, unique | QGS-PAY-XXXX |
 | orderId | ObjectId ref Order | required, index | Parent order |
 | userId | ObjectId ref User | required, index | Payer |
-| gateway | Enum | required | stripe, payzoo |
-| gatewayTxnId | String | index | Stripe PaymentIntent ID or Payzoo transaction ID |
-| gatewayCustomerId | String | — | Stripe Customer ID or Payzoo equivalent |
+| gateway | Enum | required | stripe, payroo |
+| gatewayTxnId | String | index | Stripe PaymentIntent ID or Payroo transaction ID |
+| gatewayCustomerId | String | — | Stripe Customer ID or Payroo equivalent |
 | idempotencyKey | String | required, unique | Client-generated UUID v4 — prevents duplicate payments |
 | amount | Number | required, integer | Amount in cents (AUD). ALWAYS integer. |
 | currency | String | default: "AUD" | ISO 4217 currency code |
@@ -1272,13 +1272,13 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 
 | Field | Type | Description |
 |-------|------|-------------|
-| primaryGateway | Enum | stripe, payzoo |
+| primaryGateway | Enum | stripe, payroo |
 | routingRule | Enum | primary_only, fallback, round_robin, amount_based |
 | amountThreshold | Number | For amount_based: below threshold → primary, above → secondary (cents) |
 | stripeEnabled | Boolean | Toggle Stripe |
 | stripePublishableKey | String | Client-side key |
-| payzooEnabled | Boolean | Toggle Payzoo |
-| payzooPublicKey | String | Client-side key |
+| payrooEnabled | Boolean | Toggle Payroo |
+| payrooPublicKey | String | Client-side key |
 | fallbackTimeoutMs | Number | default: 10000 — wait time before fallback |
 | maintenanceMode | Boolean | default: false — disable all payments |
 | maintenanceMessage | String | User-facing message during maintenance |
@@ -1289,8 +1289,8 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 
 | Field | Type | Validation | Description |
 |-------|------|-----------|-------------|
-| eventId | String | required, unique | Gateway event ID (Stripe: evt_xxx, Payzoo: equivalent) |
-| gateway | Enum | required | stripe, payzoo |
+| eventId | String | required, unique | Gateway event ID (Stripe: evt_xxx, Payroo: equivalent) |
+| gateway | Enum | required | stripe, payroo |
 | eventType | String | required | payment_intent.succeeded, charge.refunded, etc. |
 | payload | Object | required | Raw webhook body (stored for debugging/replay) |
 | processedAt | Date | — | When successfully processed |
@@ -1309,7 +1309,7 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 | GET /api/v1/payments/:id/status | GET | Client (own) | Real-time status poll from gateway |
 | GET /api/v1/payments/order/:orderId | GET | Admin+ / Staff (assigned) / Client (own) | All payments for an order |
 | POST /api/v1/webhooks/stripe | POST | Public (signature-verified) | Stripe webhook. Verifies stripe.webhooks.constructEvent(). |
-| POST /api/v1/webhooks/payzoo | POST | Public (HMAC-verified) | Payzoo webhook. Verifies HMAC-SHA256 signature. |
+| POST /api/v1/webhooks/payroo | POST | Public (HMAC-verified) | Payroo webhook. Verifies HMAC-SHA256 signature. |
 | GET /api/v1/payments/config | GET | Admin+ | Current gateway configuration |
 | PUT /api/v1/payments/config | PUT | Super Admin | Update gateway config. AuditLog: severity=critical. |
 | POST /api/v1/payments/config/test | POST | Admin+ | Test gateway connectivity (creates $0 auth, immediately voids). |
@@ -1324,7 +1324,7 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 | PAY-INV-02 | All amounts stored as integers (cents). $165.00 = 16500. No floating point. | Mongoose: type Number, validate: Number.isInteger |
 | PAY-INV-03 | Webhook events processed exactly once. WebhookEvent.eventId unique index. Duplicate webhooks return 200 OK without reprocessing. | Check-before-process pattern |
 | PAY-INV-04 | Stripe webhooks MUST verify signature using stripe.webhooks.constructEvent(body, sig, endpointSecret). Raw body (not parsed JSON) required. | Express raw body middleware for /webhooks/stripe path |
-| PAY-INV-05 | Payzoo webhooks MUST verify HMAC-SHA256 signature from X-Payzoo-Signature header. | HMAC verification middleware |
+| PAY-INV-05 | Payroo webhooks MUST verify HMAC-SHA256 signature from X-Payroo-Signature header. | HMAC verification middleware |
 | PAY-INV-06 | Refund amount can NEVER exceed capturedAmount. Validation: sum(existing refunds) + newRefundAmount <= capturedAmount. | Pre-refund calculation in handler |
 | PAY-INV-07 | Payment status transitions are strictly one-directional: pending → authorised → captured → succeeded. Cannot reverse. Only exception: → failed (from any pre-succeeded state), → refunded/partially_refunded (from succeeded). | Transition validator |
 | PAY-INV-08 | Gateway fallback triggers ONLY on: network timeout (ETIMEDOUT, ECONNREFUSED), 5xx responses, or gateway maintenance. NEVER on business errors (card_declined, insufficient_funds, expired_card). | Error classification in PaymentRouter: isRetryable() function |
@@ -1339,8 +1339,8 @@ When admin activates new rules, these test cases run automatically. ALL must pas
 | UC-ID | Use Case | Flow |
 |-------|----------|------|
 | PAY-UC-01 | Happy path: Stripe payment | 1. Client selects Pay → app calls POST /payments/intent {orderId, idempotencyKey: uuid()} 2. PaymentRouter checks config: primary=stripe → creates Stripe PaymentIntent 3. Stores Payment(status=pending, gateway=stripe) 4. Returns {clientSecret, gateway: "stripe", publishableKey} 5. Client confirms via Stripe SDK 6. Stripe webhook: payment_intent.succeeded 7. WebhookEvent stored, Payment.status→succeeded 8. BullMQ job: sync to Xero 9. Push notification: "Payment of $165.00 received for Order #QGS-O-0042" |
-| PAY-UC-02 | Stripe timeout → Payzoo fallback | 1. POST /payments/intent 2. PaymentRouter tries Stripe 3. Stripe ETIMEDOUT after 10s 4. isRetryable=true → Router auto-creates Payzoo intent 5. Returns {clientSecret: payzooSecret, gateway: "payzoo"} 6. Client SDK detects gateway=payzoo, loads Payzoo UI 7. AuditLog: "Gateway fallback: stripe→payzoo, reason: ETIMEDOUT" |
-| PAY-UC-03 | Card declined (NO fallback) | 1. POST /payments/intent → Stripe PaymentIntent created 2. Client confirms → Stripe returns card_declined 3. isRetryable=false → NO fallback to Payzoo 4. Return error to client: "Card declined. Please try a different card." |
+| PAY-UC-02 | Stripe timeout → Payroo fallback | 1. POST /payments/intent 2. PaymentRouter tries Stripe 3. Stripe ETIMEDOUT after 10s 4. isRetryable=true → Router auto-creates Payroo intent 5. Returns {clientSecret: payrooSecret, gateway: "payroo"} 6. Client SDK detects gateway=payroo, loads Payroo UI 7. AuditLog: "Gateway fallback: stripe→payroo, reason: ETIMEDOUT" |
+| PAY-UC-03 | Card declined (NO fallback) | 1. POST /payments/intent → Stripe PaymentIntent created 2. Client confirms → Stripe returns card_declined 3. isRetryable=false → NO fallback to Payroo 4. Return error to client: "Card declined. Please try a different card." |
 | PAY-UC-04 | Duplicate network request | 1. Client's network flaky, request sent twice with same idempotencyKey 2. Second request finds existing Payment with this key 3. Returns original response (same clientSecret, same paymentId) 4. Only one PaymentIntent exists in Stripe |
 | PAY-UC-05 | Partial refund | 1. Admin: POST /payments/refund {paymentId, amount: 5000, reason: "Overcharge", idempotencyKey} 2. Validate: 0 (existing refunds) + 5000 <= 16500 (captured) ✓ 3. Call gateway.refund(5000) 4. Payment.refundedAmount=5000, status=partially_refunded 5. Refund entry added to Payment.refunds[] 6. BullMQ job: create Xero credit note for $50.00 7. Push notification to client: "Refund of $50.00 processed" |
 | PAY-UC-06 | Webhook replay attack | 1. Attacker replays captured webhook 2. POST /webhooks/stripe → verify signature → PASS (same body, valid sig) 3. Check WebhookEvent: eventId already exists, status=processed 4. Return 200 OK, no reprocessing 5. Log: "Duplicate webhook ignored: evt_xxx" |
@@ -2666,7 +2666,7 @@ Structured customer support system for a high-stress tax domain. Every client is
 | NFR-22 | CI/CD | GitHub Actions: lint → test → build → deploy for all 4 apps. Staging + production environments. | P1 |
 | NFR-23 | Message Queue | BullMQ (Redis-backed): Xero sync, broadcast sends, webhook processing, review scheduling, analytics computation, media downloads, SLA checks. | P0 |
 | NFR-24 | Idempotency | All financial POST endpoints accept Idempotency-Key header. Redis storage, 24hr TTL. | P0 |
-| NFR-25 | Circuit Breaker | Xero, Stripe, Payzoo, Twilio, SES, Meta API behind circuit breakers. Open after 5 failures. Half-open after 30 sec. | P1 |
+| NFR-25 | Circuit Breaker | Xero, Stripe, Payroo, Twilio, SES, Meta API behind circuit breakers. Open after 5 failures. Half-open after 30 sec. | P1 |
 | NFR-26 | Soft Delete | All user-facing data uses soft delete (isDeleted flag). Hard delete by cron after grace period. | P0 |
 | NFR-27 | Audit Retention | 7 years (ATO requirement). Monthly archive to S3 Glacier for records > 12 months. | P0 |
 | NFR-28 | Socket.io Scaling | Redis adapter for horizontal scaling. Sticky sessions via ALB. | P1 |
@@ -2683,7 +2683,7 @@ Structured customer support system for a high-stress tax domain. Every client is
 | Phase | Duration | Team | Scope | Deliverables |
 |-------|----------|------|-------|-------------|
 | 0: Foundation | 4 weeks | 2 BE | RBAC middleware + permission matrix + permission audit tooling, audit logging on all models, rate limiting (express-rate-limit + Redis), JWT refresh rotation + blacklisting, standardised error handling, health check endpoints, express-validator on all existing endpoints, API versioning prefix, tax rule config model + FY2024-25 seed data | RBAC working, audit trail recording, auth hardened, tax rules seeded |
-| 1: Payment Hardening | 5 weeks | 2 BE + 1 FE | Separate Payment collection + migration, idempotency keys, Stripe webhook signature verification, Payzoo Provider, Gateway Abstraction Layer + routing, webhook replay protection, GST rounding engine, billing dispute model, prorated cancellation workflow, write-off workflow, admin gateway config UI, payment transaction log UI | Dual-gateway payments, bulletproof webhooks, billing edge cases handled |
+| 1: Payment Hardening | 5 weeks | 2 BE + 1 FE | Separate Payment collection + migration, idempotency keys, Stripe webhook signature verification, Payroo Provider, Gateway Abstraction Layer + routing, webhook replay protection, GST rounding engine, billing dispute model, prorated cancellation workflow, write-off workflow, admin gateway config UI, payment transaction log UI | Dual-gateway payments, bulletproof webhooks, billing edge cases handled |
 | 2: Xero Integration | 4 weeks | 1 BE + 1 FE | OAuth 2.0 with encrypted tokens, Redis distributed lock for refresh, Contact sync, Invoice auto-creation, Payment sync, Credit note for refunds, invoice adjustment (void + recreate), rate limiter (60/min), sync log with retry, reconciliation report, admin settings UI | Automated accounting sync |
 | 3: Lead & Order Core | 6 weeks | 2 BE + 2 FE | Lead CRUD + 8-state status machine + activity logging + dedup + assignment + Kanban + staff mobile companion, Order enhancements (orderType, linkedOrderId), Review/Approval Pipeline (checklist, assignment rules, approval gate), follow-up reminders + push | Lead tracking + review pipeline operational |
 | 4: Lead Advanced + Tax Engine | 4 weeks | 2 BE + 1 FE | Lead scoring + automation crons + bulk import/export + merge + conversion, Tax estimate calculator (pure function + APIs + client UI hooks), Tax result import system, Amendment workflow, Tax rules admin UI + test suite, taxEstimateLog storage | Lead management + tax engine complete |

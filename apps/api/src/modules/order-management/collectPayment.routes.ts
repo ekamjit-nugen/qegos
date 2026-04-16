@@ -140,7 +140,7 @@ const pricingValidation = [
 const payValidation = [
   ...pricingValidation,
   body('idempotencyKey').isString().isLength({ min: 10, max: 128 }),
-  body('gateway').optional().isIn(['stripe', 'payzoo']),
+  body('gateway').optional().isIn(['stripe', 'payroo']),
 ];
 
 export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Router {

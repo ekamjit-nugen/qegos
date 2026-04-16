@@ -460,7 +460,7 @@ describe('E2E: Order Lifecycle', () => {
         .send({ amountCents: 11000, gateway: 'stripe' });
       await request(app)
         .post(`/api/v1/orders/${create.body.data._id}/payment`)
-        .send({ amountCents: 11000, gateway: 'payzoo' });
+        .send({ amountCents: 11000, gateway: 'payroo' });
 
       const res = await request(app).get(`/api/v1/orders/${create.body.data._id}/payments`);
 

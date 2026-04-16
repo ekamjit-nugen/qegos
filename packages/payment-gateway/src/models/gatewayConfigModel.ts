@@ -6,7 +6,7 @@ const gatewayConfigSchema = new Schema<IGatewayConfigDocument>(
     primaryGateway: {
       type: String,
       required: true,
-      enum: ['stripe', 'payzoo'] as PaymentGateway[],
+      enum: ['stripe', 'payroo'] as PaymentGateway[],
       default: 'stripe',
     },
     routingRule: {
@@ -25,8 +25,8 @@ const gatewayConfigSchema = new Schema<IGatewayConfigDocument>(
     },
     stripeEnabled: { type: Boolean, default: true },
     stripePublishableKey: { type: String, default: '' },
-    payzooEnabled: { type: Boolean, default: false },
-    payzooPublicKey: { type: String, default: '' },
+    payrooEnabled: { type: Boolean, default: false },
+    payrooPublicKey: { type: String, default: '' },
     fallbackTimeoutMs: {
       type: Number,
       default: 10000,

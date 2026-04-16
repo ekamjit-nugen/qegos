@@ -51,8 +51,8 @@ function createBaseConfig(overrides?: Partial<IGatewayConfig>): IGatewayConfig {
     amountThreshold: 100000,
     stripeEnabled: true,
     stripePublishableKey: 'pk_test_xxx',
-    payzooEnabled: true,
-    payzooPublicKey: 'pz_pk_xxx',
+    payrooEnabled: true,
+    payrooPublicKey: 'pz_pk_xxx',
     fallbackTimeoutMs: 10000,
     maintenanceMode: false,
     maintenanceMessage: '',
@@ -140,17 +140,17 @@ describe('PaymentRouter', () => {
       timeoutError.isRetryable = true;
 
       const stripeProvider = createMockProvider('stripe', undefined, timeoutError);
-      const payzooProvider = createMockProvider('payzoo');
+      const payrooProvider = createMockProvider('payroo');
       const providers = new Map<PaymentGateway, IPaymentProvider>();
       providers.set('stripe', stripeProvider);
-      providers.set('payzoo', payzooProvider);
+      providers.set('payroo', payrooProvider);
 
       const config = createBaseConfig({ routingRule: 'fallback' });
       const result = await routePayment(createBaseParams(), config, providers);
 
-      expect(result.gateway).toBe('payzoo');
+      expect(result.gateway).toBe('payroo');
       expect(stripeProvider.createPaymentIntent).toHaveBeenCalledTimes(1);
-      expect(payzooProvider.createPaymentIntent).toHaveBeenCalledTimes(1);
+      expect(payrooProvider.createPaymentIntent).toHaveBeenCalledTimes(1);
     });
 
     it('should NOT fall back on card_declined (PAY-INV-08)', async () => {
@@ -159,39 +159,39 @@ describe('PaymentRouter', () => {
       businessError.isRetryable = false;
 
       const stripeProvider = createMockProvider('stripe', undefined, businessError);
-      const payzooProvider = createMockProvider('payzoo');
+      const payrooProvider = createMockProvider('payroo');
       const providers = new Map<PaymentGateway, IPaymentProvider>();
       providers.set('stripe', stripeProvider);
-      providers.set('payzoo', payzooProvider);
+      providers.set('payroo', payrooProvider);
 
       const config = createBaseConfig({ routingRule: 'fallback' });
       await expect(routePayment(createBaseParams(), config, providers)).rejects.toThrow('declined');
 
-      expect(payzooProvider.createPaymentIntent).not.toHaveBeenCalled();
+      expect(payrooProvider.createPaymentIntent).not.toHaveBeenCalled();
     });
 
     it('should use primary when primary succeeds', async () => {
       const stripeProvider = createMockProvider('stripe');
-      const payzooProvider = createMockProvider('payzoo');
+      const payrooProvider = createMockProvider('payroo');
       const providers = new Map<PaymentGateway, IPaymentProvider>();
       providers.set('stripe', stripeProvider);
-      providers.set('payzoo', payzooProvider);
+      providers.set('payroo', payrooProvider);
 
       const config = createBaseConfig({ routingRule: 'fallback' });
       const result = await routePayment(createBaseParams(), config, providers);
 
       expect(result.gateway).toBe('stripe');
-      expect(payzooProvider.createPaymentIntent).not.toHaveBeenCalled();
+      expect(payrooProvider.createPaymentIntent).not.toHaveBeenCalled();
     });
   });
 
   describe('routePayment — round_robin', () => {
     it('should alternate between gateways', async () => {
       const stripeProvider = createMockProvider('stripe');
-      const payzooProvider = createMockProvider('payzoo');
+      const payrooProvider = createMockProvider('payroo');
       const providers = new Map<PaymentGateway, IPaymentProvider>();
       providers.set('stripe', stripeProvider);
-      providers.set('payzoo', payzooProvider);
+      providers.set('payroo', payrooProvider);
 
       const config = createBaseConfig({ routingRule: 'round_robin' });
 
@@ -205,10 +205,10 @@ describe('PaymentRouter', () => {
   describe('routePayment — amount_based', () => {
     it('should use primary below threshold', async () => {
       const stripeProvider = createMockProvider('stripe');
-      const payzooProvider = createMockProvider('payzoo');
+      const payrooProvider = createMockProvider('payroo');
       const providers = new Map<PaymentGateway, IPaymentProvider>();
       providers.set('stripe', stripeProvider);
-      providers.set('payzoo', payzooProvider);
+      providers.set('payroo', payrooProvider);
 
       const config = createBaseConfig({
         routingRule: 'amount_based',
@@ -225,22 +225,22 @@ describe('PaymentRouter', () => {
 
     it('should use secondary above threshold', async () => {
       const stripeProvider = createMockProvider('stripe');
-      const payzooProvider = createMockProvider('payzoo');
+      const payrooProvider = createMockProvider('payroo');
       const providers = new Map<PaymentGateway, IPaymentProvider>();
       providers.set('stripe', stripeProvider);
-      providers.set('payzoo', payzooProvider);
+      providers.set('payroo', payrooProvider);
 
       const config = createBaseConfig({
         routingRule: 'amount_based',
         amountThreshold: 100000, // $1000
       });
 
-      // Above threshold — should use secondary (payzoo)
+      // Above threshold — should use secondary (payroo)
       const params = createBaseParams();
       params.amount = 200000; // $2000
       const result = await routePayment(params, config, providers);
 
-      expect(result.gateway).toBe('payzoo');
+      expect(result.gateway).toBe('payroo');
     });
   });
 });

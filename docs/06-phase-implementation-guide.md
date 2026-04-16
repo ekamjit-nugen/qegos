@@ -98,14 +98,14 @@ RBAC-INV-01 through RBAC-INV-12, PRM-INV-01 through PRM-INV-06, SEC-INV-01 throu
 
 ### Scope
 
-Separate Payment collection + migration, idempotency keys, Stripe webhook signature verification, Payzoo Provider, Gateway Abstraction Layer + routing, webhook replay protection, GST rounding engine, billing dispute model, prorated cancellation workflow, write-off workflow, admin gateway config UI, payment transaction log UI.
+Separate Payment collection + migration, idempotency keys, Stripe webhook signature verification, Payroo Provider, Gateway Abstraction Layer + routing, webhook replay protection, GST rounding engine, billing dispute model, prorated cancellation workflow, write-off workflow, admin gateway config UI, payment transaction log UI.
 
 ### Data Models to Build
 
 | Model | Collection | Key Fields |
 |-------|-----------|-----------|
 | Payment | payments | paymentNumber, orderId, userId, gateway, gatewayTxnId, idempotencyKey, amount(cents), status, refunds[] |
-| PaymentGatewayConfig | paymentgatewayconfigs | primaryGateway, routingRule, stripeEnabled, payzooEnabled, fallbackTimeoutMs, maintenanceMode |
+| PaymentGatewayConfig | paymentgatewayconfigs | primaryGateway, routingRule, stripeEnabled, payrooEnabled, fallbackTimeoutMs, maintenanceMode |
 | WebhookEvent | webhookevents | eventId(unique), gateway, eventType, payload, status, retryCount |
 | BillingDispute | billingdisputes | ticketId, orderId, paymentId, disputeType, disputedAmount, resolution, status |
 
@@ -120,7 +120,7 @@ Separate Payment collection + migration, idempotency keys, Stripe webhook signat
 | GET /api/v1/payments/:id/status | GET | client(own) | SS9.4 |
 | GET /api/v1/payments/order/:orderId | GET | admin+/staff/client | SS9.4 |
 | POST /api/v1/webhooks/stripe | POST | public(sig) | SS9.4 |
-| POST /api/v1/webhooks/payzoo | POST | public(HMAC) | SS9.4 |
+| POST /api/v1/webhooks/payroo | POST | public(HMAC) | SS9.4 |
 | GET /api/v1/payments/config | GET | admin+ | SS9.4 |
 | PUT /api/v1/payments/config | PUT | super_admin | SS9.4 |
 | POST /api/v1/payments/config/test | POST | admin+ | SS9.4 |
@@ -152,7 +152,7 @@ PAY-INV-01 through PAY-INV-13, BIL-INV-01 through BIL-INV-07
 ### Dependencies
 
 - Stripe SDK + Stripe webhook endpoint secret
-- Payzoo SDK + HMAC secret
+- Payroo SDK + HMAC secret
 - Phase 0 RBAC + audit logging
 
 ### Deliverables
@@ -702,7 +702,7 @@ Week 44-46:  Phase 10 (Polish)              [Full team]
 | ATO changes tax brackets mid-build | Re-seed tax rules | Tax rules as DATA not code. Admin can update without deploy. |
 | Xero API rate limits hit during bulk sync | Sync delays | Token bucket rate limiter. Queue with backoff. |
 | ClamAV false positives on client uploads | Support load | Manual review queue. Admin can override quarantine. |
-| Stripe/Payzoo downtime | Payment failures | Gateway fallback pattern. Maintenance mode toggle. |
+| Stripe/Payroo downtime | Payment failures | Gateway fallback pattern. Maintenance mode toggle. |
 | Meta WhatsApp quality rating drops | Message throttling | Monitor quality rating. Template approval process. |
 | MongoDB transaction failures (conversion) | Data inconsistency | Retry logic. Compensating transactions. |
 | Storage costs escalate | Budget | Per-user quotas. Orphaned file detection. Glacier archival. |

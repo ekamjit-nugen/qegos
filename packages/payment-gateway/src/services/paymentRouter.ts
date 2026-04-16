@@ -81,7 +81,7 @@ export function isRetryable(error: GatewayError): boolean {
  * Get the secondary gateway given a primary.
  */
 function getSecondaryGateway(primary: PaymentGateway): PaymentGateway {
-  return primary === 'stripe' ? 'payzoo' : 'stripe';
+  return primary === 'stripe' ? 'payroo' : 'stripe';
 }
 
 /**
@@ -98,7 +98,7 @@ function isGatewayAvailable(
   if (gateway === 'stripe' && !config.stripeEnabled) {
     return false;
   }
-  if (gateway === 'payzoo' && !config.payzooEnabled) {
+  if (gateway === 'payroo' && !config.payrooEnabled) {
     return false;
   }
   return true;

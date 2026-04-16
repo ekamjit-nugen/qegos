@@ -1,7 +1,7 @@
 import {
   initWebhookProcessor,
   processStripeWebhook,
-  processPayzooWebhook,
+  processPayrooWebhook,
   paymentEvents,
 } from '../src/services/webhookProcessor';
 
@@ -270,9 +270,9 @@ describe('WebhookProcessor', () => {
     });
   });
 
-  describe('processPayzooWebhook', () => {
-    it('should process a Payzoo payment.completed webhook', async () => {
-      const result = await processPayzooWebhook('pz_evt_001', 'payment.completed', {
+  describe('processPayrooWebhook', () => {
+    it('should process a Payroo payment.completed webhook', async () => {
+      const result = await processPayrooWebhook('pz_evt_001', 'payment.completed', {
         transactionId: 'pi_test_123',
         amount: 16500,
       });
@@ -281,12 +281,12 @@ describe('WebhookProcessor', () => {
       expect(result.duplicate).toBe(false);
     });
 
-    it('should return duplicate=true for repeated Payzoo eventId', async () => {
-      await processPayzooWebhook('pz_evt_dup', 'payment.completed', {
+    it('should return duplicate=true for repeated Payroo eventId', async () => {
+      await processPayrooWebhook('pz_evt_dup', 'payment.completed', {
         transactionId: 'pi_test_123',
       });
 
-      const result = await processPayzooWebhook('pz_evt_dup', 'payment.completed', {
+      const result = await processPayrooWebhook('pz_evt_dup', 'payment.completed', {
         transactionId: 'pi_test_123',
       });
 

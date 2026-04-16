@@ -180,7 +180,7 @@ All async job processing runs on BullMQ backed by Redis.
 | Service | Purpose | Auth | Rate Limits | Integration Pattern |
 |---------|---------|------|-------------|-------------------|
 | **Stripe** | Primary payment gateway | API Key (server) + Publishable Key (client) | 100 req/sec | PaymentIntent flow, webhook (signature verified via `stripe.webhooks.constructEvent()`) |
-| **Payzoo** | Secondary/fallback gateway | API Key + HMAC webhook | TBD | Gateway Abstraction Layer, HMAC-SHA256 signature verification |
+| **Payroo** | Secondary/fallback gateway | API Key + HMAC webhook | TBD | Gateway Abstraction Layer, HMAC-SHA256 signature verification |
 
 **Gateway routing rules:** `primary_only`, `fallback`, `round_robin`, `amount_based` (configurable via `paymentGatewayConfig`).
 
@@ -328,7 +328,7 @@ All external service integrations behind circuit breakers:
 |---------|-----------|-----------------|
 | Xero | 5 failures | 30 seconds |
 | Stripe | 5 failures | 30 seconds |
-| Payzoo | 5 failures | 30 seconds |
+| Payroo | 5 failures | 30 seconds |
 | Twilio | 5 failures | 30 seconds |
 | Amazon SES | 5 failures | 30 seconds |
 | Meta Cloud API | 5 failures | 30 seconds |

@@ -13,40 +13,40 @@ import type {
   GatewayError,
 } from '../types';
 
-interface PayzooProviderConfig {
+interface PayrooProviderConfig {
   apiKey: string;
   apiSecret: string;
   baseUrl: string;
   publicKey: string;
 }
 
-let _config: PayzooProviderConfig | null = null;
+let _config: PayrooProviderConfig | null = null;
 
 /**
- * Initialize the Payzoo provider with configuration.
+ * Initialize the Payroo provider with configuration.
  */
-export function initPayzooProvider(config: PayzooProviderConfig): void {
+export function initPayrooProvider(config: PayrooProviderConfig): void {
   _config = config;
 }
 
-function getConfig(): PayzooProviderConfig {
+function getConfig(): PayrooProviderConfig {
   if (!_config) {
-    throw new Error('Payzoo provider not initialized. Call initPayzooProvider first.');
+    throw new Error('Payroo provider not initialized. Call initPayrooProvider first.');
   }
   return _config;
 }
 
 /**
- * Generate HMAC-SHA256 signature for Payzoo API requests.
+ * Generate HMAC-SHA256 signature for Payroo API requests.
  */
 function signRequest(payload: string, secret: string): string {
   return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
 /**
- * Generic Payzoo API HTTP client.
+ * Generic Payroo API HTTP client.
  */
-async function payzooRequest<T>(
+async function payrooRequest<T>(
   method: string,
   path: string,
   body?: Record<string, unknown>,
@@ -59,8 +59,8 @@ async function payzooRequest<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Payzoo-Api-Key': config.apiKey,
-    'X-Payzoo-Signature': signature,
+    'X-Payroo-Api-Key': config.apiKey,
+    'X-Payroo-Signature': signature,
   };
 
   if (idempotencyKey) {
@@ -82,7 +82,7 @@ async function payzooRequest<T>(
     response = await fetch(url, fetchOptions);
   } catch (err) {
     const gatewayErr: GatewayError = new Error(
-      `Payzoo network error: ${(err as Error).message}`,
+      `Payroo network error: ${(err as Error).message}`,
     ) as GatewayError;
     gatewayErr.code = (err as NodeJS.ErrnoException).code ?? 'ECONNREFUSED';
     gatewayErr.isRetryable = true;
@@ -93,7 +93,7 @@ async function payzooRequest<T>(
 
   if (!response.ok) {
     const gatewayErr: GatewayError = new Error(
-      (data.message as string) ?? `Payzoo error: ${response.status}`,
+      (data.message as string) ?? `Payroo error: ${response.status}`,
     ) as GatewayError;
     gatewayErr.code = (data.code as string) ?? undefined;
     gatewayErr.type = (data.type as string) ?? undefined;
@@ -105,30 +105,30 @@ async function payzooRequest<T>(
   return data as T;
 }
 
-interface PayzooIntentResponse {
+interface PayrooIntentResponse {
   transactionId: string;
   clientSecret: string;
   status: string;
 }
 
-interface PayzooCaptureResponse {
+interface PayrooCaptureResponse {
   transactionId: string;
   capturedAmount: number;
   status: string;
 }
 
-interface PayzooCancelResponse {
+interface PayrooCancelResponse {
   transactionId: string;
   status: string;
 }
 
-interface PayzooRefundResponse {
+interface PayrooRefundResponse {
   refundId: string;
   amount: number;
   status: string;
 }
 
-interface PayzooStatusResponse {
+interface PayrooStatusResponse {
   transactionId: string;
   status: string;
   amount: number;
@@ -137,15 +137,15 @@ interface PayzooStatusResponse {
 }
 
 /**
- * Payzoo implementation of IPaymentProvider.
+ * Payroo implementation of IPaymentProvider.
  * Uses HMAC-SHA256 signed HTTP requests.
  */
-export const payzooProvider: IPaymentProvider = {
-  name: 'payzoo',
+export const payrooProvider: IPaymentProvider = {
+  name: 'payroo',
 
   async createPaymentIntent(params: CreateIntentParams): Promise<PaymentIntentResult> {
     const config = getConfig();
-    const result = await payzooRequest<PayzooIntentResponse>(
+    const result = await payrooRequest<PayrooIntentResponse>(
       'POST',
       '/v1/payments/intents',
       {
@@ -161,14 +161,14 @@ export const payzooProvider: IPaymentProvider = {
     return {
       gatewayTxnId: result.transactionId,
       clientSecret: result.clientSecret,
-      gateway: 'payzoo',
+      gateway: 'payroo',
       publishableKey: config.publicKey,
       status: result.status,
     };
   },
 
   async capturePayment(params: CaptureParams): Promise<CaptureResult> {
-    const result = await payzooRequest<PayzooCaptureResponse>(
+    const result = await payrooRequest<PayrooCaptureResponse>(
       'POST',
       `/v1/payments/${params.gatewayTxnId}/capture`,
       { amount: params.amount },
@@ -183,7 +183,7 @@ export const payzooProvider: IPaymentProvider = {
 
   async cancelPayment(params: CancelParams): Promise<CancelResult> {
     try {
-      const result = await payzooRequest<PayzooCancelResponse>(
+      const result = await payrooRequest<PayrooCancelResponse>(
         'POST',
         `/v1/payments/${params.gatewayTxnId}/cancel`,
         params.reason ? { reason: params.reason } : undefined,
@@ -193,7 +193,7 @@ export const payzooProvider: IPaymentProvider = {
         status: result.status,
       };
     } catch (err) {
-      // Idempotent compensation: if Payzoo says the intent is missing
+      // Idempotent compensation: if Payroo says the intent is missing
       // (already cleaned up) or in a state that disallows cancel
       // (already cancelled / settled), treat as success — the saga
       // outcome is the same. Other errors propagate.
@@ -209,7 +209,7 @@ export const payzooProvider: IPaymentProvider = {
   },
 
   async refundPayment(params: RefundParams): Promise<RefundResult> {
-    const result = await payzooRequest<PayzooRefundResponse>(
+    const result = await payrooRequest<PayrooRefundResponse>(
       'POST',
       `/v1/payments/${params.gatewayTxnId}/refunds`,
       {
@@ -227,7 +227,7 @@ export const payzooProvider: IPaymentProvider = {
   },
 
   async getPaymentStatus(gatewayTxnId: string): Promise<PaymentStatusResult> {
-    const result = await payzooRequest<PayzooStatusResponse>('GET', `/v1/payments/${gatewayTxnId}`);
+    const result = await payrooRequest<PayrooStatusResponse>('GET', `/v1/payments/${gatewayTxnId}`);
 
     return {
       gatewayTxnId: result.transactionId,
@@ -240,7 +240,7 @@ export const payzooProvider: IPaymentProvider = {
 
   async testConnection(): Promise<boolean> {
     try {
-      await payzooRequest<Record<string, unknown>>('GET', '/v1/health');
+      await payrooRequest<Record<string, unknown>>('GET', '/v1/health');
       return true;
     } catch {
       return false;

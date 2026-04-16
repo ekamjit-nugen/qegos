@@ -168,7 +168,7 @@ stateDiagram-v2
 sequenceDiagram
     participant C as Client
     participant API as QEGOS API
-    participant GW as Gateway (Stripe/Payzoo)
+    participant GW as Gateway (Stripe/Payroo)
     participant WH as Webhook
     participant X as Xero
     participant N as Notifications

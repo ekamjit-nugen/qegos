@@ -332,7 +332,7 @@ components:
           type: string
         gateway:
           type: string
-          enum: [stripe, payzoo]
+          enum: [stripe, payroo]
         amount:
           type: integer
           description: Amount in cents
@@ -1025,7 +1025,7 @@ paths:
                   minimum: 1
                 gateway:
                   type: string
-                  enum: [stripe, payzoo]
+                  enum: [stripe, payroo]
                 idempotencyKey:
                   type: string
       responses:

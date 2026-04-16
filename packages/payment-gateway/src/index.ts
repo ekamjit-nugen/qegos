@@ -4,12 +4,12 @@ import { createPaymentModel } from './models/paymentModel';
 import { createWebhookEventModel } from './models/webhookEventModel';
 import { createGatewayConfigModel } from './models/gatewayConfigModel';
 import { initStripeProvider, stripeProvider } from './services/stripeProvider';
-import { initPayzooProvider, payzooProvider } from './services/payzooProvider';
+import { initPayrooProvider, payrooProvider } from './services/payrooProvider';
 import { initWebhookProcessor } from './services/webhookProcessor';
 import { initRefundService } from './services/refundService';
 import { initIdempotencyService } from './services/idempotencyService';
 import { initStripeWebhookVerify } from './middleware/stripeWebhookVerify';
-import { initPayzooWebhookVerify } from './middleware/payzooWebhookVerify';
+import { initPayrooWebhookVerify } from './middleware/payrooWebhookVerify';
 import { initMaintenanceMode } from './middleware/maintenanceMode';
 import type {
   IPaymentDocument,
@@ -58,14 +58,14 @@ export function init(
     providers.set('stripe', stripeProvider);
   }
 
-  if (config.payzooApiKey && config.payzooApiSecret && config.payzooBaseUrl) {
-    initPayzooProvider({
-      apiKey: config.payzooApiKey,
-      apiSecret: config.payzooApiSecret,
-      baseUrl: config.payzooBaseUrl,
+  if (config.payrooApiKey && config.payrooApiSecret && config.payrooBaseUrl) {
+    initPayrooProvider({
+      apiKey: config.payrooApiKey,
+      apiSecret: config.payrooApiSecret,
+      baseUrl: config.payrooBaseUrl,
       publicKey: '', // Set via gateway config in DB
     });
-    providers.set('payzoo', payzooProvider);
+    providers.set('payroo', payrooProvider);
   }
 
   // Initialize services
@@ -77,8 +77,8 @@ export function init(
   if (config.stripeWebhookSecret) {
     initStripeWebhookVerify(config.stripeWebhookSecret);
   }
-  if (config.payzooWebhookSecret) {
-    initPayzooWebhookVerify(config.payzooWebhookSecret);
+  if (config.payrooWebhookSecret) {
+    initPayrooWebhookVerify(config.payrooWebhookSecret);
   }
   initMaintenanceMode(GatewayConfigModel);
 
@@ -101,10 +101,10 @@ export { createWebhookEventModel } from './models/webhookEventModel';
 export { createGatewayConfigModel } from './models/gatewayConfigModel';
 export { routePayment, isRetryable, resetRoundRobinIndex } from './services/paymentRouter';
 export { stripeProvider, initStripeProvider } from './services/stripeProvider';
-export { payzooProvider, initPayzooProvider } from './services/payzooProvider';
+export { payrooProvider, initPayrooProvider } from './services/payrooProvider';
 export {
   processStripeWebhook,
-  processPayzooWebhook,
+  processPayrooWebhook,
   paymentEvents,
   initWebhookProcessor,
 } from './services/webhookProcessor';
@@ -121,7 +121,7 @@ export {
   initIdempotencyService,
 } from './services/idempotencyService';
 export { stripeWebhookVerify, initStripeWebhookVerify } from './middleware/stripeWebhookVerify';
-export { payzooWebhookVerify, initPayzooWebhookVerify } from './middleware/payzooWebhookVerify';
+export { payrooWebhookVerify, initPayrooWebhookVerify } from './middleware/payrooWebhookVerify';
 export { maintenanceMode, initMaintenanceMode } from './middleware/maintenanceMode';
 export { calculateLineItemGST, calculateOrderGST } from './utils/gstCalculator';
 export { createPaymentRoutes, type PaymentRouteDeps } from './routes/paymentRoutes';

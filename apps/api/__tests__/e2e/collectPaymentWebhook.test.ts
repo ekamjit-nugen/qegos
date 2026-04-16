@@ -146,13 +146,13 @@ function buildGatewayConfigModel(): unknown {
     primaryGateway: 'stripe',
     routingRule: 'primary_only',
     stripeEnabled: true,
-    payzooEnabled: false,
+    payrooEnabled: false,
     toObject(): Record<string, unknown> {
       return {
         primaryGateway: 'stripe',
         routingRule: 'primary_only',
         stripeEnabled: true,
-        payzooEnabled: false,
+        payrooEnabled: false,
       };
     },
   };

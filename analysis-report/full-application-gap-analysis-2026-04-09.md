@@ -341,7 +341,7 @@ The QEGOS codebase has undergone a **massive expansion** since the last audit 2 
 | Lead | Order | Direct (lead.service creates Order via injected model) | Working |
 | Order | Review | Direct (review.service updates order status) | Working (fixed to use order service) |
 | Lead | BullMQ | Repeatable automation jobs | Working |
-| Payment | Webhook | Stripe/Payzoo signature verification | Working |
+| Payment | Webhook | Stripe/Payroo signature verification | Working |
 | Auth | RBAC | Middleware chain (auth() + check()) | Working |
 | Audit | All mutations | Middleware + manual logging | Working |
 | Broadcast | BullMQ | Channel processing queues | Working |

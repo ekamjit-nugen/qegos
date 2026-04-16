@@ -243,10 +243,10 @@ async function bootstrap(): Promise<void> {
     {
       stripeSecretKey: config.STRIPE_SECRET_KEY,
       stripeWebhookSecret: config.STRIPE_WEBHOOK_SECRET,
-      payzooApiKey: config.PAYZOO_API_KEY,
-      payzooApiSecret: config.PAYZOO_API_SECRET,
-      payzooBaseUrl: config.PAYZOO_BASE_URL,
-      payzooWebhookSecret: config.PAYZOO_WEBHOOK_SECRET,
+      payrooApiKey: config.PAYROO_API_KEY,
+      payrooApiSecret: config.PAYROO_API_SECRET,
+      payrooBaseUrl: config.PAYROO_BASE_URL,
+      payrooWebhookSecret: config.PAYROO_WEBHOOK_SECRET,
     },
   );
 

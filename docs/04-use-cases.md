@@ -167,14 +167,14 @@
 | **Postcondition** | Payment captured, Xero sync queued, client notified |
 | **Invariants** | PAY-INV-01 to PAY-INV-04, PAY-INV-11, PAY-INV-12 |
 
-### PAY-UC-02: Stripe Timeout with Payzoo Fallback
+### PAY-UC-02: Stripe Timeout with Payroo Fallback
 
 | Field | Value |
 |-------|-------|
 | **Actor** | Client |
 | **Precondition** | Stripe experiencing connectivity issues |
-| **Flow** | 1. POST /payments/intent 2. PaymentRouter tries Stripe 3. ETIMEDOUT after 10s 4. isRetryable=true -> Router creates Payzoo intent 5. Returns {clientSecret: payzooSecret, gateway: "payzoo"} 6. Client SDK detects gateway=payzoo, loads Payzoo UI |
-| **Postcondition** | Payment proceeds via fallback. AuditLog: "Gateway fallback: stripe->payzoo, reason: ETIMEDOUT" |
+| **Flow** | 1. POST /payments/intent 2. PaymentRouter tries Stripe 3. ETIMEDOUT after 10s 4. isRetryable=true -> Router creates Payroo intent 5. Returns {clientSecret: payrooSecret, gateway: "payroo"} 6. Client SDK detects gateway=payroo, loads Payroo UI |
+| **Postcondition** | Payment proceeds via fallback. AuditLog: "Gateway fallback: stripe->payroo, reason: ETIMEDOUT" |
 | **Invariants** | PAY-INV-08 |
 
 ### PAY-UC-03: Card Declined (No Fallback)
@@ -183,7 +183,7 @@
 |-------|-------|
 | **Actor** | Client |
 | **Precondition** | Client's card has insufficient funds |
-| **Flow** | 1. POST /payments/intent -> Stripe PaymentIntent created 2. Client confirms -> Stripe returns card_declined 3. isRetryable=false -> NO fallback to Payzoo 4. Error: "Card declined. Please try a different card." |
+| **Flow** | 1. POST /payments/intent -> Stripe PaymentIntent created 2. Client confirms -> Stripe returns card_declined 3. isRetryable=false -> NO fallback to Payroo 4. Error: "Card declined. Please try a different card." |
 | **Postcondition** | No payment created in secondary gateway. Client must retry with different card. |
 | **Invariants** | PAY-INV-08 (business errors never trigger fallback) |
 

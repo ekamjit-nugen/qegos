@@ -179,13 +179,13 @@ PaymentRouter:
 Return {clientSecret, gateway, publishableKey, paymentId}
   |
   v
-Client confirms payment via Stripe SDK / Payzoo SDK
+Client confirms payment via Stripe SDK / Payroo SDK
   |
   v
 Gateway processes --> Webhook fires
   POST /api/v1/webhooks/stripe (signature verified) (PAY-INV-04)
   OR
-  POST /api/v1/webhooks/payzoo (HMAC verified) (PAY-INV-05)
+  POST /api/v1/webhooks/payroo (HMAC verified) (PAY-INV-05)
   |
   v
 Webhook Processing:
@@ -856,7 +856,7 @@ Super Admin opens Payment Settings
   v
 PUT /api/v1/payments/config
   {primaryGateway, routingRule, amountThreshold,
-   stripeEnabled, payzooEnabled, fallbackTimeoutMs,
+   stripeEnabled, payrooEnabled, fallbackTimeoutMs,
    maintenanceMode, maintenanceMessage}
   -> AuditLog: severity=critical
   |

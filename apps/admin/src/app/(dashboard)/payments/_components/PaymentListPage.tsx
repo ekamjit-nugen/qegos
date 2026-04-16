@@ -73,7 +73,7 @@ export function PaymentListPage(): React.ReactNode {
 
   const gatewayOptions = [
     { value: 'stripe', label: 'Stripe' },
-    { value: 'payzoo', label: 'Payzoo' },
+    { value: 'payroo', label: 'Payroo' },
   ];
 
   return (

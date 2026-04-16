@@ -5,28 +5,28 @@ import { AppError } from '@nugen/error-handler';
 let _webhookSecret: string | null = null;
 
 /**
- * Initialize the Payzoo webhook verification middleware.
+ * Initialize the Payroo webhook verification middleware.
  */
-export function initPayzooWebhookVerify(webhookSecret: string): void {
+export function initPayrooWebhookVerify(webhookSecret: string): void {
   _webhookSecret = webhookSecret;
 }
 
 /**
- * PAY-INV-05: Payzoo HMAC-SHA256 webhook signature verification middleware.
+ * PAY-INV-05: Payroo HMAC-SHA256 webhook signature verification middleware.
  *
- * Verifies the X-Payzoo-Signature header against the request body.
+ * Verifies the X-Payroo-Signature header against the request body.
  * Uses timing-safe comparison to prevent timing attacks.
  */
-export function payzooWebhookVerify(): RequestHandler {
+export function payrooWebhookVerify(): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!_webhookSecret) {
-      next(AppError.internal('Payzoo webhook secret not configured'));
+      next(AppError.internal('Payroo webhook secret not configured'));
       return;
     }
 
-    const signature = req.headers['x-payzoo-signature'];
+    const signature = req.headers['x-payroo-signature'];
     if (!signature || typeof signature !== 'string') {
-      next(AppError.badRequest('Missing X-Payzoo-Signature header'));
+      next(AppError.badRequest('Missing X-Payroo-Signature header'));
       return;
     }
 
@@ -47,11 +47,11 @@ export function payzooWebhookVerify(): RequestHandler {
         sigBuffer.length !== expectedBuffer.length ||
         !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
       ) {
-        next(AppError.badRequest('Payzoo webhook signature verification failed'));
+        next(AppError.badRequest('Payroo webhook signature verification failed'));
         return;
       }
     } catch {
-      next(AppError.badRequest('Payzoo webhook signature verification failed'));
+      next(AppError.badRequest('Payroo webhook signature verification failed'));
       return;
     }
 

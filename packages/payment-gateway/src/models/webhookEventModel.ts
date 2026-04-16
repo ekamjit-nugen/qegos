@@ -13,7 +13,7 @@ const webhookEventSchema = new Schema<IWebhookEventDocument>(
     gateway: {
       type: String,
       required: true,
-      enum: ['stripe', 'payzoo'] as PaymentGateway[],
+      enum: ['stripe', 'payroo'] as PaymentGateway[],
     },
     eventType: {
       type: String,

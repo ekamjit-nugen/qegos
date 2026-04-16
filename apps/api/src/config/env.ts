@@ -52,11 +52,11 @@ const envSchema = z
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_PUBLISHABLE_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
-    PAYZOO_API_KEY: z.string().optional(),
-    PAYZOO_API_SECRET: z.string().optional(),
-    PAYZOO_BASE_URL: z.string().optional(),
-    PAYZOO_PUBLIC_KEY: z.string().optional(),
-    PAYZOO_WEBHOOK_SECRET: z.string().optional(),
+    PAYROO_API_KEY: z.string().optional(),
+    PAYROO_API_SECRET: z.string().optional(),
+    PAYROO_BASE_URL: z.string().optional(),
+    PAYROO_PUBLIC_KEY: z.string().optional(),
+    PAYROO_WEBHOOK_SECRET: z.string().optional(),
 
     // Amazon SES (Phase 5 — Broadcast Engine)
     AWS_SES_REGION: z.string().optional(),
@@ -119,12 +119,12 @@ const envSchema = z
         return true;
       } // Skip in test
       const hasStripe = Boolean(data.STRIPE_SECRET_KEY);
-      const hasPayzoo = Boolean(data.PAYZOO_API_KEY && data.PAYZOO_API_SECRET);
-      return hasStripe || hasPayzoo;
+      const hasPayroo = Boolean(data.PAYROO_API_KEY && data.PAYROO_API_SECRET);
+      return hasStripe || hasPayroo;
     },
     {
       message:
-        'At least one payment gateway must be configured (STRIPE_SECRET_KEY or PAYZOO_API_KEY+PAYZOO_API_SECRET)',
+        'At least one payment gateway must be configured (STRIPE_SECRET_KEY or PAYROO_API_KEY+PAYROO_API_SECRET)',
     },
   );
 

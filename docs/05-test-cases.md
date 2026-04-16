@@ -87,15 +87,15 @@ Each test case follows this structure:
 | P1-PAY-001 | Idempotency key prevents duplicate payments | Order exists | 1. POST /payments/intent {idempotencyKey: "abc-123"} 2. POST /payments/intent {idempotencyKey: "abc-123"} again | Second request returns same paymentId and clientSecret as first | P0 | PAY-INV-01 |
 | P1-PAY-002 | All amounts stored as integer cents | — | 1. Create payment for $165.00 | Payment.amount = 16500 (integer) | P0 | PAY-INV-02 |
 | P1-PAY-003 | Stripe webhook signature verification | Raw webhook body | 1. POST /webhooks/stripe with valid signature 2. POST with tampered body | Valid: processed. Tampered: 400 | P0 | PAY-INV-04 |
-| P1-PAY-004 | Payzoo HMAC verification | Webhook body | 1. POST /webhooks/payzoo with valid HMAC 2. POST with invalid HMAC | Valid: processed. Invalid: 400 | P0 | PAY-INV-05 |
+| P1-PAY-004 | Payroo HMAC verification | Webhook body | 1. POST /webhooks/payroo with valid HMAC 2. POST with invalid HMAC | Valid: processed. Invalid: 400 | P0 | PAY-INV-05 |
 | P1-PAY-005 | Duplicate webhook returns 200 without reprocessing | Webhook already processed | 1. POST /webhooks/stripe with same eventId twice | Both return 200. Payment updated only once. | P0 | PAY-INV-03 |
 | P1-PAY-006 | Refund cannot exceed captured amount | Payment captured for $165 | 1. POST /payments/refund {amount: 20000} (=$200) | 400 "Refund amount exceeds captured amount" | P0 | PAY-INV-06 |
 | P1-PAY-007 | Cumulative refund check | Payment $165, already refunded $50 | 1. POST /payments/refund {amount: 12000} | 400 "Total refunds ($170) would exceed captured ($165)" | P0 | PAY-INV-06 |
-| P1-PAY-008 | Gateway fallback on timeout | Stripe configured as primary | 1. Mock Stripe ETIMEDOUT 2. POST /payments/intent | Returns Payzoo clientSecret. AuditLog: "Gateway fallback: stripe->payzoo" | P0 | PAY-INV-08 |
-| P1-PAY-009 | No fallback on business error | Card declined | 1. Stripe returns card_declined | Error returned to client. No Payzoo attempt. | P0 | PAY-INV-08 |
+| P1-PAY-008 | Gateway fallback on timeout | Stripe configured as primary | 1. Mock Stripe ETIMEDOUT 2. POST /payments/intent | Returns Payroo clientSecret. AuditLog: "Gateway fallback: stripe->payroo" | P0 | PAY-INV-08 |
+| P1-PAY-009 | No fallback on business error | Card declined | 1. Stripe returns card_declined | Error returned to client. No Payroo attempt. | P0 | PAY-INV-08 |
 | P1-PAY-010 | Maintenance mode blocks payments | maintenanceMode=true | 1. POST /payments/intent | 503 {code: "PAYMENT_MAINTENANCE", retryAfter: 3600} | P0 | PAY-INV-10 |
 | P1-PAY-011 | Payment state transitions are one-directional | Payment in "succeeded" | 1. Attempt to set status to "pending" | 400 "Invalid status transition" | P0 | PAY-INV-07 |
-| P1-PAY-012 | Client never receives raw gateway objects | — | 1. Any payment response | No Stripe/Payzoo internal objects in response | P1 | PAY-INV-09 |
+| P1-PAY-012 | Client never receives raw gateway objects | — | 1. Any payment response | No Stripe/Payroo internal objects in response | P1 | PAY-INV-09 |
 | P1-PAY-013 | GST calculated per line item | Order: $99 + $165 | 1. Calculate GST | GST: Math.round(9900/11)=900 + Math.round(16500/11)=1500 = 2400 total | P0 | BIL-INV-01 |
 | P1-PAY-014 | Refund >$500 requires admin approval | Staff user, refund $600 | 1. POST /payments/refund {amount: 60000} | 403 "Refund amount requires admin approval" | P0 | BIL-INV-04 |
 | P1-PAY-015 | Refund >$2000 requires super_admin | Admin user, refund $2500 | 1. POST /payments/refund {amount: 250000} | 403 "Refund amount requires super_admin approval" | P0 | BIL-INV-04 |

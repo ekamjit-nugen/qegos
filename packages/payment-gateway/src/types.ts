@@ -3,7 +3,7 @@ import type { Request } from 'express';
 
 // ─── Gateway Enums ───────────────────────────────────────────────────────────
 
-export type PaymentGateway = 'stripe' | 'payzoo';
+export type PaymentGateway = 'stripe' | 'payroo';
 
 export type RoutingRule = 'primary_only' | 'fallback' | 'round_robin' | 'amount_based';
 
@@ -119,8 +119,8 @@ export interface IGatewayConfig {
   amountThreshold: number; // cents — for amount_based routing
   stripeEnabled: boolean;
   stripePublishableKey: string;
-  payzooEnabled: boolean;
-  payzooPublicKey: string;
+  payrooEnabled: boolean;
+  payrooPublicKey: string;
   fallbackTimeoutMs: number;
   maintenanceMode: boolean;
   maintenanceMessage: string;
@@ -296,10 +296,10 @@ export interface GatewayError extends Error {
 export interface PaymentGatewayConfig {
   stripeSecretKey?: string;
   stripeWebhookSecret?: string;
-  payzooApiKey?: string;
-  payzooApiSecret?: string;
-  payzooBaseUrl?: string;
-  payzooWebhookSecret?: string;
+  payrooApiKey?: string;
+  payrooApiSecret?: string;
+  payrooBaseUrl?: string;
+  payrooWebhookSecret?: string;
 }
 
 // ─── Status Transition Map ───────────────────────────────────────────────────

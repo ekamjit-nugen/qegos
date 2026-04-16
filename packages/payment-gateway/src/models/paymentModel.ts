@@ -17,7 +17,7 @@ const refundEntrySchema = new Schema(
     gateway: {
       type: String,
       required: true,
-      enum: ['stripe', 'payzoo'] as PaymentGateway[],
+      enum: ['stripe', 'payroo'] as PaymentGateway[],
     },
     gatewayRefundId: { type: String, required: true },
     status: {
@@ -63,7 +63,7 @@ const paymentSchema = new Schema<IPaymentDocument>(
     gateway: {
       type: String,
       required: true,
-      enum: ['stripe', 'payzoo'] as PaymentGateway[],
+      enum: ['stripe', 'payroo'] as PaymentGateway[],
     },
     gatewayTxnId: {
       type: String,
