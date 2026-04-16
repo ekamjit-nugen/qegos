@@ -163,6 +163,7 @@ export function finalizeApp(
     userRouter: express.Router;
     taxRuleRouter: express.Router;
     paymentRouter?: express.Router;
+    refundRouter?: express.Router;
     billingDisputeRouter?: express.Router;
     // Phase 3: Lead & Order Core + Review Pipeline
     leadRouter?: express.Router;
@@ -231,6 +232,14 @@ export function finalizeApp(
   // Phase 1: Payment & Billing routes
   if (routes.paymentRouter) {
     app.use(`${prefix}/payments`, routes.paymentRouter);
+  }
+  if (routes.refundRouter) {
+    // Saga-wrapped admin refund route. Mounted at the API prefix because
+    // the router's own paths are absolute (/admin/payments/:id/full-refund).
+    // Sits alongside paymentRouter — package-level POST /refund stays for
+    // legacy/raw use, this route is the canonical "refund + restore domain"
+    // entrypoint (re-credits credit balance, revokes promo, flips order).
+    app.use(`${prefix}`, routes.refundRouter);
   }
   if (routes.billingDisputeRouter) {
     app.use(`${prefix}/billing-disputes`, routes.billingDisputeRouter);

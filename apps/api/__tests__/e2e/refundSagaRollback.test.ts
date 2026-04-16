@@ -1,0 +1,480 @@
+/**
+ * E2E: Admin "full refund" route — saga rollback on partial failure
+ *
+ * The route POST /admin/payments/:paymentId/full-refund mutates four
+ * pieces of state in sequence:
+ *
+ *   0. Stripe processRefund — IRREVERSIBLE, runs first, NOT inside saga.
+ *   1. addCredit (re-credit user the amount originally paid in credits)
+ *   2. revokePromoCode (decrement promo usage, delete usage row)
+ *   3. order.save with paymentStatus='refunded' (or 'partially_refunded')
+ *
+ * Steps 1–3 are inside `runSaga('refund.domainSync', ...)`. The Stripe
+ * call itself is never compensated — only DOMAIN consistency is restored.
+ *
+ * This suite mounts the real createRefundRoutes against in-memory mocks
+ * and proves:
+ *
+ *   1. Happy path — Stripe + all 3 saga steps run, no compensations,
+ *      order.paymentStatus='refunded', credit added back, promo revoked.
+ *   2. Promo revoke step throws — credit re-credit was already done, so
+ *      its compensation (useCredit) fires; order status NEVER flipped.
+ *   3. Order-save step throws — BOTH preceding compensations fire in
+ *      reverse: promo re-applied, credit deducted again.
+ *   4. Stripe processRefund throws — saga never runs, no domain mutation.
+ *
+ * If anyone weakens the saga wrapper or skips the domain restoration,
+ * this suite catches the regression — and protects users from losing
+ * credits / having promo usage stuck on a refunded order.
+ */
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+const request = require('supertest') as typeof import('supertest').default;
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+const express = require('express') as typeof import('express').default;
+
+import type { IPaymentProvider } from '@nugen/payment-gateway';
+import type { PromoCodeServiceResult } from '../../src/modules/promo-code/promoCode.service';
+import type { CreditServiceResult } from '../../src/modules/credit/credit.service';
+
+// ─── Mock @nugen/payment-gateway's processRefund ───────────────────────────
+// processRefund is a module-level function (not DI'd) that talks to Stripe
+// and updates Payment state. The route imports it directly. Mocking the
+// package lets us drive Step 0 outcomes without spinning up Stripe.
+
+const processRefundMock = jest.fn();
+
+jest.mock('@nugen/payment-gateway', () => {
+  const actual = jest.requireActual('@nugen/payment-gateway');
+  return {
+    ...actual,
+    processRefund: (...args: unknown[]) => processRefundMock(...args),
+  };
+});
+
+// Import AFTER the mock is registered so the route picks up the mocked
+// processRefund instead of the real one.
+// eslint-disable-next-line import/order
+import { createRefundRoutes } from '../../src/modules/order-management/refund.routes';
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const ACTOR_ID = '670000000000000000000001';
+const CLIENT_ID = '670000000000000000000010';
+const ORDER_ID = '670000000000000000000020';
+const PAYMENT_ID = '670000000000000000000030';
+const TOTAL = 30000; // $300
+const CREDIT_APPLIED = 10000; // $100 of credit applied at checkout
+const DISCOUNT = 5000; // $50 promo discount
+const PROMO_CODE = 'SAVE50';
+
+// ─── In-memory order ────────────────────────────────────────────────────────
+
+interface StoredOrder {
+  _id: string;
+  userId: string;
+  orderNumber: string;
+  totalAmount: number;
+  paymentStatus: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
+  isDeleted: boolean;
+  discountAmount?: number;
+  promoCode?: string;
+  creditApplied?: number;
+  finalAmount?: number;
+  save: () => Promise<void>;
+}
+
+function makeOrder(overrides?: Partial<StoredOrder>): StoredOrder {
+  const order: StoredOrder = {
+    _id: ORDER_ID,
+    userId: CLIENT_ID,
+    orderNumber: 'QGS-O-0001',
+    totalAmount: TOTAL,
+    paymentStatus: 'succeeded',
+    isDeleted: false,
+    creditApplied: CREDIT_APPLIED,
+    promoCode: PROMO_CODE,
+    discountAmount: DISCOUNT,
+    finalAmount: TOTAL - DISCOUNT - CREDIT_APPLIED,
+    save: async (): Promise<void> => {
+      // re-bound per test when we want to simulate save failure
+    },
+    ...overrides,
+  };
+  return order;
+}
+
+function buildOrderModel(order: StoredOrder): unknown {
+  return {
+    findById: async (id: string): Promise<StoredOrder | null> => {
+      if (id !== order._id) {
+        return null;
+      }
+      if (order.isDeleted) {
+        return null;
+      }
+      return order;
+    },
+  };
+}
+
+// PaymentModel is only used for the initial findById().lean() lookup; the
+// actual refund mutation happens inside processRefund (mocked).
+
+function buildPaymentModel(): unknown {
+  return {
+    findById: (id: string) => ({
+      lean: async (): Promise<Record<string, unknown> | null> => {
+        if (id !== PAYMENT_ID) {
+          return null;
+        }
+        return {
+          _id: PAYMENT_ID,
+          orderId: ORDER_ID,
+          userId: CLIENT_ID,
+          status: 'succeeded',
+          amount: TOTAL,
+        };
+      },
+    }),
+  };
+}
+
+// providers Map isn't exercised on this route directly (processRefund owns
+// the Stripe call) — minimal stub that throws if hit.
+
+function buildStripeProviderStub(): IPaymentProvider {
+  const fail = async (): Promise<never> => {
+    throw new Error('Stripe provider unexpectedly invoked from refund route');
+  };
+  return {
+    name: 'stripe',
+    createPaymentIntent: fail as never,
+    capturePayment: fail as never,
+    refundPayment: fail as never,
+    cancelPayment: fail as never,
+    retrievePayment: fail as never,
+  };
+}
+
+// ─── Stub services that record calls ────────────────────────────────────────
+
+interface CreditCallLog {
+  // refundCalls: re-credits issued to the user (saga forward step)
+  refundCalls: Array<{ userId: string; amount: number; type: string; description: string }>;
+  // useCalls: deductions (compensation when re-credit needs to be undone)
+  useCalls: Array<{ userId: string; amount: number; orderId: string }>;
+}
+
+function buildCreditService(opts: {
+  log: CreditCallLog;
+  failAddCredit?: boolean;
+}): CreditServiceResult {
+  return {
+    getBalance: async () => 0,
+    addCredit: (async (userId: string, amount: number, type: string, description: string) => {
+      opts.log.refundCalls.push({ userId, amount, type, description });
+      if (opts.failAddCredit) {
+        throw new Error('addCredit failed');
+      }
+      return { _id: 'credit_refund_id' } as never;
+    }) as CreditServiceResult['addCredit'],
+    useCredit: (async (userId: string, amount: number, orderId: string) => {
+      opts.log.useCalls.push({ userId, amount, orderId });
+      return { _id: 'credit_use_id' } as never;
+    }) as CreditServiceResult['useCredit'],
+    getTransactions: (async () => ({
+      transactions: [],
+      total: 0,
+    })) as CreditServiceResult['getTransactions'],
+    expireCredits: (async () => 0) as CreditServiceResult['expireCredits'],
+  };
+}
+
+interface PromoCallLog {
+  applyCalls: Array<{ code: string; userId: string; orderId: string; orderAmount: number }>;
+  revokeCalls: Array<{ code: string; userId: string; orderId: string }>;
+}
+
+function buildPromoService(opts: {
+  log: PromoCallLog;
+  failRevoke?: boolean;
+}): PromoCodeServiceResult {
+  return {
+    createPromoCode: (async () => ({}) as never) as PromoCodeServiceResult['createPromoCode'],
+    validatePromoCode: (async () => ({
+      valid: true,
+    })) as unknown as PromoCodeServiceResult['validatePromoCode'],
+    applyPromoCode: (async (code: string, userId: string, orderId: string, orderAmount: number) => {
+      opts.log.applyCalls.push({ code, userId, orderId, orderAmount });
+      return { discountApplied: DISCOUNT };
+    }) as PromoCodeServiceResult['applyPromoCode'],
+    revokePromoCode: (async (code: string, userId: string, orderId: string) => {
+      opts.log.revokeCalls.push({ code, userId, orderId });
+      if (opts.failRevoke) {
+        throw new Error('revokePromoCode failed');
+      }
+      return 1;
+    }) as PromoCodeServiceResult['revokePromoCode'],
+    listPromoCodes: (async () => ({
+      promoCodes: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+    })) as PromoCodeServiceResult['listPromoCodes'],
+    getPromoCode: (async () => ({}) as never) as PromoCodeServiceResult['getPromoCode'],
+    updatePromoCode: (async () => ({}) as never) as PromoCodeServiceResult['updatePromoCode'],
+    deactivatePromoCode: (async () =>
+      ({}) as never) as PromoCodeServiceResult['deactivatePromoCode'],
+    getPromoCodeUsage: (async () => []) as PromoCodeServiceResult['getPromoCodeUsage'],
+  };
+}
+
+// ─── App factory ────────────────────────────────────────────────────────────
+
+function mount(opts: {
+  order: StoredOrder;
+  failAddCredit?: boolean;
+  failRevoke?: boolean;
+  failOrderSave?: boolean;
+}): {
+  app: express.Express;
+  creditLog: CreditCallLog;
+  promoLog: PromoCallLog;
+  order: StoredOrder;
+} {
+  const creditLog: CreditCallLog = { refundCalls: [], useCalls: [] };
+  const promoLog: PromoCallLog = { applyCalls: [], revokeCalls: [] };
+
+  // If failOrderSave is set, replace the order's `save` so the third
+  // saga step throws after credits + promo have already been re-applied.
+  if (opts.failOrderSave) {
+    let firstCall = true;
+    opts.order.save = async (): Promise<void> => {
+      if (firstCall) {
+        firstCall = false;
+        throw new Error('order.save failed');
+      }
+      // subsequent saves (the compensation) succeed
+    };
+  }
+
+  const authenticate = (): RequestHandler => {
+    return (req: Request, _res: Response, next: NextFunction): void => {
+      (req as unknown as Record<string, unknown>).user = {
+        userId: ACTOR_ID,
+        _id: ACTOR_ID,
+        userType: 0, // super_admin
+      };
+      next();
+    };
+  };
+
+  // checkPermission is a factory returning middleware — pass-through here.
+  const checkPermission =
+    () =>
+    (_req: Request, _res: Response, next: NextFunction): void => {
+      next();
+    };
+
+  const router = createRefundRoutes({
+    PaymentModel: buildPaymentModel() as never,
+    OrderModel: buildOrderModel(opts.order) as never,
+    providers: new Map([['stripe', buildStripeProviderStub()]]) as never,
+    authenticate,
+    checkPermission: checkPermission as never,
+    creditService: buildCreditService({
+      log: creditLog,
+      failAddCredit: opts.failAddCredit,
+    }),
+    promoCodeService: buildPromoService({
+      log: promoLog,
+      failRevoke: opts.failRevoke,
+    }),
+  });
+
+  const app = express();
+  app.use(express.json());
+  app.use('/api', router);
+
+  return { app, creditLog, promoLog, order: opts.order };
+}
+
+// ─── Default mock for processRefund: returns a successful FULL refund ─────
+
+function defaultProcessRefundResult(): Record<string, unknown> {
+  return {
+    refundEntry: {
+      refundId: 'rf_test_01',
+      amount: TOTAL,
+      status: 'succeeded',
+    },
+    payment: {
+      _id: PAYMENT_ID,
+      paymentNumber: 'QGS-P-0001',
+      userId: CLIENT_ID,
+      orderId: ORDER_ID,
+      status: 'refunded', // full refund — triggers the credit + promo restoration branch
+      refundedAmount: TOTAL,
+    },
+    requiredApproval: 'super_admin',
+  };
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+describe('E2E: Admin full-refund route — saga compensation', () => {
+  beforeEach(() => {
+    processRefundMock.mockReset();
+  });
+
+  it('happy path: Stripe + reCreditUser + revokePromoCode + flipOrderStatus all run, no compensations', async () => {
+    processRefundMock.mockResolvedValue(defaultProcessRefundResult());
+
+    const order = makeOrder();
+    const { app, creditLog, promoLog } = mount({ order });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Customer requested cancellation',
+      idempotencyKey: 'idem_refund_happy_001',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.domainRestored).toBe(true);
+    expect(res.body.data.orderPaymentStatus).toBe('refunded');
+
+    // Forward effects all ran.
+    expect(processRefundMock).toHaveBeenCalledTimes(1);
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(creditLog.refundCalls[0].amount).toBe(CREDIT_APPLIED);
+    expect(creditLog.refundCalls[0].type).toBe('refund_credit');
+    expect(promoLog.revokeCalls).toHaveLength(1);
+    expect(promoLog.revokeCalls[0].code).toBe(PROMO_CODE);
+    expect(order.paymentStatus).toBe('refunded');
+
+    // No compensations.
+    expect(creditLog.useCalls).toHaveLength(0);
+    expect(promoLog.applyCalls).toHaveLength(0);
+  });
+
+  it('revokePromoCode throws: reCreditUser compensation fires, order status NOT flipped', async () => {
+    processRefundMock.mockResolvedValue(defaultProcessRefundResult());
+
+    const order = makeOrder();
+    const originalStatus = order.paymentStatus;
+    const { app, creditLog, promoLog } = mount({ order, failRevoke: true });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Customer requested',
+      idempotencyKey: 'idem_refund_promo_fail_001',
+    });
+
+    expect(res.status).toBe(500);
+    expect(res.body.message).toContain('revokePromoCode failed');
+
+    // Forward: Stripe + re-credit ran; promo revoke attempted.
+    expect(processRefundMock).toHaveBeenCalledTimes(1);
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(promoLog.revokeCalls).toHaveLength(1);
+
+    // Compensation: re-credit reversed via useCredit. Promo apply NEVER
+    // called (the forward step never completed).
+    expect(creditLog.useCalls).toHaveLength(1);
+    expect(creditLog.useCalls[0].amount).toBe(CREDIT_APPLIED);
+    expect(promoLog.applyCalls).toHaveLength(0);
+
+    // Order status untouched — flipOrderStatus never ran.
+    expect(order.paymentStatus).toBe(originalStatus);
+  });
+
+  it('order.save throws: BOTH preceding compensations fire in REVERSE order', async () => {
+    processRefundMock.mockResolvedValue(defaultProcessRefundResult());
+
+    const order = makeOrder();
+    const { app, creditLog, promoLog } = mount({ order, failOrderSave: true });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Customer requested',
+      idempotencyKey: 'idem_refund_save_fail_001',
+    });
+
+    expect(res.status).toBe(500);
+    expect(res.body.message).toContain('order.save failed');
+
+    // Both forward steps completed before order.save threw.
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(promoLog.revokeCalls).toHaveLength(1);
+
+    // Both compensations fired (order: promo re-applied, credit deducted).
+    expect(promoLog.applyCalls).toHaveLength(1);
+    expect(promoLog.applyCalls[0].orderAmount).toBe(TOTAL);
+    expect(creditLog.useCalls).toHaveLength(1);
+    expect(creditLog.useCalls[0].amount).toBe(CREDIT_APPLIED);
+  });
+
+  it('Stripe processRefund throws: NO domain mutation (saga never runs)', async () => {
+    processRefundMock.mockRejectedValue(new Error('Stripe API rejected'));
+
+    const order = makeOrder();
+    const originalStatus = order.paymentStatus;
+    const { app, creditLog, promoLog } = mount({ order });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Customer requested',
+      idempotencyKey: 'idem_refund_stripe_fail_001',
+    });
+
+    expect(res.status).toBe(500);
+    expect(res.body.message).toContain('Stripe API rejected');
+
+    // Stripe was attempted; nothing else was touched.
+    expect(processRefundMock).toHaveBeenCalledTimes(1);
+    expect(creditLog.refundCalls).toHaveLength(0);
+    expect(creditLog.useCalls).toHaveLength(0);
+    expect(promoLog.revokeCalls).toHaveLength(0);
+    expect(promoLog.applyCalls).toHaveLength(0);
+    expect(order.paymentStatus).toBe(originalStatus);
+  });
+
+  it('partial refund: ONLY order status flips to partially_refunded — no credit/promo restore', async () => {
+    // Partial refund: payment.status stays 'succeeded' (still has captured
+    // amount remaining). Saga only runs flipOrderStatus.
+    processRefundMock.mockResolvedValue({
+      refundEntry: {
+        refundId: 'rf_partial_01',
+        amount: 5000,
+        status: 'succeeded',
+      },
+      payment: {
+        _id: PAYMENT_ID,
+        paymentNumber: 'QGS-P-0001',
+        userId: CLIENT_ID,
+        orderId: ORDER_ID,
+        status: 'succeeded', // still has captured amount > refunded
+        refundedAmount: 5000,
+      },
+      requiredApproval: 'none',
+    });
+
+    const order = makeOrder();
+    const { app, creditLog, promoLog } = mount({ order });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Partial refund — disputed line item',
+      idempotencyKey: 'idem_refund_partial_001',
+      amount: 5000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.orderPaymentStatus).toBe('partially_refunded');
+    // domainRestored is false for partial — credits/promo intentionally untouched.
+    expect(res.body.data.domainRestored).toBe(false);
+
+    // No credit/promo activity for partial refund (v1 scope).
+    expect(creditLog.refundCalls).toHaveLength(0);
+    expect(promoLog.revokeCalls).toHaveLength(0);
+    // Only the status flip happened.
+    expect(order.paymentStatus).toBe('partially_refunded');
+  });
+});

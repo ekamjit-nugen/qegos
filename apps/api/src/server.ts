@@ -51,6 +51,7 @@ import { createLeadService } from './modules/lead-management/lead.service';
 import { createOrderModel } from './modules/order-management/order.model';
 import { createSalesModel, seedSalesCatalogue } from './modules/order-management/sales.model';
 import { createOrderRoutes, createSalesRoutes } from './modules/order-management/order.routes';
+import { createRefundRoutes } from './modules/order-management/refund.routes';
 import { createReviewAssignmentModel } from './modules/review-pipeline/reviewAssignment.model';
 import { createReviewRoutes } from './modules/review-pipeline/review.routes';
 
@@ -828,6 +829,23 @@ async function bootstrap(): Promise<void> {
     creditService: creditServiceInstance,
   });
 
+  // Saga-wrapped admin "full refund" route. Sits alongside the package's
+  // POST /payments/:id/refund (which only mutates Payment state). This
+  // route is the canonical refund entry point: Stripe call FIRST
+  // (irreversible), then a saga restores domain state — re-credits the
+  // user, revokes the promo usage, flips Order.paymentStatus. If saga
+  // steps fail, compensations run; the Stripe refund itself is never
+  // rolled back (different operation, manual reconciliation territory).
+  const refundRouter = createRefundRoutes({
+    PaymentModel,
+    OrderModel: OrderModel,
+    providers,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+    creditService: creditServiceInstance,
+    promoCodeService,
+  });
+
   // Client-facing Appointment Booking routes (mounted under /portal)
   const appointmentBookingRouter = createAppointmentBookingRoutes({
     AppointmentModel,
@@ -1126,6 +1144,7 @@ async function bootstrap(): Promise<void> {
       userRouter,
       taxRuleRouter,
       paymentRouter,
+      refundRouter,
       billingDisputeRouter,
       leadRouter,
       orderRouter,
