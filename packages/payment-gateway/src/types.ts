@@ -150,6 +150,14 @@ export interface IPayment {
   xeroSynced: boolean;
   webhookProcessed: boolean;
   webhookProcessedAt?: Date;
+  // Idempotency marker for the consuming app's domain compensation
+  // listener (e.g. apps/api's paymentCompensation.listener). When a
+  // webhook fires `payment.failed` / `payment.cancelled` and the
+  // listener has restored credits/promo/order state, this flips to
+  // true so concurrent or replayed webhooks don't double-compensate.
+  // Tier-1 owns the field but is agnostic to who sets it.
+  domainCompensated?: boolean;
+  domainCompensatedAt?: Date;
 }
 
 export interface IPaymentDocument extends IPayment, Document {

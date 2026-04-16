@@ -52,6 +52,7 @@ import { createOrderModel } from './modules/order-management/order.model';
 import { createSalesModel, seedSalesCatalogue } from './modules/order-management/sales.model';
 import { createOrderRoutes, createSalesRoutes } from './modules/order-management/order.routes';
 import { createRefundRoutes } from './modules/order-management/refund.routes';
+import { registerPaymentCompensationListener } from './modules/order-management/paymentCompensation.listener';
 import { createReviewAssignmentModel } from './modules/review-pipeline/reviewAssignment.model';
 import { createReviewRoutes } from './modules/review-pipeline/review.routes';
 
@@ -842,6 +843,20 @@ async function bootstrap(): Promise<void> {
     providers,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
+    creditService: creditServiceInstance,
+    promoCodeService,
+  });
+
+  // Subscribe to `payment.failed` / `payment.cancelled` from
+  // @nugen/payment-gateway and restore the user's credits / promo /
+  // order-provisional state. Closes the abandoned-checkout leak in the
+  // partial-Stripe path used by both Pay Now and Collect Payment — see
+  // paymentCompensation.listener.ts header for the full rationale.
+  // Idempotent via Payment.domainCompensated; safe under duplicate
+  // webhook delivery and concurrent races.
+  registerPaymentCompensationListener({
+    OrderModel: OrderModel,
+    PaymentModel,
     creditService: creditServiceInstance,
     promoCodeService,
   });

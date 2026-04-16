@@ -136,6 +136,12 @@ const paymentSchema = new Schema<IPaymentDocument>(
     xeroSynced: { type: Boolean, default: false },
     webhookProcessed: { type: Boolean, default: false },
     webhookProcessedAt: { type: Date },
+    // Set by the consuming app's payment compensation listener after a
+    // failed/cancelled webhook so credits/promo/order are not restored
+    // twice on duplicate or concurrent events. See
+    // apps/api/src/modules/order-management/paymentCompensation.listener.ts.
+    domainCompensated: { type: Boolean, default: false, index: true },
+    domainCompensatedAt: { type: Date },
   },
   { timestamps: true },
 );
