@@ -36,6 +36,20 @@ export interface CreditServiceResult {
     page?: number,
     limit?: number,
   ) => Promise<{ transactions: ICreditTransactionDocument[]; total: number }>;
+  /**
+   * Sum of positive `refund_credit` transactions for a given user/order pair.
+   *
+   * Used by the partial-refund saga to compute the proportional credit
+   * already restored by prior partial refunds on the same order. On the
+   * call that completes the refund (cumulative refundedAmount ===
+   * capturedAmount, i.e. payment.status === 'refunded'), the route uses
+   * this to top up the final restoration so total restored EXACTLY equals
+   * the original `creditApplied` (covers floor-rounding drift across
+   * multiple partials).
+   *
+   * Returns 0 if no prior refund_credit entries exist for the order.
+   */
+  getRestoredCreditForOrder: (userId: string, orderId: string) => Promise<number>;
   expireCredits: () => Promise<number>;
 }
 
@@ -143,6 +157,24 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
   }
 
   /**
+   * Sum of positive `refund_credit` transactions for a given user/order
+   * pair. See interface JSDoc on CreditServiceResult for the rationale.
+   *
+   * Filters in the query (not in JS) so the index on userId can do most
+   * of the work. The result set is small in practice (bounded by the
+   * number of partial refunds against a single order — typically 1-3).
+   */
+  async function getRestoredCreditForOrder(userId: string, orderId: string): Promise<number> {
+    const txns = await CreditTransactionModel.find({
+      userId,
+      type: 'refund_credit',
+      referenceId: orderId,
+      amount: { $gt: 0 },
+    }).lean<Array<{ amount: number }>>();
+    return txns.reduce((sum, t) => sum + t.amount, 0);
+  }
+
+  /**
    * Expire credits past their expiresAt date (REF-INV-04: 12-month expiry).
    * Returns number of credit entries expired.
    */
@@ -202,5 +234,12 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
     return expiredCount;
   }
 
-  return { getBalance, addCredit, useCredit, getTransactions, expireCredits };
+  return {
+    getBalance,
+    addCredit,
+    useCredit,
+    getTransactions,
+    getRestoredCreditForOrder,
+    expireCredits,
+  };
 }

@@ -266,6 +266,7 @@ function buildCreditService(opts: {
       transactions: [],
       total: 0,
     })) as CreditServiceResult['getTransactions'],
+    getRestoredCreditForOrder: (async () => 0) as CreditServiceResult['getRestoredCreditForOrder'],
     expireCredits: (async () => 0) as CreditServiceResult['expireCredits'],
   };
 }

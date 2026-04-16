@@ -17,10 +17,15 @@
  *     0. (irreversible) Call the package's processRefund — Stripe
  *        moves the money back to the customer. If this fails, no
  *        downstream work runs.
- *     1. (saga) Re-credit the user for the original creditApplied
- *        amount.
+ *     1. (saga) Re-credit the user for the proportional share of
+ *        creditApplied that matches this refund's cash slice. On the
+ *        call that COMPLETES the refund (cumulative refundedAmount ===
+ *        capturedAmount), top up the remainder so total restored
+ *        EXACTLY equals the original creditApplied (rounding-drift fix).
  *     2. (saga) Revoke the promo usage (delete usage row, decrement
- *        usageCount counter).
+ *        usageCount counter). v1: only on the call that completes the
+ *        refund — partial-promo accounting is more model than it's
+ *        worth.
  *     3. (saga) Flip Order.paymentStatus to 'refunded' (full) or
  *        'partially_refunded' (partial).
  *
@@ -33,11 +38,21 @@
  *   may have left the domain partially restored — manual reconciliation
  *   territory, surfaced explicitly via logs.
  *
- *   v1 scope: full refunds only get the credit + promo restoration.
- *   Partial refunds run the saga only for order status flip; we do not
- *   try to proportionally restore credit or partially decrement promo
- *   usage. That's a v2 question and not worth the modeling complexity
- *   today (the vast majority of refunds are full).
+ *   Proportional credit math:
+ *
+ *     creditApplied  = C       (cents of credit used at checkout)
+ *     finalAmount    = F       (cents charged via Stripe at checkout)
+ *     refundAmount   = P       (cents being refunded by this call)
+ *     priorRestored  = R       (sum of refund_credit txns for this order)
+ *
+ *     If this call completes the refund (payment.status === 'refunded'):
+ *       creditToRestore = C - R              (top-up to exact total)
+ *     Else (partial):
+ *       creditToRestore = floor(C * P / F)   (proportional slice)
+ *
+ *   Promo: revoked only when the call completes the refund. Re-applied
+ *   on compensation. Partial calls leave the promo counted; the
+ *   completing call zeroes the usage in one shot.
  *
  *   The package-level POST /refund continues to exist for callers that
  *   want raw refund-without-domain-rollback (legacy compatibility,
@@ -167,16 +182,24 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
             paymentStatus: order.paymentStatus,
           };
 
-          // Idempotency guard. If this admin double-clicks the refund
-          // button (or two operators race), processRefund's status guard
-          // catches the second `payment.status === 'refunded'` call —
-          // BUT a true concurrent race can still slip both through. If
-          // we see the order is already in the target refunded state,
-          // the saga has already run for this refund. Skip it; otherwise
-          // we'd re-credit the user a second time (addCredit doesn't
-          // dedupe on referenceId) and double-revoke the promo.
+          // Idempotency guard — FULL refunds only.
+          //
+          // If this admin double-clicks the refund button (or two
+          // operators race), processRefund's status guard catches the
+          // second `payment.status === 'refunded'` call — BUT a true
+          // concurrent race can still slip both through. If the order
+          // is already in 'refunded', the saga has already run for this
+          // refund. Skip it; otherwise we'd re-credit the user a second
+          // time and double-revoke the promo.
+          //
+          // Partial refunds intentionally DO NOT have this guard: the
+          // order can sit in 'partially_refunded' across many sequential
+          // partial refunds. The processRefund call itself (Step 0) is
+          // the boundary that prevents over-refunding via its
+          // sum(refunds) <= capturedAmount check; if Step 0 succeeded,
+          // it's a NEW refund event and the saga should run.
           const targetOrderStatus = isFullRefund ? 'refunded' : 'partially_refunded';
-          if (order.paymentStatus === targetOrderStatus) {
+          if (isFullRefund && order.paymentStatus === targetOrderStatus) {
             auditLog.log({
               actor: actorId,
               actorType: 'admin',
@@ -208,32 +231,65 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
 
           const steps: SagaStep<void>[] = [];
 
-          // Re-credit only if the order originally consumed credits AND
-          // this is a full refund. Partial refund credit math (which
-          // portion to restore) is intentionally out of scope for v1.
-          const creditToRestore = order.creditApplied ?? 0;
-          if (isFullRefund && creditToRestore > 0) {
+          // ── Proportional credit restoration ─────────────────────────
+          // Compute the slice of `creditApplied` that should be returned
+          // for THIS refund call. See file-level docs for the math.
+          //
+          // For partial refunds we floor the proportional share. Across
+          // a sequence of partial refunds totalling the full captured
+          // amount, the sum of floors can be 1-N cents short of the
+          // original creditApplied. The completing call (isFullRefund
+          // === true) reads the cumulative `refund_credit` history for
+          // this order and tops up to the exact original amount, so the
+          // user is made whole down to the cent.
+          const creditApplied = order.creditApplied ?? 0;
+          const finalAmount = order.finalAmount ?? 0;
+          let creditToRestore = 0;
+          if (creditApplied > 0) {
+            if (isFullRefund) {
+              const priorRestored = await creditService.getRestoredCreditForOrder(
+                userId,
+                String(order._id),
+              );
+              creditToRestore = creditApplied - priorRestored;
+              // Defensive clamp: priorRestored should never exceed
+              // creditApplied; if it does (manual ops adjustment, data
+              // drift), don't issue a negative addCredit — skip.
+              if (creditToRestore < 0) {
+                creditToRestore = 0;
+              }
+            } else if (finalAmount > 0) {
+              creditToRestore = Math.floor(
+                (creditApplied * refundResult.refundEntry.amount) / finalAmount,
+              );
+            }
+          }
+          if (creditToRestore > 0) {
+            const restoreAmount = creditToRestore;
             steps.push({
               name: 'reCreditUser',
               forward: async () => {
                 await creditService.addCredit(
                   userId,
-                  creditToRestore,
+                  restoreAmount,
                   'refund_credit',
-                  `Refund restoration for order ${order.orderNumber}: $${(creditToRestore / 100).toFixed(2)} credit returned`,
+                  `Refund restoration for order ${order.orderNumber}: $${(restoreAmount / 100).toFixed(2)} credit returned${
+                    isFullRefund ? '' : ' (partial)'
+                  }`,
                   String(order._id),
                 );
               },
               compensate: async () => {
                 // Reverse the re-credit by deducting it again. Tied to
                 // the same orderId so reconciliation can find the pair.
-                await creditService.useCredit(userId, creditToRestore, String(order._id));
+                await creditService.useCredit(userId, restoreAmount, String(order._id));
               },
             });
           }
 
           // Revoke promo only if the order originally used one AND this
-          // is a full refund. Partial refunds keep the promo counted.
+          // call completes the refund. Partial refunds keep the promo
+          // counted; the completing call zeroes the usage in one shot.
           const promoCode = order.promoCode;
           if (isFullRefund && promoCode && (order.discountAmount ?? 0) > 0) {
             steps.push({
@@ -258,11 +314,25 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
           // Always update order status (full or partial). Without this,
           // the order detail screen claims the order is paid even after
           // the user has their money back.
+          //
+          // Defensive restore: if save() throws, the in-memory order
+          // already holds the new paymentStatus. The saga's compensation
+          // pass only runs compensations for COMPLETED steps — so this
+          // step's mutation would leak into the response object that
+          // tests (and real callers) inspect after the failure. Restore
+          // the snapshot before re-throwing so the leaked state matches
+          // what's persisted (i.e. nothing changed).
           steps.push({
             name: 'flipOrderStatus',
             forward: async () => {
+              const previousStatus = order.paymentStatus;
               order.paymentStatus = isFullRefund ? 'refunded' : 'partially_refunded';
-              await order.save();
+              try {
+                await order.save();
+              } catch (saveErr) {
+                order.paymentStatus = previousStatus;
+                throw saveErr;
+              }
             },
             compensate: async () => {
               order.paymentStatus = originalOrderSnapshot.paymentStatus;
@@ -280,7 +350,7 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
           resource: 'payment',
           resourceId: paymentId,
           severity: 'critical',
-          description: `Full-refund route: ${refundResult.refundEntry.amount} cents on payment ${refundResult.payment.paymentNumber} (full=${isFullRefund}). Reason: ${reason}`,
+          description: `Full-refund route: ${refundResult.refundEntry.amount} cents on payment ${refundResult.payment.paymentNumber} (full=${isFullRefund}, paymentStatus=${refundResult.payment.status}). Reason: ${reason}`,
         });
 
         res.status(200).json({
@@ -296,7 +366,12 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
             totalRefunded: refundResult.payment.refundedAmount,
             paymentStatus: refundResult.payment.status,
             orderPaymentStatus: hasOrder ? order.paymentStatus : null,
-            domainRestored: hasOrder && isFullRefund,
+            // True whenever the saga restored ANY domain state (full
+            // refund's credit + promo, or a partial refund's
+            // proportional credit slice). Only false for orphaned
+            // payments (no order linked) or refunds on orders that had
+            // no credit + no promo (nothing to restore).
+            domainRestored: hasOrder && (isFullRefund || (order.creditApplied ?? 0) > 0),
           },
         });
       } catch (err) {

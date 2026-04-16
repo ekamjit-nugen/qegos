@@ -182,6 +182,12 @@ interface CreditCallLog {
 function buildCreditService(opts: {
   log: CreditCallLog;
   failAddCredit?: boolean;
+  /**
+   * Optional pre-existing `refund_credit` total for this order — used
+   * to simulate the second of a partial-then-full sequence, where the
+   * completing call must read priorRestored and top up the remainder.
+   */
+  priorRestoredCents?: number;
 }): CreditServiceResult {
   return {
     getBalance: async () => 0,
@@ -200,6 +206,8 @@ function buildCreditService(opts: {
       transactions: [],
       total: 0,
     })) as CreditServiceResult['getTransactions'],
+    getRestoredCreditForOrder: (async () =>
+      opts.priorRestoredCents ?? 0) as CreditServiceResult['getRestoredCreditForOrder'],
     expireCredits: (async () => 0) as CreditServiceResult['expireCredits'],
   };
 }
@@ -250,6 +258,7 @@ function mount(opts: {
   failAddCredit?: boolean;
   failRevoke?: boolean;
   failOrderSave?: boolean;
+  priorRestoredCents?: number;
 }): {
   app: express.Express;
   creditLog: CreditCallLog;
@@ -299,6 +308,7 @@ function mount(opts: {
     creditService: buildCreditService({
       log: creditLog,
       failAddCredit: opts.failAddCredit,
+      priorRestoredCents: opts.priorRestoredCents,
     }),
     promoCodeService: buildPromoService({
       log: promoLog,
@@ -450,22 +460,28 @@ describe('E2E: Admin full-refund route — saga compensation', () => {
     expect(order.paymentStatus).toBe(originalStatus);
   });
 
-  it('partial refund: ONLY order status flips to partially_refunded — no credit/promo restore', async () => {
-    // Partial refund: payment.status stays 'succeeded' (still has captured
-    // amount remaining). Saga only runs flipOrderStatus.
+  // ── Partial refund: prorated credit restoration ────────────────────────
+  // Order economics for these tests:
+  //   totalAmount   = 30000  ($300 order)
+  //   discountAmount=  5000  ($50 promo)
+  //   creditApplied = 10000  ($100 credit applied at checkout)
+  //   finalAmount   = 15000  ($150 charged via Stripe)
+  //
+  // Partial refund of $75 = 7500 cents (50% of finalAmount):
+  //   creditToRestore = floor(10000 * 7500 / 15000) = 5000 cents = $50
+  //   promo: NOT revoked (v1: only revoked on completing call)
+  //   order.paymentStatus → 'partially_refunded'
+
+  it('partial refund: PROPORTIONAL credit restored, promo untouched, status partial', async () => {
     processRefundMock.mockResolvedValue({
-      refundEntry: {
-        refundId: 'rf_partial_01',
-        amount: 5000,
-        status: 'succeeded',
-      },
+      refundEntry: { refundId: 'rf_partial_01', amount: 7500, status: 'succeeded' },
       payment: {
         _id: PAYMENT_ID,
         paymentNumber: 'QGS-P-0001',
         userId: CLIENT_ID,
         orderId: ORDER_ID,
-        status: 'succeeded', // still has captured amount > refunded
-        refundedAmount: 5000,
+        status: 'partially_refunded', // still has captured amount > refunded
+        refundedAmount: 7500,
       },
       requiredApproval: 'none',
     });
@@ -476,18 +492,218 @@ describe('E2E: Admin full-refund route — saga compensation', () => {
     const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
       reason: 'Partial refund — disputed line item',
       idempotencyKey: 'idem_refund_partial_001',
+      amount: 7500,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.orderPaymentStatus).toBe('partially_refunded');
+    expect(res.body.data.domainRestored).toBe(true); // proportional credit restored
+
+    // Credit restored proportionally: floor(10000 * 7500 / 15000) = 5000.
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(creditLog.refundCalls[0].amount).toBe(5000);
+    expect(creditLog.refundCalls[0].type).toBe('refund_credit');
+    expect(creditLog.refundCalls[0].description).toContain('partial');
+
+    // Promo NOT revoked on partial — v1 keeps the promo counted until the
+    // refund completes.
+    expect(promoLog.revokeCalls).toHaveLength(0);
+    expect(promoLog.applyCalls).toHaveLength(0);
+
+    // Order status flipped, no compensations.
+    expect(order.paymentStatus).toBe('partially_refunded');
+    expect(creditLog.useCalls).toHaveLength(0);
+  });
+
+  it('completing call after partials: tops up exact remainder + revokes promo (rounding-drift fix)', async () => {
+    // Sequence:
+    //   prior partial refunded $50 (3333 cents would have been restored
+    //   under floor proportional math if finalAmount were 15000 and
+    //   creditApplied 10000: floor(10000 * 5000 / 15000) = 3333).
+    //
+    // Now this call completes the refund: another $100 = 10000 cents.
+    // payment.status will be 'refunded' (cumulative refundedAmount =
+    // 15000 = capturedAmount).
+    //
+    // Without top-up: floor(10000 * 10000 / 15000) = 6666 cents → total
+    // restored = 3333 + 6666 = 9999 — short by 1 cent.
+    //
+    // With top-up: creditToRestore = creditApplied - priorRestored =
+    // 10000 - 3333 = 6667 cents → total = 3333 + 6667 = 10000 exact.
+
+    processRefundMock.mockResolvedValue({
+      refundEntry: { refundId: 'rf_complete_02', amount: 10000, status: 'succeeded' },
+      payment: {
+        _id: PAYMENT_ID,
+        paymentNumber: 'QGS-P-0001',
+        userId: CLIENT_ID,
+        orderId: ORDER_ID,
+        status: 'refunded', // cumulative refundedAmount === capturedAmount
+        refundedAmount: 15000,
+      },
+      requiredApproval: 'admin',
+    });
+
+    // Prior partial already restored 3333 cents (the floor of the first
+    // partial's proportional share).
+    const order = makeOrder({ paymentStatus: 'partially_refunded' });
+    const { app, creditLog, promoLog } = mount({ order, priorRestoredCents: 3333 });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Completing the partial sequence',
+      idempotencyKey: 'idem_refund_complete_002',
+      amount: 10000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.orderPaymentStatus).toBe('refunded');
+    expect(res.body.data.domainRestored).toBe(true);
+
+    // Credit restored exactly equals creditApplied - priorRestored.
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(creditLog.refundCalls[0].amount).toBe(CREDIT_APPLIED - 3333); // 6667
+    // Sanity: cumulative restoration equals creditApplied (no drift).
+    expect(3333 + creditLog.refundCalls[0].amount).toBe(CREDIT_APPLIED);
+
+    // Promo IS revoked on the completing call.
+    expect(promoLog.revokeCalls).toHaveLength(1);
+    expect(promoLog.revokeCalls[0].code).toBe(PROMO_CODE);
+
+    // Order flipped to 'refunded'.
+    expect(order.paymentStatus).toBe('refunded');
+
+    // No compensations.
+    expect(creditLog.useCalls).toHaveLength(0);
+    expect(promoLog.applyCalls).toHaveLength(0);
+  });
+
+  it('partial refund: order.save throws → proportional credit re-credit is COMPENSATED', async () => {
+    // Failure on the third (status flip) saga step on a partial refund.
+    // The proportional re-credit must be reversed via useCredit so the
+    // user does NOT keep the partial credit while the order stays
+    // 'succeeded'.
+    processRefundMock.mockResolvedValue({
+      refundEntry: { refundId: 'rf_partial_fail_03', amount: 7500, status: 'succeeded' },
+      payment: {
+        _id: PAYMENT_ID,
+        paymentNumber: 'QGS-P-0001',
+        userId: CLIENT_ID,
+        orderId: ORDER_ID,
+        status: 'partially_refunded',
+        refundedAmount: 7500,
+      },
+      requiredApproval: 'none',
+    });
+
+    const order = makeOrder();
+    const originalStatus = order.paymentStatus;
+    const { app, creditLog, promoLog } = mount({ order, failOrderSave: true });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Partial refund test',
+      idempotencyKey: 'idem_refund_partial_fail_003',
+      amount: 7500,
+    });
+
+    expect(res.status).toBe(500);
+    expect(res.body.message).toContain('order.save failed');
+
+    // Forward: proportional re-credit ran.
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(creditLog.refundCalls[0].amount).toBe(5000);
+
+    // Compensation: re-credit reversed via useCredit for the SAME amount.
+    expect(creditLog.useCalls).toHaveLength(1);
+    expect(creditLog.useCalls[0].amount).toBe(5000);
+    expect(creditLog.useCalls[0].orderId).toBe(ORDER_ID);
+
+    // Promo never touched on partials — no apply/revoke calls.
+    expect(promoLog.revokeCalls).toHaveLength(0);
+    expect(promoLog.applyCalls).toHaveLength(0);
+
+    // Order status untouched.
+    expect(order.paymentStatus).toBe(originalStatus);
+  });
+
+  it('partial refund: idempotency guard does NOT skip when order already partially_refunded', async () => {
+    // The full-refund idempotency guard would skip if order.paymentStatus
+    // matched the target. For partial refunds, the order can sit in
+    // 'partially_refunded' across many sequential calls — so the guard
+    // MUST NOT short-circuit. processRefund's capturedAmount check is
+    // the boundary that prevents over-refunding.
+    processRefundMock.mockResolvedValue({
+      refundEntry: { refundId: 'rf_partial_repeat_04', amount: 3000, status: 'succeeded' },
+      payment: {
+        _id: PAYMENT_ID,
+        paymentNumber: 'QGS-P-0001',
+        userId: CLIENT_ID,
+        orderId: ORDER_ID,
+        status: 'partially_refunded',
+        refundedAmount: 6000, // a previous partial of 3000 already happened
+      },
+      requiredApproval: 'none',
+    });
+
+    // Order is ALREADY 'partially_refunded' from the first partial.
+    const order = makeOrder({ paymentStatus: 'partially_refunded' });
+    const { app, creditLog } = mount({ order, priorRestoredCents: 2000 });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Second partial refund',
+      idempotencyKey: 'idem_refund_partial_repeat_004',
+      amount: 3000,
+    });
+
+    expect(res.status).toBe(200);
+    // NOT skipped as idempotent — saga ran, proportional credit restored.
+    expect(res.body.data.idempotentReplay).toBeUndefined();
+    expect(res.body.data.domainRestored).toBe(true);
+
+    // floor(10000 * 3000 / 15000) = 2000 cents restored for THIS call.
+    // (The priorRestoredCents of 2000 is only relevant to the COMPLETING
+    // call — proportional partials do not consult it.)
+    expect(creditLog.refundCalls).toHaveLength(1);
+    expect(creditLog.refundCalls[0].amount).toBe(2000);
+  });
+
+  it('partial refund on order with NO credit/promo: saga runs but no credit step', async () => {
+    // Order paid entirely in cash — no creditApplied, no promo. Partial
+    // refund should still flip order status to 'partially_refunded' but
+    // run no credit-restore step.
+    processRefundMock.mockResolvedValue({
+      refundEntry: { refundId: 'rf_partial_cash_05', amount: 5000, status: 'succeeded' },
+      payment: {
+        _id: PAYMENT_ID,
+        paymentNumber: 'QGS-P-0001',
+        userId: CLIENT_ID,
+        orderId: ORDER_ID,
+        status: 'partially_refunded',
+        refundedAmount: 5000,
+      },
+      requiredApproval: 'none',
+    });
+
+    const order = makeOrder({
+      creditApplied: 0,
+      promoCode: undefined,
+      discountAmount: 0,
+      finalAmount: TOTAL,
+    });
+    const { app, creditLog, promoLog } = mount({ order });
+
+    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/full-refund`).send({
+      reason: 'Partial refund on cash-only order',
+      idempotencyKey: 'idem_refund_partial_cash_005',
       amount: 5000,
     });
 
     expect(res.status).toBe(200);
     expect(res.body.data.orderPaymentStatus).toBe('partially_refunded');
-    // domainRestored is false for partial — credits/promo intentionally untouched.
+    // Nothing to restore — domainRestored false (no credit + not full).
     expect(res.body.data.domainRestored).toBe(false);
 
-    // No credit/promo activity for partial refund (v1 scope).
     expect(creditLog.refundCalls).toHaveLength(0);
     expect(promoLog.revokeCalls).toHaveLength(0);
-    // Only the status flip happened.
     expect(order.paymentStatus).toBe('partially_refunded');
   });
 
@@ -620,6 +836,8 @@ describe('E2E: Admin full-refund route — saga compensation', () => {
           transactions: [],
           total: 0,
         })) as CreditServiceResult['getTransactions'],
+        getRestoredCreditForOrder: (async () =>
+          0) as CreditServiceResult['getRestoredCreditForOrder'],
         expireCredits: (async () => 0) as CreditServiceResult['expireCredits'],
       },
       promoCodeService: buildPromoService({ log: promoLog }),
