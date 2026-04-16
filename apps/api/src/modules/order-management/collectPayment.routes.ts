@@ -342,7 +342,21 @@ export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Route
             },
           });
 
-          await runSaga('collectPayment.fullCreditCoverage', steps, undefined);
+          // Metadata for the reconciliation queue if any compensation
+          // fails. clientUserId is the order owner (whose credits/promo
+          // got touched); staffUserId is the actor that initiated the
+          // collect-payment call (relevant for accountability).
+          await runSaga('collectPayment.fullCreditCoverage', steps, undefined, {
+            orderId: String(order._id),
+            orderNumber: order.orderNumber,
+            userId: clientUserId,
+            staffUserId,
+            creditApplied: breakdown.creditApplied,
+            discountAmount: breakdown.discountAmount,
+            totalAmount: breakdown.totalAmount,
+            promoCode: breakdown.promoCode,
+            idempotencyKey,
+          });
 
           auditLog.log({
             actor: staffUserId,
@@ -553,7 +567,23 @@ export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Route
           },
         });
 
-        await runSaga('collectPayment.partialStripe', steps, undefined);
+        // Metadata for the reconciliation queue. Mirrors the Pay Now
+        // partial-Stripe shape, plus staffUserId so support knows which
+        // staff member initiated the collection.
+        await runSaga('collectPayment.partialStripe', steps, undefined, {
+          orderId: String(order._id),
+          orderNumber: order.orderNumber,
+          userId: clientUserId,
+          staffUserId,
+          paymentNumber,
+          gateway,
+          creditApplied: breakdown.creditApplied,
+          discountAmount: breakdown.discountAmount,
+          finalAmount: breakdown.finalAmount,
+          totalAmount: breakdown.totalAmount,
+          promoCode: breakdown.promoCode,
+          idempotencyKey,
+        });
 
         if (!intentResult || !payment) {
           throw new Error('collectPayment.partialStripe saga succeeded but state is missing');

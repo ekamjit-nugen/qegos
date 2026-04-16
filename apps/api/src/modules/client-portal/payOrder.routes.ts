@@ -346,7 +346,21 @@ export function createPayOrderRoutes(deps: PayOrderRouteDeps): Router {
             },
           });
 
-          await runSaga('payOrder.fullCreditCoverage', steps, undefined);
+          // Metadata for the reconciliation queue if any compensation
+          // fails. Captured at saga-start so support has the full
+          // breadcrumb trail (orderId, userId, amounts, idempotencyKey)
+          // without grepping logs. No payment row exists in this branch
+          // (fully covered by credits), so paymentId is omitted.
+          await runSaga('payOrder.fullCreditCoverage', steps, undefined, {
+            orderId: String(order._id),
+            orderNumber: order.orderNumber,
+            userId,
+            creditApplied: breakdown.creditApplied,
+            discountAmount: breakdown.discountAmount,
+            totalAmount: breakdown.totalAmount,
+            promoCode: breakdown.promoCode,
+            idempotencyKey,
+          });
 
           res.status(200).json({
             status: 200,
@@ -544,7 +558,25 @@ export function createPayOrderRoutes(deps: PayOrderRouteDeps): Router {
           },
         });
 
-        await runSaga('payOrder.partialStripe', steps, undefined);
+        // Metadata for the reconciliation queue. paymentId isn't known
+        // until persistPayment.forward runs (step 2 of this saga), so we
+        // include paymentNumber + idempotencyKey instead — those are
+        // enough to find the row, including the case where the saga
+        // failed BEFORE persistPayment ran (no row exists, but support
+        // has the order/user/idempotency triple).
+        await runSaga('payOrder.partialStripe', steps, undefined, {
+          orderId: String(order._id),
+          orderNumber: order.orderNumber,
+          userId,
+          paymentNumber,
+          gateway,
+          creditApplied: breakdown.creditApplied,
+          discountAmount: breakdown.discountAmount,
+          finalAmount: breakdown.finalAmount,
+          totalAmount: breakdown.totalAmount,
+          promoCode: breakdown.promoCode,
+          idempotencyKey,
+        });
 
         // After a successful saga both refs are populated; null-check to
         // satisfy TS narrowing (closures can't tell us this).
