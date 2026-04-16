@@ -8,8 +8,23 @@
  *      creates Payment intent via configured gateway (Stripe), returns
  *      clientSecret + publishableKey for the frontend SDK to confirm.
  *
- * Credits are deducted on intent creation (provisional). On webhook failure
- * the existing webhook processor should refund credits — out of scope here.
+ * Both branches are saga-wrapped (GAP-C03):
+ *
+ *   - Full-credit branch: useCredit → applyPromoCode → markOrderPaid.
+ *     A failure rolls each completed step back synchronously.
+ *
+ *   - Partial-Stripe branch: createStripeIntent → persistPayment →
+ *     useCredit → applyPromoCode → updateOrder. A mid-flight failure
+ *     cancels the Stripe intent (releases the held funds + fires the
+ *     `payment_intent.canceled` webhook), refunds the credit, revokes
+ *     the promo, and reverts the order's provisional fields. The
+ *     `Payment.domainCompensated` marker is set so the
+ *     paymentCompensation.listener (which also fires on the cancel
+ *     webhook) does not double-compensate.
+ *
+ * The webhook listener still backs us up for abandoned checkouts that
+ * complete the route happily but never confirm at Stripe — see
+ * apps/api/src/modules/order-management/paymentCompensation.listener.ts.
  */
 
 import { Router, type Request, type Response } from 'express';
@@ -24,6 +39,7 @@ import {
   type IGatewayConfig,
   type IPaymentProvider,
   type PaymentGateway,
+  type PaymentIntentResult,
 } from '@nugen/payment-gateway';
 import { getRequestId } from '../../lib/requestContext';
 import { runSaga, type SagaStep } from '../../lib/saga';
@@ -357,7 +373,10 @@ export function createPayOrderRoutes(deps: PayOrderRouteDeps): Router {
           return;
         }
 
-        // 3. Get gateway config
+        // 3. Get gateway config + allocate payment number BEFORE the saga.
+        //    These are read-only / sequence allocations; if the saga later
+        //    rolls back we don't need to "release" them — the next pay
+        //    attempt grabs the next number.
         const config =
           (await GatewayConfigModel.findOne()) ??
           (await GatewayConfigModel.create({
@@ -365,67 +384,182 @@ export function createPayOrderRoutes(deps: PayOrderRouteDeps): Router {
             routingRule: 'primary_only',
           }));
         const configObj = config.toObject() as unknown as IGatewayConfig;
-
         const paymentNumber = await generatePaymentNumber(PaymentModel);
+        const effectiveGateway = gateway ?? configObj.primaryGateway;
 
-        // 4. Create gateway intent
-        const intentResult = await routePayment(
+        // 4. Snapshot original order state for the order-step compensation.
+        const originalOrderSnapshot = {
+          discountAmount: order.discountAmount,
+          promoCode: order.promoCode,
+          creditApplied: order.creditApplied,
+          finalAmount: order.finalAmount,
+        };
+
+        // 5. Build the partial-Stripe saga. Closures share state across
+        //    forward + compensate callbacks. Order is:
+        //      createStripeIntent → persistPayment → useCredit?
+        //      → applyPromoCode? → updateOrder
+        //    A failure at any step rolls back all completed steps in
+        //    reverse. The Stripe intent is cancelled at the gateway,
+        //    which fires `payment_intent.canceled` — the
+        //    paymentCompensation.listener checks `Payment.domainCompensated`
+        //    (set by the persistPayment compensation below) and skips.
+        let intentResult: PaymentIntentResult | null = null;
+        let payment: IPaymentDocument | null = null;
+
+        const steps: SagaStep<void>[] = [
           {
-            amount: breakdown.finalAmount,
-            currency: 'AUD',
-            orderId: String(order._id),
-            userId,
-            idempotencyKey,
-            metadata: { paymentNumber, orderNumber: order.orderNumber },
+            name: 'createStripeIntent',
+            forward: async () => {
+              intentResult = await routePayment(
+                {
+                  amount: breakdown.finalAmount,
+                  currency: 'AUD',
+                  orderId: String(order._id),
+                  userId,
+                  idempotencyKey,
+                  metadata: { paymentNumber, orderNumber: order.orderNumber },
+                },
+                { ...configObj, primaryGateway: effectiveGateway },
+                providers,
+              );
+            },
+            compensate: async () => {
+              if (!intentResult) {
+                return;
+              }
+              const provider = providers.get(intentResult.gateway);
+              if (!provider) {
+                return;
+              }
+              await provider.cancelPayment({
+                gatewayTxnId: intentResult.gatewayTxnId,
+                reason: 'abandoned',
+              });
+            },
           },
-          { ...configObj, primaryGateway: gateway ?? configObj.primaryGateway },
-          providers,
-        );
+          {
+            name: 'persistPayment',
+            forward: async () => {
+              if (!intentResult) {
+                throw new Error('intentResult missing before persistPayment');
+              }
+              payment = await PaymentModel.create({
+                paymentNumber,
+                orderId: order._id,
+                userId,
+                gateway: intentResult.gateway,
+                gatewayTxnId: intentResult.gatewayTxnId,
+                idempotencyKey,
+                amount: breakdown.finalAmount,
+                currency: 'AUD',
+                status: 'pending',
+                metadata: {
+                  clientIp: req.ip,
+                  userAgent: req.headers['user-agent'],
+                  deviceType: (req.headers['x-device-type'] as 'mobile' | 'web') ?? 'web',
+                },
+              });
+            },
+            compensate: async () => {
+              if (!payment) {
+                return;
+              }
+              // Mark the payment cancelled and flip the domain-compensation
+              // flag so the webhook listener (which fires on the
+              // `payment_intent.canceled` event from the createStripeIntent
+              // compensation step above) doesn't double-compensate.
+              payment.status = 'cancelled';
+              payment.domainCompensated = true;
+              payment.domainCompensatedAt = new Date();
+              await payment.save();
+            },
+          },
+        ];
 
-        // 5. Persist Payment
-        const payment = await PaymentModel.create({
-          paymentNumber,
-          orderId: order._id,
-          userId,
-          gateway: intentResult.gateway,
-          gatewayTxnId: intentResult.gatewayTxnId,
-          idempotencyKey,
-          amount: breakdown.finalAmount,
-          currency: 'AUD',
-          status: 'pending',
-          metadata: {
-            clientIp: req.ip,
-            userAgent: req.headers['user-agent'],
-            deviceType: (req.headers['x-device-type'] as 'mobile' | 'web') ?? 'web',
+        if (breakdown.creditApplied > 0 && creditService) {
+          steps.push({
+            name: 'useCredit',
+            forward: async () => {
+              await creditService.useCredit(userId, breakdown.creditApplied, String(order._id));
+            },
+            compensate: async () => {
+              await creditService.addCredit(
+                userId,
+                breakdown.creditApplied,
+                'refund_credit',
+                `Saga compensation: pay-now partial-Stripe failed for order ${order.orderNumber}`,
+                String(order._id),
+              );
+            },
+          });
+        }
+
+        if (breakdown.promoCode && promoCodeService && breakdown.discountAmount > 0) {
+          const promoCode = breakdown.promoCode;
+          steps.push({
+            name: 'applyPromoCode',
+            forward: async () => {
+              await promoCodeService.applyPromoCode(
+                promoCode,
+                userId,
+                String(order._id),
+                breakdown.totalAmount,
+              );
+            },
+            compensate: async () => {
+              await promoCodeService.revokePromoCode(promoCode, userId, String(order._id));
+            },
+          });
+        }
+
+        steps.push({
+          name: 'updateOrder',
+          forward: async () => {
+            order.discountAmount = breakdown.discountAmount;
+            order.promoCode = breakdown.promoCode;
+            order.creditApplied = breakdown.creditApplied;
+            order.finalAmount = breakdown.finalAmount;
+            try {
+              await order.save();
+            } catch (saveErr) {
+              // Save failed — restore the in-memory order to the
+              // pre-mutation snapshot so the calling code (and the
+              // saga's compensation pass for prior steps) doesn't see
+              // dirty fields. The DB was never written, so the
+              // snapshot IS the truth.
+              order.discountAmount = originalOrderSnapshot.discountAmount;
+              order.promoCode = originalOrderSnapshot.promoCode;
+              order.creditApplied = originalOrderSnapshot.creditApplied;
+              order.finalAmount = originalOrderSnapshot.finalAmount;
+              throw saveErr;
+            }
+          },
+          compensate: async () => {
+            order.discountAmount = originalOrderSnapshot.discountAmount;
+            order.promoCode = originalOrderSnapshot.promoCode;
+            order.creditApplied = originalOrderSnapshot.creditApplied;
+            order.finalAmount = originalOrderSnapshot.finalAmount;
+            await order.save();
           },
         });
 
-        // 6. Provisionally apply promo + credits to the order so the user
-        //    sees the right amounts in their order detail. Webhook reconciles
-        //    on success/failure.
-        if (breakdown.creditApplied > 0 && creditService) {
-          await creditService.useCredit(userId, breakdown.creditApplied, String(order._id));
+        await runSaga('payOrder.partialStripe', steps, undefined);
+
+        // After a successful saga both refs are populated; null-check to
+        // satisfy TS narrowing (closures can't tell us this).
+        if (!intentResult || !payment) {
+          throw new Error('payOrder.partialStripe saga succeeded but state is missing');
         }
-        if (breakdown.promoCode && promoCodeService && breakdown.discountAmount > 0) {
-          await promoCodeService.applyPromoCode(
-            breakdown.promoCode,
-            userId,
-            String(order._id),
-            breakdown.totalAmount,
-          );
-        }
-        order.discountAmount = breakdown.discountAmount;
-        order.promoCode = breakdown.promoCode;
-        order.creditApplied = breakdown.creditApplied;
-        order.finalAmount = breakdown.finalAmount;
-        await order.save();
+        const finalIntent: PaymentIntentResult = intentResult;
+        const finalPayment: IPaymentDocument = payment;
 
         auditLog.log({
           actor: userId,
           actorType: 'client',
           action: 'create',
           resource: 'payment',
-          resourceId: String(payment._id),
+          resourceId: String(finalPayment._id),
           severity: 'info',
           description: `Pay Now intent for order ${order.orderNumber} (${breakdown.finalAmount} cents)`,
         });
@@ -433,13 +567,13 @@ export function createPayOrderRoutes(deps: PayOrderRouteDeps): Router {
         res.status(201).json({
           status: 201,
           data: {
-            paymentId: String(payment._id),
-            paymentNumber: payment.paymentNumber,
-            clientSecret: intentResult.clientSecret,
-            publishableKey: intentResult.publishableKey,
-            gateway: intentResult.gateway,
-            amount: payment.amount,
-            currency: payment.currency,
+            paymentId: String(finalPayment._id),
+            paymentNumber: finalPayment.paymentNumber,
+            clientSecret: finalIntent.clientSecret,
+            publishableKey: finalIntent.publishableKey,
+            gateway: finalIntent.gateway,
+            amount: finalPayment.amount,
+            currency: finalPayment.currency,
             breakdown,
           },
         });

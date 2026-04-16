@@ -5,6 +5,8 @@ import type {
   PaymentIntentResult,
   CaptureParams,
   CaptureResult,
+  CancelParams,
+  CancelResult,
   RefundParams,
   RefundResult,
   PaymentStatusResult,
@@ -115,6 +117,51 @@ export const stripeProvider: IPaymentProvider = {
       };
     } catch (err) {
       throw mapStripeError(err as Stripe.errors.StripeError);
+    }
+  },
+
+  async cancelPayment(params: CancelParams): Promise<CancelResult> {
+    const stripe = getStripe();
+    // Stripe's cancellation_reason enum is restricted; map free-form
+    // reason → known enum, default to 'abandoned' which best matches
+    // the saga-compensation case (intent created but downstream work
+    // failed before the customer ever confirmed).
+    const allowed: Stripe.PaymentIntentCancelParams.CancellationReason[] = [
+      'duplicate',
+      'fraudulent',
+      'requested_by_customer',
+      'abandoned',
+    ];
+    const cancellation_reason = (
+      allowed.includes(params.reason as Stripe.PaymentIntentCancelParams.CancellationReason)
+        ? params.reason
+        : 'abandoned'
+    ) as Stripe.PaymentIntentCancelParams.CancellationReason;
+
+    try {
+      const cancelled = await stripe.paymentIntents.cancel(params.gatewayTxnId, {
+        cancellation_reason,
+      });
+      return {
+        gatewayTxnId: cancelled.id,
+        status: cancelled.status,
+      };
+    } catch (err) {
+      // Make this idempotent for callers: if Stripe says the intent is
+      // already in a terminal state (cancelled / succeeded), treat as
+      // a success — cancellation has effectively already happened (or
+      // is impossible because the charge settled). Other errors bubble.
+      const stripeErr = err as Stripe.errors.StripeError;
+      if (
+        stripeErr.code === 'payment_intent_unexpected_state' ||
+        stripeErr.code === 'resource_missing'
+      ) {
+        return {
+          gatewayTxnId: params.gatewayTxnId,
+          status: 'cancelled',
+        };
+      }
+      throw mapStripeError(stripeErr);
     }
   },
 

@@ -6,6 +6,19 @@
  *
  * The order's stored `userId` is used as the payment's owner — staff cannot
  * pay against their own user record. RBAC requires `payments:create`.
+ *
+ * Both branches are saga-wrapped (GAP-C03), matching Pay Now exactly:
+ *
+ *   - Full-credit branch: useCredit → applyPromoCode → markOrderPaid.
+ *
+ *   - Partial-Stripe branch: createStripeIntent → persistPayment →
+ *     useCredit → applyPromoCode → updateOrder. A mid-flight failure
+ *     cancels the Stripe intent (releases held funds + fires the
+ *     `payment_intent.canceled` webhook), refunds credit, revokes promo,
+ *     and reverts the order's provisional fields. The
+ *     `Payment.domainCompensated` marker prevents the
+ *     paymentCompensation.listener (which fires on the same cancel
+ *     webhook) from double-compensating.
  */
 
 import { Router, type Request, type Response, type RequestHandler } from 'express';
@@ -21,6 +34,7 @@ import {
   type IGatewayConfig,
   type IPaymentProvider,
   type PaymentGateway,
+  type PaymentIntentResult,
 } from '@nugen/payment-gateway';
 import { getRequestId } from '../../lib/requestContext';
 import { runSaga, type SagaStep } from '../../lib/saga';
@@ -365,6 +379,9 @@ export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Route
           return;
         }
 
+        // Gateway config + payment number allocated BEFORE the saga.
+        // These are read/sequence operations; if the saga rolls back we
+        // don't need to release them.
         const config =
           (await GatewayConfigModel.findOne()) ??
           (await GatewayConfigModel.create({
@@ -372,68 +389,184 @@ export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Route
             routingRule: 'primary_only',
           }));
         const configObj = config.toObject() as unknown as IGatewayConfig;
-
         const paymentNumber = await generatePaymentNumber(PaymentModel);
+        const effectiveGateway = gateway ?? configObj.primaryGateway;
 
-        const intentResult = await routePayment(
+        // Snapshot original order state for the order-step compensation.
+        const originalOrderSnapshot = {
+          discountAmount: order.discountAmount,
+          promoCode: order.promoCode,
+          creditApplied: order.creditApplied,
+          finalAmount: order.finalAmount,
+        };
+
+        // Build the partial-Stripe saga. Mirror of payOrder.partialStripe
+        // (apps/api/src/modules/client-portal/payOrder.routes.ts) — same
+        // step order, same compensations, same domainCompensated guard
+        // against the listener double-compensating from the
+        // payment_intent.canceled webhook fired by the createStripeIntent
+        // compensation step.
+        let intentResult: PaymentIntentResult | null = null;
+        let payment: IPaymentDocument | null = null;
+
+        const steps: SagaStep<void>[] = [
           {
-            amount: breakdown.finalAmount,
-            currency: 'AUD',
-            orderId: String(order._id),
-            userId: clientUserId,
-            idempotencyKey,
-            metadata: {
-              paymentNumber,
-              orderNumber: order.orderNumber,
-              collectedBy: staffUserId,
+            name: 'createStripeIntent',
+            forward: async () => {
+              intentResult = await routePayment(
+                {
+                  amount: breakdown.finalAmount,
+                  currency: 'AUD',
+                  orderId: String(order._id),
+                  userId: clientUserId,
+                  idempotencyKey,
+                  metadata: {
+                    paymentNumber,
+                    orderNumber: order.orderNumber,
+                    collectedBy: staffUserId,
+                  },
+                },
+                { ...configObj, primaryGateway: effectiveGateway },
+                providers,
+              );
+            },
+            compensate: async () => {
+              if (!intentResult) {
+                return;
+              }
+              const provider = providers.get(intentResult.gateway);
+              if (!provider) {
+                return;
+              }
+              await provider.cancelPayment({
+                gatewayTxnId: intentResult.gatewayTxnId,
+                reason: 'abandoned',
+              });
             },
           },
-          { ...configObj, primaryGateway: gateway ?? configObj.primaryGateway },
-          providers,
-        );
+          {
+            name: 'persistPayment',
+            forward: async () => {
+              if (!intentResult) {
+                throw new Error('intentResult missing before persistPayment');
+              }
+              payment = await PaymentModel.create({
+                paymentNumber,
+                orderId: order._id,
+                userId: clientUserId,
+                gateway: intentResult.gateway,
+                gatewayTxnId: intentResult.gatewayTxnId,
+                idempotencyKey,
+                amount: breakdown.finalAmount,
+                currency: 'AUD',
+                status: 'pending',
+                metadata: {
+                  clientIp: req.ip,
+                  userAgent: req.headers['user-agent'],
+                  deviceType: 'web',
+                  collectedBy: staffUserId,
+                },
+              });
+            },
+            compensate: async () => {
+              if (!payment) {
+                return;
+              }
+              payment.status = 'cancelled';
+              payment.domainCompensated = true;
+              payment.domainCompensatedAt = new Date();
+              await payment.save();
+            },
+          },
+        ];
 
-        const payment = await PaymentModel.create({
-          paymentNumber,
-          orderId: order._id,
-          userId: clientUserId,
-          gateway: intentResult.gateway,
-          gatewayTxnId: intentResult.gatewayTxnId,
-          idempotencyKey,
-          amount: breakdown.finalAmount,
-          currency: 'AUD',
-          status: 'pending',
-          metadata: {
-            clientIp: req.ip,
-            userAgent: req.headers['user-agent'],
-            deviceType: 'web',
-            collectedBy: staffUserId,
+        if (breakdown.creditApplied > 0 && creditService) {
+          steps.push({
+            name: 'useCredit',
+            forward: async () => {
+              await creditService.useCredit(
+                clientUserId,
+                breakdown.creditApplied,
+                String(order._id),
+              );
+            },
+            compensate: async () => {
+              await creditService.addCredit(
+                clientUserId,
+                breakdown.creditApplied,
+                'refund_credit',
+                `Saga compensation: collect-payment partial-Stripe failed for order ${order.orderNumber}`,
+                String(order._id),
+              );
+            },
+          });
+        }
+
+        if (breakdown.promoCode && promoCodeService && breakdown.discountAmount > 0) {
+          const promoCodeForSaga = breakdown.promoCode;
+          steps.push({
+            name: 'applyPromoCode',
+            forward: async () => {
+              await promoCodeService.applyPromoCode(
+                promoCodeForSaga,
+                clientUserId,
+                String(order._id),
+                breakdown.totalAmount,
+              );
+            },
+            compensate: async () => {
+              await promoCodeService.revokePromoCode(
+                promoCodeForSaga,
+                clientUserId,
+                String(order._id),
+              );
+            },
+          });
+        }
+
+        steps.push({
+          name: 'updateOrder',
+          forward: async () => {
+            order.discountAmount = breakdown.discountAmount;
+            order.promoCode = breakdown.promoCode;
+            order.creditApplied = breakdown.creditApplied;
+            order.finalAmount = breakdown.finalAmount;
+            try {
+              await order.save();
+            } catch (saveErr) {
+              // Save failed — restore in-memory order so the saga's
+              // compensation pass for prior steps (and any caller code)
+              // doesn't see dirty fields. DB was never written.
+              order.discountAmount = originalOrderSnapshot.discountAmount;
+              order.promoCode = originalOrderSnapshot.promoCode;
+              order.creditApplied = originalOrderSnapshot.creditApplied;
+              order.finalAmount = originalOrderSnapshot.finalAmount;
+              throw saveErr;
+            }
+          },
+          compensate: async () => {
+            order.discountAmount = originalOrderSnapshot.discountAmount;
+            order.promoCode = originalOrderSnapshot.promoCode;
+            order.creditApplied = originalOrderSnapshot.creditApplied;
+            order.finalAmount = originalOrderSnapshot.finalAmount;
+            await order.save();
           },
         });
 
-        // Provisionally apply promo + credits to the order
-        if (breakdown.creditApplied > 0 && creditService) {
-          await creditService.useCredit(clientUserId, breakdown.creditApplied, String(order._id));
+        await runSaga('collectPayment.partialStripe', steps, undefined);
+
+        if (!intentResult || !payment) {
+          throw new Error('collectPayment.partialStripe saga succeeded but state is missing');
         }
-        if (breakdown.promoCode && promoCodeService && breakdown.discountAmount > 0) {
-          await promoCodeService.applyPromoCode(
-            breakdown.promoCode,
-            clientUserId,
-            String(order._id),
-            breakdown.totalAmount,
-          );
-        }
-        order.discountAmount = breakdown.discountAmount;
-        order.promoCode = breakdown.promoCode;
-        order.creditApplied = breakdown.creditApplied;
-        order.finalAmount = breakdown.finalAmount;
-        await order.save();
+        const finalIntent: PaymentIntentResult = intentResult;
+        const finalPayment: IPaymentDocument = payment;
 
         auditLog.log({
           actor: staffUserId,
           actorType: 'staff',
           action: 'create',
           resource: 'payment',
-          resourceId: String(payment._id),
+          resourceId: String(finalPayment._id),
           severity: 'info',
           description: `Staff initiated payment for order ${order.orderNumber} (${breakdown.finalAmount} cents) on behalf of client ${clientUserId}`,
         });
@@ -441,13 +574,13 @@ export function createCollectPaymentRoutes(deps: CollectPaymentRouteDeps): Route
         res.status(201).json({
           status: 201,
           data: {
-            paymentId: String(payment._id),
-            paymentNumber: payment.paymentNumber,
-            clientSecret: intentResult.clientSecret,
-            publishableKey: intentResult.publishableKey,
-            gateway: intentResult.gateway,
-            amount: payment.amount,
-            currency: payment.currency,
+            paymentId: String(finalPayment._id),
+            paymentNumber: finalPayment.paymentNumber,
+            clientSecret: finalIntent.clientSecret,
+            publishableKey: finalIntent.publishableKey,
+            gateway: finalIntent.gateway,
+            amount: finalPayment.amount,
+            currency: finalPayment.currency,
             breakdown,
           },
         });

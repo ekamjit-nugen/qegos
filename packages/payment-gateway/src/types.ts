@@ -54,6 +54,21 @@ export interface CaptureResult {
   status: string;
 }
 
+export interface CancelParams {
+  gatewayTxnId: string;
+  // Optional cancellation reason — Stripe accepts a fixed enum
+  // ('duplicate' | 'fraudulent' | 'requested_by_customer' | 'abandoned'),
+  // but the package-level interface keeps it as a free-form string and
+  // each provider maps as needed. Used for compensation rollback when a
+  // saga step fails after intent creation.
+  reason?: string;
+}
+
+export interface CancelResult {
+  gatewayTxnId: string;
+  status: string; // 'cancelled' on success
+}
+
 export interface RefundParams {
   gatewayTxnId: string;
   amount: number; // cents
@@ -83,6 +98,14 @@ export interface IPaymentProvider {
   name: PaymentGateway;
   createPaymentIntent(params: CreateIntentParams): Promise<PaymentIntentResult>;
   capturePayment(params: CaptureParams): Promise<CaptureResult>;
+  // Cancel an unconfirmed/uncaptured intent. Used as the saga
+  // compensation when a downstream step fails after intent creation —
+  // tells the gateway to release the held funds and fires the
+  // gateway's `payment_intent.canceled` webhook for any reconciliation
+  // hooks. Idempotent at the gateway: cancelling an already-cancelled
+  // intent is not an error in callers' eyes (provider may map to a
+  // success or specific error code).
+  cancelPayment(params: CancelParams): Promise<CancelResult>;
   refundPayment(params: RefundParams): Promise<RefundResult>;
   getPaymentStatus(gatewayTxnId: string): Promise<PaymentStatusResult>;
   testConnection(): Promise<boolean>;

@@ -5,6 +5,8 @@ import type {
   PaymentIntentResult,
   CaptureParams,
   CaptureResult,
+  CancelParams,
+  CancelResult,
   RefundParams,
   RefundResult,
   PaymentStatusResult,
@@ -115,6 +117,11 @@ interface PayzooCaptureResponse {
   status: string;
 }
 
+interface PayzooCancelResponse {
+  transactionId: string;
+  status: string;
+}
+
 interface PayzooRefundResponse {
   refundId: string;
   amount: number;
@@ -172,6 +179,33 @@ export const payzooProvider: IPaymentProvider = {
       capturedAmount: result.capturedAmount,
       status: result.status,
     };
+  },
+
+  async cancelPayment(params: CancelParams): Promise<CancelResult> {
+    try {
+      const result = await payzooRequest<PayzooCancelResponse>(
+        'POST',
+        `/v1/payments/${params.gatewayTxnId}/cancel`,
+        params.reason ? { reason: params.reason } : undefined,
+      );
+      return {
+        gatewayTxnId: result.transactionId,
+        status: result.status,
+      };
+    } catch (err) {
+      // Idempotent compensation: if Payzoo says the intent is missing
+      // (already cleaned up) or in a state that disallows cancel
+      // (already cancelled / settled), treat as success — the saga
+      // outcome is the same. Other errors propagate.
+      const gatewayErr = err as GatewayError;
+      if (gatewayErr.statusCode === 404 || gatewayErr.statusCode === 409) {
+        return {
+          gatewayTxnId: params.gatewayTxnId,
+          status: 'cancelled',
+        };
+      }
+      throw err;
+    }
   },
 
   async refundPayment(params: RefundParams): Promise<RefundResult> {
