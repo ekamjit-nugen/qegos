@@ -278,9 +278,14 @@ export interface PaymentGatewayConfig {
  * Defines which transitions are valid from each status.
  */
 export const VALID_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
-  pending: ['requires_capture', 'authorised', 'failed', 'cancelled'],
-  requires_capture: ['captured', 'failed', 'cancelled'],
-  authorised: ['captured', 'failed', 'cancelled'],
+  // Stripe's default auto-capture PaymentIntent flow fires
+  // `payment_intent.succeeded` directly against a freshly created
+  // intent — there is no intermediate capture event. Without
+  // `pending → succeeded` here, the Pay Now webhook is silently marked
+  // `ignored` and the order never transitions to paid.
+  pending: ['requires_capture', 'authorised', 'captured', 'succeeded', 'failed', 'cancelled'],
+  requires_capture: ['captured', 'succeeded', 'failed', 'cancelled'],
+  authorised: ['captured', 'succeeded', 'failed', 'cancelled'],
   captured: ['succeeded', 'failed'],
   succeeded: ['refund_pending', 'refunded', 'partially_refunded', 'disputed'],
   failed: [],

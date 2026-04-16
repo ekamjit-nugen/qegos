@@ -21,6 +21,7 @@ const config: Config = {
     '@nugen/xero-connector': '<rootDir>/packages/xero-connector/src',
     '@nugen/notification-engine': '<rootDir>/packages/notification-engine/src',
     '@nugen/analytics-engine': '<rootDir>/packages/analytics-engine/src',
+    '@nugen/payment-gateway': '<rootDir>/packages/payment-gateway/src',
   },
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',
