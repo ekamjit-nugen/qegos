@@ -6,16 +6,7 @@
  * only `*Last4` / `dateOfBirthYear` projections. These types reflect that.
  */
 
-export const AU_STATES = [
-  'NSW',
-  'VIC',
-  'QLD',
-  'SA',
-  'WA',
-  'TAS',
-  'NT',
-  'ACT',
-] as const;
+export const AU_STATES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'] as const;
 export type AuState = (typeof AU_STATES)[number];
 
 export const WORK_TYPES = ['TFN', 'ABN', 'ACN'] as const;

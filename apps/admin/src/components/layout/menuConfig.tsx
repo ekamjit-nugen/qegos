@@ -57,7 +57,12 @@ export const menuItems: AdminMenuItem[] = [
     allowedUserTypes: ALL_STAFF,
     children: [
       { path: '/leads', name: 'Leads', icon: <SolutionOutlined />, allowedUserTypes: ALL_STAFF },
-      { path: '/referrals', name: 'Referrals', icon: <StarOutlined />, allowedUserTypes: ALL_STAFF },
+      {
+        path: '/referrals',
+        name: 'Referrals',
+        icon: <StarOutlined />,
+        allowedUserTypes: ALL_STAFF,
+      },
     ],
   },
   {
@@ -66,9 +71,24 @@ export const menuItems: AdminMenuItem[] = [
     allowedUserTypes: ALL_STAFF,
     children: [
       { path: '/orders', name: 'Orders', icon: <FileTextOutlined />, allowedUserTypes: ALL_STAFF },
-      { path: '/consent-forms', name: 'Consent Forms', icon: <FormOutlined />, allowedUserTypes: ALL_STAFF },
-      { path: '/appointments', name: 'Appointments', icon: <ScheduleOutlined />, allowedUserTypes: ALL_STAFF },
-      { path: '/reviews', name: 'Review Pipeline', icon: <AuditOutlined />, allowedUserTypes: [0, 1, 5, 6] },
+      {
+        path: '/consent-forms',
+        name: 'Consent Forms',
+        icon: <FormOutlined />,
+        allowedUserTypes: ALL_STAFF,
+      },
+      {
+        path: '/appointments',
+        name: 'Appointments',
+        icon: <ScheduleOutlined />,
+        allowedUserTypes: ALL_STAFF,
+      },
+      {
+        path: '/reviews',
+        name: 'Review Pipeline',
+        icon: <AuditOutlined />,
+        allowedUserTypes: [0, 1, 5, 6],
+      },
     ],
   },
   {
@@ -76,10 +96,25 @@ export const menuItems: AdminMenuItem[] = [
     icon: <MessageOutlined />,
     allowedUserTypes: ALL_STAFF,
     children: [
-      { path: '/broadcasts', name: 'Broadcasts', icon: <NotificationOutlined />, allowedUserTypes: MANAGER_PLUS },
+      {
+        path: '/broadcasts',
+        name: 'Broadcasts',
+        icon: <NotificationOutlined />,
+        allowedUserTypes: MANAGER_PLUS,
+      },
       { path: '/chat', name: 'Chat', icon: <MessageOutlined />, allowedUserTypes: ALL_STAFF },
-      { path: '/whatsapp', name: 'WhatsApp', icon: <PhoneOutlined />, allowedUserTypes: MANAGER_PLUS },
-      { path: '/tickets', name: 'Support Tickets', icon: <SolutionOutlined />, allowedUserTypes: ALL_STAFF },
+      {
+        path: '/whatsapp',
+        name: 'WhatsApp',
+        icon: <PhoneOutlined />,
+        allowedUserTypes: MANAGER_PLUS,
+      },
+      {
+        path: '/tickets',
+        name: 'Support Tickets',
+        icon: <SolutionOutlined />,
+        allowedUserTypes: ALL_STAFF,
+      },
     ],
   },
   {
@@ -87,9 +122,24 @@ export const menuItems: AdminMenuItem[] = [
     icon: <DollarOutlined />,
     allowedUserTypes: MANAGER_PLUS,
     children: [
-      { path: '/payments', name: 'Payments', icon: <DollarOutlined />, allowedUserTypes: MANAGER_PLUS },
-      { path: '/billing-disputes', name: 'Billing Disputes', icon: <FileTextOutlined />, allowedUserTypes: MANAGER_PLUS },
-      { path: '/promo-codes', name: 'Promo Codes', icon: <GiftOutlined />, allowedUserTypes: ADMIN_ONLY },
+      {
+        path: '/payments',
+        name: 'Payments',
+        icon: <DollarOutlined />,
+        allowedUserTypes: MANAGER_PLUS,
+      },
+      {
+        path: '/billing-disputes',
+        name: 'Billing Disputes',
+        icon: <FileTextOutlined />,
+        allowedUserTypes: MANAGER_PLUS,
+      },
+      {
+        path: '/promo-codes',
+        name: 'Promo Codes',
+        icon: <GiftOutlined />,
+        allowedUserTypes: ADMIN_ONLY,
+      },
       { path: '/xero', name: 'Xero Sync', icon: <DollarOutlined />, allowedUserTypes: ADMIN_ONLY },
     ],
   },
@@ -110,8 +160,18 @@ export const menuItems: AdminMenuItem[] = [
     icon: <BarChartOutlined />,
     allowedUserTypes: MANAGER_PLUS,
     children: [
-      { path: '/analytics', name: 'Analytics', icon: <BarChartOutlined />, allowedUserTypes: MANAGER_PLUS },
-      { path: '/audit-logs', name: 'Audit Logs', icon: <AuditOutlined />, allowedUserTypes: ADMIN_ONLY },
+      {
+        path: '/analytics',
+        name: 'Analytics',
+        icon: <BarChartOutlined />,
+        allowedUserTypes: MANAGER_PLUS,
+      },
+      {
+        path: '/audit-logs',
+        name: 'Audit Logs',
+        icon: <AuditOutlined />,
+        allowedUserTypes: ADMIN_ONLY,
+      },
     ],
   },
   {
@@ -120,10 +180,30 @@ export const menuItems: AdminMenuItem[] = [
     allowedUserTypes: ADMIN_ONLY,
     children: [
       { path: '/users', name: 'Users', icon: <UserOutlined />, allowedUserTypes: ADMIN_ONLY },
-      { path: '/form-mappings', name: 'Form Mappings', icon: <FormOutlined />, allowedUserTypes: ADMIN_ONLY },
-      { path: '/calendar', name: 'Tax Calendar', icon: <CalendarOutlined />, allowedUserTypes: ADMIN_ONLY },
-      { path: '/reputation', name: 'Reputation', icon: <StarOutlined />, allowedUserTypes: ADMIN_ONLY },
-      { path: '/settings', name: 'Settings', icon: <SettingOutlined />, allowedUserTypes: ADMIN_ONLY },
+      {
+        path: '/form-mappings',
+        name: 'Form Mappings',
+        icon: <FormOutlined />,
+        allowedUserTypes: ADMIN_ONLY,
+      },
+      {
+        path: '/calendar',
+        name: 'Tax Calendar',
+        icon: <CalendarOutlined />,
+        allowedUserTypes: ADMIN_ONLY,
+      },
+      {
+        path: '/reputation',
+        name: 'Reputation',
+        icon: <StarOutlined />,
+        allowedUserTypes: ADMIN_ONLY,
+      },
+      {
+        path: '/settings',
+        name: 'Settings',
+        icon: <SettingOutlined />,
+        allowedUserTypes: ADMIN_ONLY,
+      },
     ],
   },
 ];

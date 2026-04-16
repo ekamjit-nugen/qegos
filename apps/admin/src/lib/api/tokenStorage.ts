@@ -11,12 +11,16 @@ export function setAccessToken(token: string): void {
 
 // Refresh token in localStorage (persists across page reloads)
 export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') { return null; }
+  if (typeof window === 'undefined') {
+    return null;
+  }
   return localStorage.getItem('qegos_refresh_token');
 }
 
 export function setRefreshToken(token: string): void {
-  if (typeof window === 'undefined') { return; }
+  if (typeof window === 'undefined') {
+    return;
+  }
   localStorage.setItem('qegos_refresh_token', token);
 }
 

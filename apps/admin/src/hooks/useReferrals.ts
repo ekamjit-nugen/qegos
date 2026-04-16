@@ -22,7 +22,9 @@ export function useReferralList(filters: ReferralListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
       const res = await api.get<PaginatedResponse<Referral>>(`/referrals?${params.toString()}`);
       return res.data;
@@ -68,7 +70,8 @@ export function useReferralLeaderboard() {
   return useQuery({
     queryKey: ['referrals', 'leaderboard'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Array<Record<string, unknown>>>>('/referrals/leaderboard');
+      const res =
+        await api.get<ApiResponse<Array<Record<string, unknown>>>>('/referrals/leaderboard');
       return res.data.data;
     },
   });

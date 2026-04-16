@@ -41,24 +41,44 @@ export function initAudienceService(
 
 function buildLeadQuery(filters?: AudienceFilters): Record<string, unknown> {
   const query: Record<string, unknown> = { isDeleted: { $ne: true } };
-  if (!filters) return query;
+  if (!filters) {
+    return query;
+  }
 
-  if (filters.leadStatus?.length) query.status = { $in: filters.leadStatus };
-  if (filters.priority?.length) query.priority = { $in: filters.priority };
-  if (filters.source?.length) query.source = { $in: filters.source };
-  if (filters.state?.length) query.state = { $in: filters.state };
-  if (filters.tags?.length) query.tags = { $in: filters.tags };
-  if (filters.financialYear) query.financialYear = filters.financialYear;
+  if (filters.leadStatus?.length) {
+    query.status = { $in: filters.leadStatus };
+  }
+  if (filters.priority?.length) {
+    query.priority = { $in: filters.priority };
+  }
+  if (filters.source?.length) {
+    query.source = { $in: filters.source };
+  }
+  if (filters.state?.length) {
+    query.state = { $in: filters.state };
+  }
+  if (filters.tags?.length) {
+    query.tags = { $in: filters.tags };
+  }
+  if (filters.financialYear) {
+    query.financialYear = filters.financialYear;
+  }
 
   return query;
 }
 
 function buildUserQuery(filters?: AudienceFilters): Record<string, unknown> {
   const query: Record<string, unknown> = { isDeleted: { $ne: true } };
-  if (!filters) return query;
+  if (!filters) {
+    return query;
+  }
 
-  if (filters.userType?.length) query.role = { $in: filters.userType };
-  if (filters.state?.length) query.state = { $in: filters.state };
+  if (filters.userType?.length) {
+    query.role = { $in: filters.userType };
+  }
+  if (filters.state?.length) {
+    query.state = { $in: filters.state };
+  }
 
   return query;
 }
@@ -98,12 +118,19 @@ async function hasConsent(
 
 // ─── Extract Contact Info ────────────────────────────────────────────────────
 
-function extractMergeData(doc: { toObject: () => Record<string, unknown> }): Record<string, string> {
+function extractMergeData(doc: {
+  toObject: () => Record<string, unknown>;
+}): Record<string, string> {
   const obj = doc.toObject();
   const result: Record<string, string> = {};
   const fields = [
-    'firstName', 'lastName', 'leadNumber', 'orderNumber',
-    'financialYear', 'email', 'mobile',
+    'firstName',
+    'lastName',
+    'leadNumber',
+    'orderNumber',
+    'financialYear',
+    'email',
+    'mobile',
   ];
   for (const f of fields) {
     if (obj[f] !== undefined && obj[f] !== null) {
@@ -130,10 +157,14 @@ export async function resolveAudience(
   if (audienceType === 'custom_list' && customList) {
     for (const item of customList) {
       const contact = channel === 'email' ? item.email : item.mobile;
-      if (!contact) continue;
+      if (!contact) {
+        continue;
+      }
 
       const optedOut = await isOptedOut(contact, channel);
-      if (optedOut) continue;
+      if (optedOut) {
+        continue;
+      }
 
       recipients.push({
         recipientType: 'custom',
@@ -157,23 +188,24 @@ export async function resolveAudience(
 
   for (const doc of docs) {
     const obj = doc.toObject() as unknown as Record<string, unknown>;
-    const contact = channel === 'email'
-      ? (obj.email as string | undefined)
-      : (obj.mobile as string | undefined);
+    const contact =
+      channel === 'email' ? (obj.email as string | undefined) : (obj.mobile as string | undefined);
 
-    if (!contact) continue;
+    if (!contact) {
+      continue;
+    }
 
     // BRC-INV-01: Check DND at send time
     const optedOut = await isOptedOut(contact, channel);
-    if (optedOut) continue;
+    if (optedOut) {
+      continue;
+    }
 
     // BRC-INV-07: Check consent
-    const consentOk = await hasConsent(
-      doc._id as Types.ObjectId,
-      contactType,
-      channel,
-    );
-    if (!consentOk) continue;
+    const consentOk = await hasConsent(doc._id as Types.ObjectId, contactType, channel);
+    if (!consentOk) {
+      continue;
+    }
 
     recipients.push({
       recipientId: doc._id as Types.ObjectId,

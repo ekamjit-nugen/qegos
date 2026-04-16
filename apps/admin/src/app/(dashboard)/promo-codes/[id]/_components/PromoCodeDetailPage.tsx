@@ -76,7 +76,8 @@ export default function PromoCodeDetailPage({ id }: { id: string }): React.React
               : 'No cap'}
           </Descriptions.Item>
           <Descriptions.Item label="Usage">
-            {promoCode.usageCount}{promoCode.maxUsageTotal ? ` / ${promoCode.maxUsageTotal}` : ' (unlimited)'}
+            {promoCode.usageCount}
+            {promoCode.maxUsageTotal ? ` / ${promoCode.maxUsageTotal}` : ' (unlimited)'}
           </Descriptions.Item>
           <Descriptions.Item label="Per User Limit">{promoCode.maxUsagePerUser}</Descriptions.Item>
           <Descriptions.Item label="Valid From">

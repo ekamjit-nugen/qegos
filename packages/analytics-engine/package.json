@@ -14,7 +14,13 @@
     "mongoose": "^8.0.0",
     "ioredis": "^5.3.0"
   },
-  "keywords": ["nugen", "analytics", "dashboard", "reporting", "caching"],
+  "keywords": [
+    "nugen",
+    "analytics",
+    "dashboard",
+    "reporting",
+    "caching"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

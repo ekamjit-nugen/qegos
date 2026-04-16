@@ -78,9 +78,7 @@ vaultDocumentSchema.index({ isArchived: 1, archivedAt: 1 });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 
-export function createVaultDocumentModel(
-  connection: Connection,
-): Model<IVaultDocumentDocument> {
+export function createVaultDocumentModel(connection: Connection): Model<IVaultDocumentDocument> {
   if (connection.models.VaultDocument) {
     return connection.models.VaultDocument as Model<IVaultDocumentDocument>;
   }

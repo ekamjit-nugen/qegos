@@ -53,17 +53,27 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'create') as never,
     ...createCampaignValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const authReq = req as AuthenticatedRequest;
       const campaign = await campaignService.createCampaign({
         ...req.body,
         createdBy: authReq.user!._id,
       });
-      auditLog?.log({
-        actor: authReq.user!._id, actorType: 'admin', action: 'create',
-        resource: 'broadcast_campaign', resourceId: String(campaign._id),
-        description: `Created campaign: ${campaign.name}`, severity: 'info',
-      }).catch((err: unknown) => { console.warn('[AUDIT] Failed:', err); }); // eslint-disable-line no-console
+      auditLog
+        ?.log({
+          actor: authReq.user!._id,
+          actorType: 'admin',
+          action: 'create',
+          resource: 'broadcast_campaign',
+          resourceId: String(campaign._id),
+          description: `Created campaign: ${campaign.name}`,
+          severity: 'info',
+        })
+        .catch((err: unknown) => {
+          console.warn('[AUDIT] Failed:', err);
+        }); // eslint-disable-line no-console
       res.status(201).json({ status: 201, data: campaign });
     },
   );
@@ -74,7 +84,9 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...listCampaignsValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const { status, channel, page, limit } = req.query as Record<string, string>;
       const result = await campaignService.listCampaigns({
         status: status as never,
@@ -92,9 +104,14 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const campaign = await campaignService.getCampaign(req.params.id);
-      if (!campaign) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!campaign) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
       const stats = await messageService.getCampaignStats(campaign._id);
       res.json({ status: 200, data: { ...campaign.toObject(), stats } });
     },
@@ -106,10 +123,16 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'update') as never,
     ...updateCampaignValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const campaign = await campaignService.updateCampaign(req.params.id, req.body);
       if (!campaign) {
-        res.status(400).json({ status: 400, code: 'INVALID_STATE', message: 'Campaign not found or not editable' });
+        res.status(400).json({
+          status: 400,
+          code: 'INVALID_STATE',
+          message: 'Campaign not found or not editable',
+        });
         return;
       }
       res.json({ status: 200, data: campaign });
@@ -122,18 +145,28 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'update') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const authReq = req as AuthenticatedRequest;
       const result = await campaignService.sendCampaign(req.params.id);
       if (!result.success) {
         res.status(400).json({ status: 400, code: 'SEND_FAILED', message: result.error });
         return;
       }
-      auditLog?.log({
-        actor: authReq.user!._id, actorType: 'admin', action: 'status_change',
-        resource: 'broadcast_campaign', resourceId: req.params.id,
-        description: `Sent campaign (${result.totalQueued} queued)`, severity: 'info',
-      }).catch((err: unknown) => { console.warn('[AUDIT] Failed:', err); }); // eslint-disable-line no-console
+      auditLog
+        ?.log({
+          actor: authReq.user!._id,
+          actorType: 'admin',
+          action: 'status_change',
+          resource: 'broadcast_campaign',
+          resourceId: req.params.id,
+          description: `Sent campaign (${result.totalQueued} queued)`,
+          severity: 'info',
+        })
+        .catch((err: unknown) => {
+          console.warn('[AUDIT] Failed:', err);
+        }); // eslint-disable-line no-console
       res.json({ status: 200, data: { totalQueued: result.totalQueued } });
     },
   );
@@ -144,9 +177,14 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'update') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const campaign = await campaignService.pauseCampaign(req.params.id);
-      if (!campaign) { res.status(400).json({ status: 400, code: 'INVALID_STATE' }); return; }
+      if (!campaign) {
+        res.status(400).json({ status: 400, code: 'INVALID_STATE' });
+        return;
+      }
       res.json({ status: 200, data: campaign });
     },
   );
@@ -157,9 +195,14 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'update') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const campaign = await campaignService.resumeCampaign(req.params.id);
-      if (!campaign) { res.status(400).json({ status: 400, code: 'INVALID_STATE' }); return; }
+      if (!campaign) {
+        res.status(400).json({ status: 400, code: 'INVALID_STATE' });
+        return;
+      }
       res.json({ status: 200, data: campaign });
     },
   );
@@ -170,10 +213,15 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'create') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const authReq = req as AuthenticatedRequest;
       const campaign = await campaignService.duplicateCampaign(req.params.id, authReq.user!._id);
-      if (!campaign) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!campaign) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
       res.status(201).json({ status: 201, data: campaign });
     },
   );
@@ -184,11 +232,19 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...previewCampaignValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const campaign = await campaignService.getCampaign(req.params.id);
-      if (!campaign) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!campaign) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
 
-      const { channel, mergeData = {} } = req.body as { channel: SingleChannel; mergeData?: Record<string, string> };
+      const { channel, mergeData = {} } = req.body as {
+        channel: SingleChannel;
+        mergeData?: Record<string, string>;
+      };
       const body = channel === 'email' ? campaign.emailBody : campaign.smsBody;
       const subject = channel === 'email' ? campaign.emailSubject : undefined;
 
@@ -208,9 +264,14 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const result = await campaignService.getAudienceCountAndCost(req.params.id);
-      if (!result) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!result) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
       res.json({ status: 200, data: result });
     },
   );
@@ -221,7 +282,9 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...campaignMessagesValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const { page, limit, status } = req.query as Record<string, string>;
       const result = await messageService.getMessageLog(
         req.params.id as never,
@@ -239,12 +302,15 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const stats = await messageService.getCampaignStats(req.params.id as never);
       res.json({
         status: 200,
         data: stats,
-        disclaimer: 'Open tracking may be blocked by some email clients (Apple Mail Privacy Protection). Actual opens may be 30-50% higher.',
+        disclaimer:
+          'Open tracking may be blocked by some email clients (Apple Mail Privacy Protection). Actual opens may be 30-50% higher.',
       });
     },
   );
@@ -257,8 +323,15 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...previewMessageValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
-      const { channel, body, subject, mergeData = {} } = req.body as {
+      if (!handleValidation(req, res)) {
+        return;
+      }
+      const {
+        channel,
+        body,
+        subject,
+        mergeData = {},
+      } = req.body as {
         channel: SingleChannel;
         body: string;
         subject?: string;
@@ -279,7 +352,9 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'create') as never,
     ...createTemplateValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const authReq = req as AuthenticatedRequest;
       const template = await templateService.createTemplate({
         ...req.body,
@@ -295,7 +370,9 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...listTemplatesValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const { channel, category, isActive, page, limit } = req.query as Record<string, string>;
       const result = await templateService.listTemplates({
         channel: channel as never,
@@ -314,9 +391,14 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'update') as never,
     ...updateTemplateValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const template = await templateService.updateTemplate(req.params.id, req.body);
-      if (!template) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!template) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
       res.json({ status: 200, data: template });
     },
   );
@@ -327,9 +409,14 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'delete') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const template = await templateService.updateTemplate(req.params.id, { isActive: false });
-      if (!template) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!template) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
       res.json({ status: 200, data: { message: 'Template deactivated' } });
     },
   );
@@ -343,20 +430,40 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     '/consent',
     checkPermission('broadcasts', 'read') as never,
     async (req: Request, res: Response): Promise<void> => {
-      const { contactId, channel, page = 1, limit = 20 } = req.query as {
-        contactId?: string; channel?: string; page?: number; limit?: number;
+      const {
+        contactId,
+        channel,
+        page = 1,
+        limit = 20,
+      } = req.query as {
+        contactId?: string;
+        channel?: string;
+        page?: number;
+        limit?: number;
       };
       const filter: Record<string, unknown> = {};
-      if (contactId) filter.contactId = contactId;
-      if (channel) filter.channel = channel;
+      if (contactId) {
+        filter.contactId = contactId;
+      }
+      if (channel) {
+        filter.channel = channel;
+      }
 
       const pageNum = Number(page);
       const limitNum = Number(limit);
       const [records, total] = await Promise.all([
-        ConsentModel.find(filter).sort({ createdAt: -1 }).skip((pageNum - 1) * limitNum).limit(limitNum).lean(),
+        ConsentModel.find(filter)
+          .sort({ createdAt: -1 })
+          .skip((pageNum - 1) * limitNum)
+          .limit(limitNum)
+          .lean(),
         ConsentModel.countDocuments(filter),
       ]);
-      res.json({ status: 200, data: records, pagination: { page: pageNum, limit: limitNum, total } });
+      res.json({
+        status: 200,
+        data: records,
+        pagination: { page: pageNum, limit: limitNum, total },
+      });
     },
   );
 
@@ -380,7 +487,9 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'create') as never,
     ...createOptOutValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const optOut = await OptOutModel.findOneAndUpdate(
         { contact: req.body.contact, channel: req.body.channel },
         { $setOnInsert: req.body },
@@ -396,11 +505,22 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...listOptOutsValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
-      const { channel, contactType, page = '1', limit = '50' } = req.query as Record<string, string>;
+      if (!handleValidation(req, res)) {
+        return;
+      }
+      const {
+        channel,
+        contactType,
+        page = '1',
+        limit = '50',
+      } = req.query as Record<string, string>;
       const query: Record<string, unknown> = {};
-      if (channel) query.channel = channel;
-      if (contactType) query.contactType = contactType;
+      if (channel) {
+        query.channel = channel;
+      }
+      if (contactType) {
+        query.contactType = contactType;
+      }
 
       const [optOuts, total] = await Promise.all([
         OptOutModel.find(query)
@@ -419,7 +539,9 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...checkOptOutValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const { contact, channel } = req.body as { contact: string; channel: string };
       const optOut = await OptOutModel.findOne({
         contact,
@@ -435,8 +557,12 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'create') as never,
     ...importOptOutsValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
-      const { entries } = req.body as { entries: Array<{ contact: string; contactType: string; channel: string; reason: string }> };
+      if (!handleValidation(req, res)) {
+        return;
+      }
+      const { entries } = req.body as {
+        entries: Array<{ contact: string; contactType: string; channel: string; reason: string }>;
+      };
 
       let imported = 0;
       let skipped = 0;
@@ -504,28 +630,47 @@ export function createBroadcastRoutes(deps: BroadcastRouteDeps): Router {
     checkPermission('broadcasts', 'read') as never,
     ...campaignIdValidation(),
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const campaign = await campaignService.getCampaign(req.params.id);
-      if (!campaign) { res.status(404).json({ status: 404, code: 'NOT_FOUND' }); return; }
+      if (!campaign) {
+        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+        return;
+      }
 
       // Stream CSV delivery report
       const messages = await MessageModel.find({ campaignId: campaign._id }).lean();
 
-      const header = 'recipientType,recipientMobile,recipientEmail,channel,status,gatewayId,sentAt,deliveredAt,error\n';
-      const rows = messages.map((m) => {
-        const escape = (v: unknown): string => {
-          const s = String(v ?? '');
-          return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-        };
-        return [
-          m.recipientType, m.recipientMobile, m.recipientEmail,
-          m.channel, m.status, m.gatewayId,
-          m.sentAt?.toISOString(), m.deliveredAt?.toISOString(), m.error,
-        ].map(escape).join(',');
-      }).join('\n');
+      const header =
+        'recipientType,recipientMobile,recipientEmail,channel,status,gatewayId,sentAt,deliveredAt,error\n';
+      const rows = messages
+        .map((m) => {
+          const escape = (v: unknown): string => {
+            const s = String(v ?? '');
+            return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+          };
+          return [
+            m.recipientType,
+            m.recipientMobile,
+            m.recipientEmail,
+            m.channel,
+            m.status,
+            m.gatewayId,
+            m.sentAt?.toISOString(),
+            m.deliveredAt?.toISOString(),
+            m.error,
+          ]
+            .map(escape)
+            .join(',');
+        })
+        .join('\n');
 
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="campaign-${campaign.campaignId}-report.csv"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="campaign-${campaign.campaignId}-report.csv"`,
+      );
       res.send(header + rows);
     },
   );

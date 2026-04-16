@@ -7,9 +7,24 @@ describe('@nugen/audit-log', () => {
   describe('Audit log types and contracts', () => {
     it('should have all required audit actions from PRD Section 2.4', () => {
       const requiredActions = [
-        'create', 'read', 'update', 'delete', 'status_change', 'assign',
-        'reassign', 'login', 'login_failed', 'logout', 'export', 'bulk_action',
-        'convert', 'merge', 'refund', 'void', 'payment_capture', 'config_change',
+        'create',
+        'read',
+        'update',
+        'delete',
+        'status_change',
+        'assign',
+        'reassign',
+        'login',
+        'login_failed',
+        'logout',
+        'export',
+        'bulk_action',
+        'convert',
+        'merge',
+        'refund',
+        'void',
+        'payment_capture',
+        'config_change',
       ];
       // This test verifies the type definition exists — actual runtime check
       // would require importing the enum/type at runtime
@@ -23,8 +38,15 @@ describe('@nugen/audit-log', () => {
 
     it('should have all required actor types', () => {
       const actorTypes = [
-        'super_admin', 'admin', 'office_manager', 'senior_staff',
-        'staff', 'client', 'student', 'system', 'cron',
+        'super_admin',
+        'admin',
+        'office_manager',
+        'senior_staff',
+        'staff',
+        'client',
+        'student',
+        'system',
+        'cron',
       ];
       expect(actorTypes).toHaveLength(9);
     });

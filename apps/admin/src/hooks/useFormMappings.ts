@@ -53,19 +53,14 @@ export function useFormMapping(mappingId: string | undefined) {
   return useQuery({
     queryKey: mappingId ? qk.detail(mappingId) : ['form-mappings', 'none'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<FormMappingDetail>>(
-        `/form-mappings/${mappingId}`,
-      );
+      const res = await api.get<ApiResponse<FormMappingDetail>>(`/form-mappings/${mappingId}`);
       return res.data.data;
     },
     enabled: !!mappingId,
   });
 }
 
-export function useFormMappingVersion(
-  mappingId: string | undefined,
-  version: number | undefined,
-) {
+export function useFormMappingVersion(mappingId: string | undefined, version: number | undefined) {
   return useQuery({
     queryKey:
       mappingId && version !== undefined
@@ -99,13 +94,7 @@ export function useCreateFormMapping() {
 export function useUpdateDraft(mappingId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      version,
-      input,
-    }: {
-      version: number;
-      input: UpdateDraftInput;
-    }) => {
+    mutationFn: async ({ version, input }: { version: number; input: UpdateDraftInput }) => {
       const res = await api.patch<ApiResponse<FormMappingVersion>>(
         `/form-mappings/${mappingId}/versions/${version}`,
         input,
@@ -123,13 +112,7 @@ export function useUpdateDraft(mappingId: string) {
 export function useForkVersion(mappingId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      sourceVersion,
-      notes,
-    }: {
-      sourceVersion: number;
-      notes?: string;
-    }) => {
+    mutationFn: async ({ sourceVersion, notes }: { sourceVersion: number; notes?: string }) => {
       const res = await api.post<ApiResponse<FormMappingVersion>>(
         `/form-mappings/${mappingId}/versions`,
         { sourceVersion, notes },

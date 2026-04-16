@@ -11,30 +11,11 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Input,
-  Row,
-  Select,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
-import {
-  EyeOutlined,
-  LockOutlined,
-  SafetyOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
+import { Alert, Button, Card, Col, Input, Row, Select, Table, Tag, Typography } from 'antd';
+import { EyeOutlined, LockOutlined, SafetyOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAdminConsentFormList } from '@/hooks/useConsentForms';
-import type {
-  ConsentFormSubmission,
-  WorkType,
-} from '@/types/consentForm';
+import type { ConsentFormSubmission, WorkType } from '@/types/consentForm';
 import { WORK_TYPES } from '@/types/consentForm';
 import { ConsentFormDetailDrawer } from './ConsentFormDetailDrawer';
 
@@ -165,10 +146,7 @@ export function ConsentFormListPage(): React.ReactNode {
         <Title level={3} style={{ margin: 0 }}>
           Consent Forms
         </Title>
-        <Button
-          icon={<EyeOutlined />}
-          onClick={(): void => router.push('/consent-forms/preview')}
-        >
+        <Button icon={<EyeOutlined />} onClick={(): void => router.push('/consent-forms/preview')}>
           Preview Form
         </Button>
       </div>
@@ -233,18 +211,13 @@ export function ConsentFormListPage(): React.ReactNode {
           emptyText: (
             <div style={{ padding: 24 }}>
               <LockOutlined style={{ fontSize: 28, color: '#bbb' }} />
-              <div style={{ marginTop: 8, color: '#888' }}>
-                No consent form submissions yet.
-              </div>
+              <div style={{ marginTop: 8, color: '#888' }}>No consent form submissions yet.</div>
             </div>
           ),
         }}
       />
 
-      <ConsentFormDetailDrawer
-        id={selectedId}
-        onClose={(): void => setSelectedId(null)}
-      />
+      <ConsentFormDetailDrawer id={selectedId} onClose={(): void => setSelectedId(null)} />
     </div>
   );
 }

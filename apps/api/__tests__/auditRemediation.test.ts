@@ -37,7 +37,14 @@ describe('@nugen/data-lifecycle — Types & Constants', () => {
   test('erasure request has 6 statuses', () => {
     expect(ERASURE_REQUEST_STATUSES).toHaveLength(6);
     expect(ERASURE_REQUEST_STATUSES).toEqual(
-      expect.arrayContaining(['pending', 'approved', 'in_progress', 'completed', 'failed', 'rejected']),
+      expect.arrayContaining([
+        'pending',
+        'approved',
+        'in_progress',
+        'completed',
+        'failed',
+        'rejected',
+      ]),
     );
   });
 
@@ -82,14 +89,24 @@ describe('@nugen/data-lifecycle — Types & Constants', () => {
 
   test('DataExportFormat supports json and csv', () => {
     const jsonExport: IDataExport = {
-      userId: {} as any, requestedBy: {} as any, status: 'pending',
-      format: 'json', modelsIncluded: [], recordCount: 0,
-      createdAt: new Date(), updatedAt: new Date(),
+      userId: {} as any,
+      requestedBy: {} as any,
+      status: 'pending',
+      format: 'json',
+      modelsIncluded: [],
+      recordCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     const csvExport: IDataExport = {
-      userId: {} as any, requestedBy: {} as any, status: 'pending',
-      format: 'csv', modelsIncluded: [], recordCount: 0,
-      createdAt: new Date(), updatedAt: new Date(),
+      userId: {} as any,
+      requestedBy: {} as any,
+      status: 'pending',
+      format: 'csv',
+      modelsIncluded: [],
+      recordCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     expect(jsonExport.format).toBe('json');
     expect(csvExport.format).toBe('csv');
@@ -102,7 +119,7 @@ describe('@nugen/data-lifecycle — Types & Constants', () => {
       { modelName: 'C', retentionDays: 90, action: 'hard_delete', dateField: 'deletedAt' },
     ];
     expect(policies).toHaveLength(3);
-    expect(policies.map(p => p.action)).toEqual(['anonymize', 'soft_delete', 'hard_delete']);
+    expect(policies.map((p) => p.action)).toEqual(['anonymize', 'soft_delete', 'hard_delete']);
   });
 
   test('ModelFieldConfig supports PII fields and export exclusions', () => {
@@ -200,9 +217,18 @@ describe('Billing Service — Type Safety', () => {
   });
 
   test('dispute status transitions are fully defined', () => {
-    const allStatuses = ['raised', 'investigating', 'pending_approval', 'approved', 'rejected', 'completed'];
+    const allStatuses = [
+      'raised',
+      'investigating',
+      'pending_approval',
+      'approved',
+      'rejected',
+      'completed',
+    ];
     for (const status of allStatuses) {
-      expect(VALID_DISPUTE_TRANSITIONS[status as keyof typeof VALID_DISPUTE_TRANSITIONS]).toBeDefined();
+      expect(
+        VALID_DISPUTE_TRANSITIONS[status as keyof typeof VALID_DISPUTE_TRANSITIONS],
+      ).toBeDefined();
     }
     expect(VALID_DISPUTE_TRANSITIONS.rejected).toEqual([]);
     expect(VALID_DISPUTE_TRANSITIONS.completed).toEqual([]);

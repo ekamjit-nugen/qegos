@@ -10,8 +10,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 // returns a per-PaymentIntent publishable key on /pay so StripeProvider's
 // key here is really only needed to bootstrap the SDK; we override per
 // payment when initializing the PaymentSheet.
-const STRIPE_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 export default function RootLayout(): React.ReactNode {
   return (

@@ -1,8 +1,4 @@
-import {
-  routePayment,
-  isRetryable,
-  resetRoundRobinIndex,
-} from '../src/services/paymentRouter';
+import { routePayment, isRetryable, resetRoundRobinIndex } from '../src/services/paymentRouter';
 import type {
   IPaymentProvider,
   IGatewayConfig,
@@ -131,8 +127,9 @@ describe('PaymentRouter', () => {
       const providers = new Map<PaymentGateway, IPaymentProvider>();
 
       const config = createBaseConfig({ routingRule: 'primary_only' });
-      await expect(routePayment(createBaseParams(), config, providers))
-        .rejects.toThrow('not available');
+      await expect(routePayment(createBaseParams(), config, providers)).rejects.toThrow(
+        'not available',
+      );
     });
   });
 
@@ -168,8 +165,7 @@ describe('PaymentRouter', () => {
       providers.set('payzoo', payzooProvider);
 
       const config = createBaseConfig({ routingRule: 'fallback' });
-      await expect(routePayment(createBaseParams(), config, providers))
-        .rejects.toThrow('declined');
+      await expect(routePayment(createBaseParams(), config, providers)).rejects.toThrow('declined');
 
       expect(payzooProvider.createPaymentIntent).not.toHaveBeenCalled();
     });

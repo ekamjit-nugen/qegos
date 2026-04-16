@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Appbar,
-  Button,
-  Text,
-  TextInput,
-  useTheme,
-} from 'react-native-paper';
+import { Appbar, Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api/client';
 
@@ -52,8 +46,8 @@ export default function ForgotPasswordScreen(): React.ReactNode {
                 Check your email
               </Text>
               <Text variant="bodyMedium" style={styles.body}>
-                If an account exists for that email, we&apos;ve sent a password reset link.
-                The link expires in 1 hour.
+                If an account exists for that email, we&apos;ve sent a password reset link. The link
+                expires in 1 hour.
               </Text>
               <Button
                 mode="contained"

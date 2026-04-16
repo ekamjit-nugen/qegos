@@ -11,9 +11,13 @@ export function useReviewList(filters: ReviewListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
-      const res = await api.get<PaginatedResponse<ReviewAssignment>>(`/reviews?${params.toString()}`);
+      const res = await api.get<PaginatedResponse<ReviewAssignment>>(
+        `/reviews?${params.toString()}`,
+      );
       return res.data;
     },
     placeholderData: (prev) => prev,
@@ -49,7 +53,9 @@ export function useApproveReview() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ orderId, notes }: { orderId: string; notes?: string }) => {
-      const res = await api.patch<ApiResponse<ReviewAssignment>>(`/reviews/${orderId}/approve`, { notes });
+      const res = await api.patch<ApiResponse<ReviewAssignment>>(`/reviews/${orderId}/approve`, {
+        notes,
+      });
       return res.data.data;
     },
     onSuccess: (_data, vars) => {
@@ -69,7 +75,10 @@ export function useRequestChanges() {
       orderId: string;
       changes: Array<{ field: string; issue: string; instruction: string }>;
     }) => {
-      const res = await api.patch<ApiResponse<ReviewAssignment>>(`/reviews/${orderId}/request-changes`, { changes });
+      const res = await api.patch<ApiResponse<ReviewAssignment>>(
+        `/reviews/${orderId}/request-changes`,
+        { changes },
+      );
       return res.data.data;
     },
     onSuccess: (_data, vars) => {
@@ -83,7 +92,9 @@ export function useRejectReview() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ orderId, reason }: { orderId: string; reason: string }) => {
-      const res = await api.patch<ApiResponse<ReviewAssignment>>(`/reviews/${orderId}/reject`, { reason });
+      const res = await api.patch<ApiResponse<ReviewAssignment>>(`/reviews/${orderId}/reject`, {
+        reason,
+      });
       return res.data.data;
     },
     onSuccess: (_data, vars) => {

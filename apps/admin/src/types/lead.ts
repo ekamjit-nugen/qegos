@@ -35,7 +35,12 @@ export const LEAD_STATUS_TRANSITIONS: Record<number, number[]> = {
   [LeadStatus.New]: [LeadStatus.Contacted, LeadStatus.Lost],
   [LeadStatus.Contacted]: [LeadStatus.Qualified, LeadStatus.Lost, LeadStatus.Dormant],
   [LeadStatus.Qualified]: [LeadStatus.QuoteSent, LeadStatus.Lost, LeadStatus.Dormant],
-  [LeadStatus.QuoteSent]: [LeadStatus.Negotiation, LeadStatus.Won, LeadStatus.Lost, LeadStatus.Dormant],
+  [LeadStatus.QuoteSent]: [
+    LeadStatus.Negotiation,
+    LeadStatus.Won,
+    LeadStatus.Lost,
+    LeadStatus.Dormant,
+  ],
   [LeadStatus.Negotiation]: [LeadStatus.Won, LeadStatus.Lost, LeadStatus.Dormant],
   [LeadStatus.Won]: [],
   [LeadStatus.Lost]: [LeadStatus.New],
@@ -43,16 +48,36 @@ export const LEAD_STATUS_TRANSITIONS: Record<number, number[]> = {
 };
 
 export type LeadSource =
-  | 'phone_inbound' | 'phone_outbound' | 'walk_in' | 'web_form'
-  | 'referral' | 'sms_inquiry' | 'whatsapp' | 'social_media'
-  | 'marketing_campaign' | 'repeat_client' | 'partner'
-  | 'google_ads' | 'facebook_ads' | 'other';
+  | 'phone_inbound'
+  | 'phone_outbound'
+  | 'walk_in'
+  | 'web_form'
+  | 'referral'
+  | 'sms_inquiry'
+  | 'whatsapp'
+  | 'social_media'
+  | 'marketing_campaign'
+  | 'repeat_client'
+  | 'partner'
+  | 'google_ads'
+  | 'facebook_ads'
+  | 'other';
 
 export const LEAD_SOURCES: LeadSource[] = [
-  'phone_inbound', 'phone_outbound', 'walk_in', 'web_form',
-  'referral', 'sms_inquiry', 'whatsapp', 'social_media',
-  'marketing_campaign', 'repeat_client', 'partner',
-  'google_ads', 'facebook_ads', 'other',
+  'phone_inbound',
+  'phone_outbound',
+  'walk_in',
+  'web_form',
+  'referral',
+  'sms_inquiry',
+  'whatsapp',
+  'social_media',
+  'marketing_campaign',
+  'repeat_client',
+  'partner',
+  'google_ads',
+  'facebook_ads',
+  'other',
 ];
 
 export const LEAD_SOURCE_LABELS: Record<string, string> = {
@@ -325,26 +350,59 @@ export const SENTIMENT_LABELS: Record<string, string> = {
 export const CALL_DIRECTIONS = ['inbound', 'outbound'] as const;
 
 // ─── Demographic Enums ─────────────────────────────────────────────────────
-export const MARITAL_STATUSES = ['single', 'married', 'de_facto', 'separated', 'divorced', 'widowed'] as const;
+export const MARITAL_STATUSES = [
+  'single',
+  'married',
+  'de_facto',
+  'separated',
+  'divorced',
+  'widowed',
+] as const;
 export const MARITAL_STATUS_LABELS: Record<string, string> = {
-  single: 'Single', married: 'Married', de_facto: 'De Facto',
-  separated: 'Separated', divorced: 'Divorced', widowed: 'Widowed',
+  single: 'Single',
+  married: 'Married',
+  de_facto: 'De Facto',
+  separated: 'Separated',
+  divorced: 'Divorced',
+  widowed: 'Widowed',
 };
 
-export const EMPLOYMENT_TYPES = ['employed', 'self_employed', 'contractor', 'retired', 'student', 'unemployed', 'multiple'] as const;
+export const EMPLOYMENT_TYPES = [
+  'employed',
+  'self_employed',
+  'contractor',
+  'retired',
+  'student',
+  'unemployed',
+  'multiple',
+] as const;
 export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
-  employed: 'Employed', self_employed: 'Self Employed', contractor: 'Contractor',
-  retired: 'Retired', student: 'Student', unemployed: 'Unemployed', multiple: 'Multiple',
+  employed: 'Employed',
+  self_employed: 'Self Employed',
+  contractor: 'Contractor',
+  retired: 'Retired',
+  student: 'Student',
+  unemployed: 'Unemployed',
+  multiple: 'Multiple',
 };
 
 export const PREFERRED_LANGUAGES = ['en', 'zh', 'hi', 'pa', 'vi', 'ar', 'other'] as const;
 export const PREFERRED_LANGUAGE_LABELS: Record<string, string> = {
-  en: 'English', zh: 'Chinese', hi: 'Hindi', pa: 'Punjabi', vi: 'Vietnamese', ar: 'Arabic', other: 'Other',
+  en: 'English',
+  zh: 'Chinese',
+  hi: 'Hindi',
+  pa: 'Punjabi',
+  vi: 'Vietnamese',
+  ar: 'Arabic',
+  other: 'Other',
 };
 
 export const PREFERRED_CONTACTS = ['call', 'sms', 'email', 'whatsapp'] as const;
 export const PREFERRED_CONTACT_LABELS: Record<string, string> = {
-  call: 'Phone Call', sms: 'SMS', email: 'Email', whatsapp: 'WhatsApp',
+  call: 'Phone Call',
+  sms: 'SMS',
+  email: 'Email',
+  whatsapp: 'WhatsApp',
 };
 
 export interface LeadStats {

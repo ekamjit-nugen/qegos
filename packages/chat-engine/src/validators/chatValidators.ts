@@ -27,9 +27,7 @@ export const sendMessageValidation = [
   body('mimeType').optional().isString(),
 ];
 
-export const markReadValidation = [
-  param('id').isMongoId().withMessage('Invalid message ID'),
-];
+export const markReadValidation = [param('id').isMongoId().withMessage('Invalid message ID')];
 
 export const resolveConversationValidation = [
   param('id').isMongoId().withMessage('Invalid conversation ID'),

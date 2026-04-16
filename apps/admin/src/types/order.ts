@@ -35,7 +35,11 @@ export const ORDER_STATUS_COLORS: Record<number, string> = {
 };
 
 export const ORDER_STATUS_TRANSITIONS: Record<number, number[]> = {
-  [OrderStatus.Pending]: [OrderStatus.DocumentsReceived, OrderStatus.Assigned, OrderStatus.Cancelled],
+  [OrderStatus.Pending]: [
+    OrderStatus.DocumentsReceived,
+    OrderStatus.Assigned,
+    OrderStatus.Cancelled,
+  ],
   [OrderStatus.DocumentsReceived]: [OrderStatus.Assigned, OrderStatus.Cancelled],
   [OrderStatus.Assigned]: [OrderStatus.InProgress, OrderStatus.Cancelled],
   [OrderStatus.InProgress]: [OrderStatus.Review, OrderStatus.Cancelled],
@@ -56,7 +60,13 @@ export interface OrderLineItem {
   completionStatus?: string;
 }
 
-export type SigningStatus = 'not_started' | 'awaiting_client' | 'client_signed' | 'awaiting_admin' | 'completed' | 'declined';
+export type SigningStatus =
+  | 'not_started'
+  | 'awaiting_client'
+  | 'client_signed'
+  | 'awaiting_admin'
+  | 'completed'
+  | 'declined';
 
 export const SIGNING_STATUS_LABELS: Record<SigningStatus, string> = {
   not_started: 'Not Started',

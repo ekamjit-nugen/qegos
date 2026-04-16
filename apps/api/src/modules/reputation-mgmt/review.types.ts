@@ -4,9 +4,7 @@ import type { Document, Types } from 'mongoose';
 
 export type ReviewStatus = 'requested' | 'submitted' | 'flagged' | 'responded';
 
-export const REVIEW_STATUSES: ReviewStatus[] = [
-  'requested', 'submitted', 'flagged', 'responded',
-];
+export const REVIEW_STATUSES: ReviewStatus[] = ['requested', 'submitted', 'flagged', 'responded'];
 
 // ─── Review Tags ───────────────────────────────────────────────────────────
 
@@ -21,8 +19,14 @@ export type ReviewTag =
   | 'great_refund';
 
 export const REVIEW_TAGS: ReviewTag[] = [
-  'quick_filing', 'friendly_staff', 'good_communication', 'thorough_review',
-  'too_slow', 'pricing_concern', 'missing_documents', 'great_refund',
+  'quick_filing',
+  'friendly_staff',
+  'good_communication',
+  'thorough_review',
+  'too_slow',
+  'pricing_concern',
+  'missing_documents',
+  'great_refund',
 ];
 
 // ─── Review Interface ──────────────────────────────────────────────────────
@@ -55,8 +59,12 @@ export interface IReviewDocument extends IReview, Document {
 // ─── NPS Categories ────────────────────────────────────────────────────────
 
 export function getNpsCategory(score: number): 'promoter' | 'passive' | 'detractor' {
-  if (score >= 9) return 'promoter';
-  if (score >= 7) return 'passive';
+  if (score >= 9) {
+    return 'promoter';
+  }
+  if (score >= 7) {
+    return 'passive';
+  }
   return 'detractor';
 }
 

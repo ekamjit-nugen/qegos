@@ -8,10 +8,10 @@
  * In production, consider restricting access via reverse proxy or auth.
  */
 
-import { type Express } from 'express';
-import swaggerUi from 'swagger-ui-express';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { type Express } from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { parse as parseYaml } from 'yaml';
 
 /**
@@ -44,15 +44,14 @@ export function mountSwaggerDocs(app: Express): void {
     };
 
     // Mount Swagger UI at /docs
-    app.use(
-      '/docs',
-      swaggerUi.serve,
-      swaggerUi.setup(spec, swaggerOptions),
-    );
+    app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec, swaggerOptions));
 
     console.log('[swagger] API docs available at /docs'); // eslint-disable-line no-console
   } catch (err) {
     // Non-fatal: if spec is missing, just skip docs
-    console.warn('[swagger] Could not load OpenAPI spec — docs endpoint disabled:', (err as Error).message); // eslint-disable-line no-console
+    console.warn(
+      '[swagger] Could not load OpenAPI spec — docs endpoint disabled:',
+      (err as Error).message,
+    ); // eslint-disable-line no-console
   }
 }

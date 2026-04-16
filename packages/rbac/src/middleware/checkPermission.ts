@@ -2,7 +2,12 @@ import type { Response, NextFunction, RequestHandler } from 'express';
 import type { Model } from 'mongoose';
 import type Redis from 'ioredis';
 import { AppError } from '@nugen/error-handler';
-import type { IRoleDocument, PermissionAction, AuthenticatedRbacRequest, RbacConfig } from '../types';
+import type {
+  IRoleDocument,
+  PermissionAction,
+  AuthenticatedRbacRequest,
+  RbacConfig,
+} from '../types';
 
 const DEFAULT_CACHE_TTL = 300; // 5 minutes (RBAC-INV-11)
 
@@ -87,13 +92,7 @@ export async function invalidateAllRoleCaches(): Promise<void> {
   try {
     let cursor = '0';
     do {
-      const [nextCursor, keys] = await _redisClient.scan(
-        cursor,
-        'MATCH',
-        'role:*',
-        'COUNT',
-        100,
-      );
+      const [nextCursor, keys] = await _redisClient.scan(cursor, 'MATCH', 'role:*', 'COUNT', 100);
       cursor = nextCursor;
       if (keys.length > 0) {
         await _redisClient.del(...keys);
@@ -153,10 +152,7 @@ export function check(resource: string, action: PermissionAction): RequestHandle
           break;
         case 'assigned':
           authReq.scopeFilter = {
-            $or: [
-              { assignedTo: userId },
-              { processingBy: userId },
-            ],
+            $or: [{ assignedTo: userId }, { processingBy: userId }],
           };
           break;
         case 'own':

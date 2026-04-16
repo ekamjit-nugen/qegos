@@ -46,11 +46,7 @@ export interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}): ReactNode {
+export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,7 +67,9 @@ export function AuthProvider({
   const restoreAttempted = useRef(false);
 
   useEffect(() => {
-    if (restoreAttempted.current) return;
+    if (restoreAttempted.current) {
+      return;
+    }
     restoreAttempted.current = true;
 
     const restore = async (): Promise<void> => {
@@ -81,10 +79,7 @@ export function AuthProvider({
         return;
       }
       try {
-        const res = await api.post<ApiResponse<LoginTokens>>(
-          '/auth/refresh',
-          { refreshToken },
-        );
+        const res = await api.post<ApiResponse<LoginTokens>>('/auth/refresh', { refreshToken });
         await setAccessToken(res.data.data.accessToken);
         await setRefreshToken(res.data.data.refreshToken);
         await fetchUser();
@@ -99,10 +94,7 @@ export function AuthProvider({
 
   const login = useCallback(
     async (email: string, password: string): Promise<void> => {
-      const res = await api.post<ApiResponse<LoginTokens>>(
-        '/auth/signin',
-        { email, password },
-      );
+      const res = await api.post<ApiResponse<LoginTokens>>('/auth/signin', { email, password });
       const data = res.data.data;
       await setAccessToken(data.accessToken);
       await setRefreshToken(data.refreshToken);
@@ -115,25 +107,15 @@ export function AuthProvider({
     await api.post('/auth/send-otp', { mobile });
   }, []);
 
-  const verifyOtp = useCallback(
-    async (mobile: string, otp: string): Promise<OtpVerifyResult> => {
-      const res = await api.post<ApiResponse<OtpVerifyResult>>(
-        '/auth/verify-otp',
-        { mobile, otp },
-      );
-      return res.data.data;
-    },
-    [],
-  );
+  const verifyOtp = useCallback(async (mobile: string, otp: string): Promise<OtpVerifyResult> => {
+    const res = await api.post<ApiResponse<OtpVerifyResult>>('/auth/verify-otp', { mobile, otp });
+    return res.data.data;
+  }, []);
 
   const loginWithOtp = useCallback(
     async (mobile: string, otp: string): Promise<void> => {
       const result = await verifyOtp(mobile, otp);
-      if (
-        !result.userExists ||
-        !result.accessToken ||
-        !result.refreshToken
-      ) {
+      if (!result.userExists || !result.accessToken || !result.refreshToken) {
         throw new Error('User does not exist. Please register first.');
       }
       await setAccessToken(result.accessToken);
@@ -150,10 +132,7 @@ export function AuthProvider({
       mobile: string;
       otp: string;
     }): Promise<void> => {
-      const res = await api.post<ApiResponse<LoginTokens>>(
-        '/auth/signup',
-        data,
-      );
+      const res = await api.post<ApiResponse<LoginTokens>>('/auth/signup', data);
       const tokens = res.data.data;
       await setAccessToken(tokens.accessToken);
       await setRefreshToken(tokens.refreshToken);

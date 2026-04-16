@@ -23,7 +23,12 @@ import {
   useMarkNotificationRead,
 } from '@/hooks/useNotifications';
 import { DashboardSkeleton } from '@/components/ScreenSkeleton';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, OrderStatus, EFILE_STATUS_LABELS } from '@/types/order';
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+  OrderStatus,
+  EFILE_STATUS_LABELS,
+} from '@/types/order';
 
 const TAX_SEASON_MILESTONES: { status: OrderStatus; label: string; icon: string }[] = [
   { status: OrderStatus.Pending, label: 'Submitted', icon: 'file-document' },
@@ -75,11 +80,7 @@ export default function DashboardScreen(): React.ReactNode {
           </Text>
         </View>
         <View>
-          <IconButton
-            icon="bell-outline"
-            size={28}
-            onPress={() => router.push('/notifications')}
-          />
+          <IconButton icon="bell-outline" size={28} onPress={() => router.push('/notifications')} />
           {notifUnread > 0 && (
             <Badge size={18} style={styles.bellBadge}>
               {notifUnread}
@@ -110,10 +111,7 @@ export default function DashboardScreen(): React.ReactNode {
             </Card.Content>
           </Card>
 
-          <Card
-            style={styles.statCard}
-            onPress={() => router.push('/appointments')}
-          >
+          <Card style={styles.statCard} onPress={() => router.push('/appointments')}>
             <Card.Content>
               <Text variant="displaySmall" style={{ color: theme.colors.primary }}>
                 {upcomingAppointments}
@@ -135,10 +133,16 @@ export default function DashboardScreen(): React.ReactNode {
 
       {(() => {
         const orders = ordersQuery.data?.data ?? [];
-        const activeOrder = orders.find(
-          (o) => o.status !== OrderStatus.Completed && o.status !== OrderStatus.Assessed && o.status !== OrderStatus.Cancelled,
-        ) ?? orders[0];
-        if (!activeOrder) return null;
+        const activeOrder =
+          orders.find(
+            (o) =>
+              o.status !== OrderStatus.Completed &&
+              o.status !== OrderStatus.Assessed &&
+              o.status !== OrderStatus.Cancelled,
+          ) ?? orders[0];
+        if (!activeOrder) {
+          return null;
+        }
         const currentIdx = TAX_SEASON_MILESTONES.findIndex((m) => m.status === activeOrder.status);
         return (
           <Card
@@ -179,10 +183,17 @@ export default function DashboardScreen(): React.ReactNode {
                       <View
                         style={[
                           styles.milestoneDot,
-                          { backgroundColor: reached ? theme.colors.primary : theme.colors.surfaceVariant },
+                          {
+                            backgroundColor: reached
+                              ? theme.colors.primary
+                              : theme.colors.surfaceVariant,
+                          },
                         ]}
                       />
-                      <Text variant="labelSmall" style={{ opacity: reached ? 1 : 0.4, textAlign: 'center' }}>
+                      <Text
+                        variant="labelSmall"
+                        style={{ opacity: reached ? 1 : 0.4, textAlign: 'center' }}
+                      >
                         {m.label}
                       </Text>
                     </View>
@@ -201,11 +212,7 @@ export default function DashboardScreen(): React.ReactNode {
               <Text variant="titleMedium" style={styles.seasonTitle}>
                 Recent Notifications
               </Text>
-              <Button
-                compact
-                mode="text"
-                onPress={() => router.push('/notifications')}
-              >
+              <Button compact mode="text" onPress={() => router.push('/notifications')}>
                 See all
               </Button>
             </View>
@@ -213,7 +220,9 @@ export default function DashboardScreen(): React.ReactNode {
               <View key={n._id}>
                 <Pressable
                   onPress={() => {
-                    if (!n.isRead) markNotifRead.mutate(n._id);
+                    if (!n.isRead) {
+                      markNotifRead.mutate(n._id);
+                    }
                     router.push('/notifications');
                   }}
                   style={styles.notifItem}

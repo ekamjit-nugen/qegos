@@ -41,9 +41,7 @@ describe('AppError', () => {
 
   describe('toJSON', () => {
     it('should serialize to standard error response format', () => {
-      const error = AppError.badRequest('Invalid input', [
-        { field: 'name', message: 'Required' },
-      ]);
+      const error = AppError.badRequest('Invalid input', [{ field: 'name', message: 'Required' }]);
       const json = error.toJSON();
 
       expect(json).toEqual({

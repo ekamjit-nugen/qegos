@@ -5,10 +5,5 @@ export default function Page({
 }: {
   params: { mappingId: string; version: string };
 }): React.ReactNode {
-  return (
-    <FormMappingVersionEditor
-      mappingId={params.mappingId}
-      version={Number(params.version)}
-    />
-  );
+  return <FormMappingVersionEditor mappingId={params.mappingId} version={Number(params.version)} />;
 }

@@ -65,7 +65,11 @@ export const twilioProvider: IChannelProvider = {
     }
 
     try {
-      const msg = await (twilioClient.messages as unknown as (sid: string) => { fetch: () => Promise<{ sid: string; status: string; errorMessage?: string }> })(gatewayId).fetch();
+      const msg = await (
+        twilioClient.messages as unknown as (sid: string) => {
+          fetch: () => Promise<{ sid: string; status: string; errorMessage?: string }>;
+        }
+      )(gatewayId).fetch();
 
       const statusMap: Record<string, DeliveryStatus['status']> = {
         delivered: 'delivered',

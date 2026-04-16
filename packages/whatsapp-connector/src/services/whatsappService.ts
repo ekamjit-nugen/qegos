@@ -29,11 +29,7 @@ export async function getConfig(): Promise<IWhatsAppConfigDocument | null> {
 export async function updateConfig(
   updates: Partial<Record<string, unknown>>,
 ): Promise<IWhatsAppConfigDocument | null> {
-  return ConfigModel.findOneAndUpdate(
-    {},
-    { $set: updates },
-    { upsert: true, new: true },
-  );
+  return ConfigModel.findOneAndUpdate({}, { $set: updates }, { upsert: true, new: true });
 }
 
 // ─── Message Logging ────────────────────────────────────────────────────────
@@ -133,15 +129,17 @@ export async function updateMessageStatus(
   failureReason?: string,
 ): Promise<IWhatsAppMessageDocument | null> {
   const updates: Record<string, unknown> = { status };
-  if (status === 'delivered') updates.deliveredAt = new Date();
-  if (status === 'read') updates.readAt = new Date();
-  if (failureReason) updates.failureReason = failureReason;
+  if (status === 'delivered') {
+    updates.deliveredAt = new Date();
+  }
+  if (status === 'read') {
+    updates.readAt = new Date();
+  }
+  if (failureReason) {
+    updates.failureReason = failureReason;
+  }
 
-  return MessageModel.findOneAndUpdate(
-    { waMessageId },
-    { $set: updates },
-    { new: true },
-  );
+  return MessageModel.findOneAndUpdate({ waMessageId }, { $set: updates }, { new: true });
 }
 
 // ─── Conversation History ───────────────────────────────────────────────────

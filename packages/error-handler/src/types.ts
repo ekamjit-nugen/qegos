@@ -34,18 +34,9 @@ export interface AppErrorOptions {
   isOperational?: boolean;
 }
 
-export type AsyncHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => Promise<void>;
+export type AsyncHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
 
-export type ErrorMiddleware = (
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => void;
+export type ErrorMiddleware = (err: Error, req: Request, res: Response, next: NextFunction) => void;
 
 export interface Logger {
   error(message: string, meta?: Record<string, unknown>): void;

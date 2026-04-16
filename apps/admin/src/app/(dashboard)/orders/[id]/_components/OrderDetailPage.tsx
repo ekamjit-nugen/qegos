@@ -2,19 +2,44 @@
 
 import { useCallback, useState } from 'react';
 import {
-  Row, Col, Card, Descriptions, Tabs, Table, Tag, Progress, Spin, Empty,
-  Badge, Button, Modal, Select, Space, Typography, Upload, Input, message,
+  Row,
+  Col,
+  Card,
+  Descriptions,
+  Tabs,
+  Table,
+  Tag,
+  Progress,
+  Spin,
+  Empty,
+  Badge,
+  Button,
+  Modal,
+  Select,
+  Space,
+  Typography,
+  Upload,
+  Input,
+  message,
   Tooltip,
 } from 'antd';
 import {
-  CloudUploadOutlined, InboxOutlined, EditOutlined, CheckCircleOutlined,
-  SendOutlined, CreditCardOutlined,
+  CloudUploadOutlined,
+  InboxOutlined,
+  EditOutlined,
+  CheckCircleOutlined,
+  SendOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
 import { useOrder, useAssignOrder } from '@/hooks/useOrders';
 import { useStaffList } from '@/hooks/useUsers';
-import { useUploadOrderDocument, useSendForSignature, useGenerateSigningUri } from '@/hooks/useDocuments';
+import {
+  useUploadOrderDocument,
+  useSendForSignature,
+  useGenerateSigningUri,
+} from '@/hooks/useDocuments';
 import { usePaymentsByOrder, useRefundPayment } from '@/hooks/usePayments';
 import { OrderStatusTransition } from '../../_components/OrderStatusTransition';
 import { CollectPaymentModal } from './CollectPaymentModal';
@@ -72,7 +97,11 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
 
   // ─── Upload handler ───────────────────────────────────────────────────
   const handleDocUpload: UploadProps['customRequest'] = useCallback(
-    (options: { file: unknown; onSuccess?: (body: unknown) => void; onError?: (err: Error) => void }) => {
+    (options: {
+      file: unknown;
+      onSuccess?: (body: unknown) => void;
+      onError?: (err: Error) => void;
+    }) => {
       const formData = new FormData();
       formData.append('file', options.file as File);
       formData.append('orderId', id);
@@ -139,8 +168,13 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
       },
     );
   }, [
-    id, signDocIndex, signClientName, signClientEmail,
-    signAdminName, signAdminEmail, sendForSignMutation,
+    id,
+    signDocIndex,
+    signClientName,
+    signClientEmail,
+    signAdminName,
+    signAdminEmail,
+    sendForSignMutation,
   ]);
 
   // ─── Counter-sign handler ─────────────────────────────────────────────
@@ -173,15 +207,24 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
     [id, generateUriMutation],
   );
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!order) { return <Empty description="Order not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!order) {
+    return <Empty description="Order not found" />;
+  }
 
   // ─── Column definitions ───────────────────────────────────────────────
   const lineItemColumns: ColumnsType<OrderLineItem> = [
     { title: 'Service', dataIndex: 'title' },
     { title: 'Price', dataIndex: 'price', render: (v: number) => formatCurrency(v), width: 120 },
     { title: 'Qty', dataIndex: 'quantity', width: 60 },
-    { title: 'Subtotal', dataIndex: 'subtotal', render: (v: number) => formatCurrency(v), width: 120 },
+    {
+      title: 'Subtotal',
+      dataIndex: 'subtotal',
+      render: (v: number) => formatCurrency(v),
+      width: 120,
+    },
     {
       title: 'Status',
       dataIndex: 'completionStatus',
@@ -198,7 +241,10 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
       dataIndex: 'status',
       width: 100,
       render: (v: string) => (
-        <Badge status={v === 'signed' ? 'success' : v === 'verified' ? 'processing' : 'default'} text={v} />
+        <Badge
+          status={v === 'signed' ? 'success' : v === 'verified' ? 'processing' : 'default'}
+          text={v}
+        />
       ),
     },
     {
@@ -234,7 +280,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
                 type="link"
                 size="small"
                 icon={<SendOutlined />}
-                onClick={() => { handleOpenSignModal(index); }}
+                onClick={() => {
+                  handleOpenSignModal(index);
+                }}
               >
                 Send for Sign
               </Button>
@@ -246,7 +294,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
                 size="small"
                 icon={<EditOutlined />}
                 loading={generateUriMutation.isPending}
-                onClick={() => { handleCounterSign(record); }}
+                onClick={() => {
+                  handleCounterSign(record);
+                }}
               >
                 Counter-Sign
               </Button>
@@ -273,12 +323,18 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
             {fullName(order.personalDetails?.firstName, order.personalDetails?.lastName)}
           </Descriptions.Item>
           <Descriptions.Item label="Email">{order.personalDetails?.email ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Mobile">{order.personalDetails?.mobile ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="Mobile">
+            {order.personalDetails?.mobile ?? '-'}
+          </Descriptions.Item>
           <Descriptions.Item label="Financial Year">{order.financialYear}</Descriptions.Item>
           <Descriptions.Item label="Order Type">{order.orderType ?? 'standard'}</Descriptions.Item>
           <Descriptions.Item label="E-File Status">{order.eFileStatus ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="E-File Reference">{order.eFileReference ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="NOA Received">{order.noaReceived ? 'Yes' : 'No'}</Descriptions.Item>
+          <Descriptions.Item label="E-File Reference">
+            {order.eFileReference ?? '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="NOA Received">
+            {order.noaReceived ? 'Yes' : 'No'}
+          </Descriptions.Item>
           <Descriptions.Item label="Created">{formatDate(order.createdAt)}</Descriptions.Item>
           <Descriptions.Item label="Updated">{formatDate(order.updatedAt)}</Descriptions.Item>
         </Descriptions>
@@ -298,7 +354,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
           />
           <div style={{ marginTop: 16, textAlign: 'right' }}>
             <Descriptions column={1} size="small" style={{ maxWidth: 300, marginLeft: 'auto' }}>
-              <Descriptions.Item label="Subtotal">{formatCurrency(order.totalAmount)}</Descriptions.Item>
+              <Descriptions.Item label="Subtotal">
+                {formatCurrency(order.totalAmount)}
+              </Descriptions.Item>
               {order.discountPercent > 0 && (
                 <Descriptions.Item label={`Discount (${order.discountPercent}%)`}>
                   -{formatCurrency(order.discountAmount)}
@@ -322,7 +380,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
               type="primary"
               icon={<CloudUploadOutlined />}
               size="small"
-              onClick={() => { setUploadOpen(true); }}
+              onClick={() => {
+                setUploadOpen(true);
+              }}
             >
               Upload Document
             </Button>
@@ -339,7 +399,10 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
           <Modal
             title="Upload Order Document"
             open={uploadOpen}
-            onCancel={() => { setUploadOpen(false); setUploadDocType(undefined); }}
+            onCancel={() => {
+              setUploadOpen(false);
+              setUploadDocType(undefined);
+            }}
             footer={null}
             destroyOnClose
           >
@@ -375,7 +438,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
           <Modal
             title="Send Document for Signature"
             open={signModalOpen}
-            onCancel={() => { setSignModalOpen(false); }}
+            onCancel={() => {
+              setSignModalOpen(false);
+            }}
             onOk={handleSendForSign}
             okText="Send for Signature"
             okButtonProps={{ loading: sendForSignMutation.isPending }}
@@ -390,18 +455,26 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
               <Card size="small" title="Client (Signs First)">
                 <Space direction="vertical" style={{ width: '100%' }} size="small">
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Name *</Text>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                      Name *
+                    </Text>
                     <Input
                       value={signClientName}
-                      onChange={(e) => { setSignClientName(e.target.value); }}
+                      onChange={(e) => {
+                        setSignClientName(e.target.value);
+                      }}
                       placeholder="Client full name"
                     />
                   </div>
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Email *</Text>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                      Email *
+                    </Text>
                     <Input
                       value={signClientEmail}
-                      onChange={(e) => { setSignClientEmail(e.target.value); }}
+                      onChange={(e) => {
+                        setSignClientEmail(e.target.value);
+                      }}
                       placeholder="Client email"
                       type="email"
                     />
@@ -412,18 +485,26 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
               <Card size="small" title="Admin / Staff (Counter-Signs)">
                 <Space direction="vertical" style={{ width: '100%' }} size="small">
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Name *</Text>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                      Name *
+                    </Text>
                     <Input
                       value={signAdminName}
-                      onChange={(e) => { setSignAdminName(e.target.value); }}
+                      onChange={(e) => {
+                        setSignAdminName(e.target.value);
+                      }}
                       placeholder="Your full name"
                     />
                   </div>
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 4 }}>Email *</Text>
+                    <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                      Email *
+                    </Text>
                     <Input
                       value={signAdminEmail}
-                      onChange={(e) => { setSignAdminEmail(e.target.value); }}
+                      onChange={(e) => {
+                        setSignAdminEmail(e.target.value);
+                      }}
                       placeholder="Your email"
                       type="email"
                     />
@@ -445,7 +526,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
               <Button
                 type="primary"
                 icon={<CreditCardOutlined />}
-                onClick={() => { setCollectOpen(true); }}
+                onClick={() => {
+                  setCollectOpen(true);
+                }}
               >
                 Collect Payment
               </Button>
@@ -454,18 +537,47 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
           <Table<Payment>
             columns={[
               { title: 'Payment #', dataIndex: 'paymentNumber', key: 'paymentNumber' },
-              { title: 'Gateway', dataIndex: 'gateway', key: 'gateway', render: (g: string) => g.toUpperCase() },
-              { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (v: number) => formatCurrency(v) },
-              { title: 'Refunded', dataIndex: 'refundedAmount', key: 'refundedAmount', render: (v: number) => v > 0 ? formatCurrency(v) : '-' },
               {
-                title: 'Status', dataIndex: 'status', key: 'status',
-                render: (s: string) => <Tag color={PAYMENT_STATUS_COLORS[s as keyof typeof PAYMENT_STATUS_COLORS]}>{PAYMENT_STATUS_LABELS[s as keyof typeof PAYMENT_STATUS_LABELS] ?? s}</Tag>,
+                title: 'Gateway',
+                dataIndex: 'gateway',
+                key: 'gateway',
+                render: (g: string) => g.toUpperCase(),
               },
-              { title: 'Date', dataIndex: 'createdAt', key: 'createdAt', render: (v: string) => formatDate(v) },
               {
-                title: 'Actions', key: 'actions',
+                title: 'Amount',
+                dataIndex: 'amount',
+                key: 'amount',
+                render: (v: number) => formatCurrency(v),
+              },
+              {
+                title: 'Refunded',
+                dataIndex: 'refundedAmount',
+                key: 'refundedAmount',
+                render: (v: number) => (v > 0 ? formatCurrency(v) : '-'),
+              },
+              {
+                title: 'Status',
+                dataIndex: 'status',
+                key: 'status',
+                render: (s: string) => (
+                  <Tag color={PAYMENT_STATUS_COLORS[s as keyof typeof PAYMENT_STATUS_COLORS]}>
+                    {PAYMENT_STATUS_LABELS[s as keyof typeof PAYMENT_STATUS_LABELS] ?? s}
+                  </Tag>
+                ),
+              },
+              {
+                title: 'Date',
+                dataIndex: 'createdAt',
+                key: 'createdAt',
+                render: (v: string) => formatDate(v),
+              },
+              {
+                title: 'Actions',
+                key: 'actions',
                 render: (_: unknown, record: Payment) => {
-                  const refundable = ['succeeded', 'captured', 'partially_refunded'].includes(record.status);
+                  const refundable = ['succeeded', 'captured', 'partially_refunded'].includes(
+                    record.status,
+                  );
                   const remaining = record.amount - record.refundedAmount;
                   if (!refundable || remaining <= 0) return null;
                   return (
@@ -526,7 +638,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
                 </Text>
               </div>
               <div>
-                <Text strong style={{ display: 'block', marginBottom: 4 }}>Refund Amount (cents)</Text>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  Refund Amount (cents)
+                </Text>
                 <Input
                   type="number"
                   value={refundAmount}
@@ -540,7 +654,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
                 <Text type="secondary">{formatCurrency(refundAmount)}</Text>
               </div>
               <div>
-                <Text strong style={{ display: 'block', marginBottom: 4 }}>Reason *</Text>
+                <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  Reason *
+                </Text>
                 <Input.TextArea
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
@@ -559,7 +675,8 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
     <div>
       <div style={{ marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>
-          {order.orderNumber} - {fullName(order.personalDetails?.firstName, order.personalDetails?.lastName)}
+          {order.orderNumber} -{' '}
+          {fullName(order.personalDetails?.firstName, order.personalDetails?.lastName)}
         </h2>
       </div>
 
@@ -586,10 +703,14 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Financial Summary" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Subtotal">{formatCurrency(order.totalAmount)}</Descriptions.Item>
+              <Descriptions.Item label="Subtotal">
+                {formatCurrency(order.totalAmount)}
+              </Descriptions.Item>
               <Descriptions.Item label="Discount">{order.discountPercent}%</Descriptions.Item>
               {order.discountAmount > 0 && (
-                <Descriptions.Item label="Discount Amount">-{formatCurrency(order.discountAmount)}</Descriptions.Item>
+                <Descriptions.Item label="Discount Amount">
+                  -{formatCurrency(order.discountAmount)}
+                </Descriptions.Item>
               )}
               {order.promoCode && (
                 <Descriptions.Item label="Promo Code">
@@ -597,9 +718,13 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
                 </Descriptions.Item>
               )}
               {(order.creditApplied ?? 0) > 0 && (
-                <Descriptions.Item label="Credit Applied">-{formatCurrency(order.creditApplied)}</Descriptions.Item>
+                <Descriptions.Item label="Credit Applied">
+                  -{formatCurrency(order.creditApplied)}
+                </Descriptions.Item>
               )}
-              <Descriptions.Item label="Final">{formatCurrency(order.finalAmount)}</Descriptions.Item>
+              <Descriptions.Item label="Final">
+                {formatCurrency(order.finalAmount)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -621,8 +746,12 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
                   assignMutation.mutate(
                     { id, processingBy: staffId },
                     {
-                      onSuccess: () => { void message.success('Order assigned'); },
-                      onError: () => { void message.error('Assignment failed'); },
+                      onSuccess: () => {
+                        void message.success('Order assigned');
+                      },
+                      onError: () => {
+                        void message.error('Assignment failed');
+                      },
                     },
                   );
                 }}
@@ -638,7 +767,9 @@ export function OrderDetailPage({ id }: { id: string }): React.ReactNode {
 
       <CollectPaymentModal
         open={collectOpen}
-        onClose={() => { setCollectOpen(false); }}
+        onClose={() => {
+          setCollectOpen(false);
+        }}
         orderId={id}
         orderNumber={order.orderNumber}
         baseAmount={order.finalAmount}

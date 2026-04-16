@@ -33,12 +33,7 @@ import {
   useUnreadNotificationCount,
   useUpcomingAppointments,
 } from '@/hooks/usePortal';
-import {
-  OrderStatus,
-  ORDER_STATUS_LABELS,
-  ORDER_STATUS_COLORS,
-  type Order,
-} from '@/types/order';
+import { OrderStatus, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, type Order } from '@/types/order';
 
 const { Title, Text } = Typography;
 
@@ -52,8 +47,7 @@ function getInitials(firstName?: string, lastName?: string): string {
 
 function getTaxSeasonStep(orders: Order[] | undefined): number {
   if (!orders || orders.length === 0) return 0;
-  const latestOrder = orders.reduce((best, o) =>
-    o.status > best.status ? o : best, orders[0]);
+  const latestOrder = orders.reduce((best, o) => (o.status > best.status ? o : best), orders[0]);
   if (latestOrder.status >= OrderStatus.Assessed) return 4;
   if (latestOrder.status >= OrderStatus.Lodged) return 3;
   if (latestOrder.status >= OrderStatus.Completed) return 2;
@@ -94,8 +88,12 @@ function StatCard({ title, value, icon, iconColor }: StatCardProps): ReactNode {
           {icon}
         </div>
         <div>
-          <Text type="secondary" style={{ fontSize: 13 }}>{title}</Text>
-          <Title level={4} style={{ margin: 0 }}>{value}</Title>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            {title}
+          </Text>
+          <Title level={4} style={{ margin: 0 }}>
+            {value}
+          </Title>
         </div>
       </div>
     </Card>
@@ -157,16 +155,28 @@ export function DashboardPage(): ReactNode {
             </Avatar>
             <div>
               <Title level={4} style={{ margin: 0 }}>
-                Welcome back, {user?.firstName ?? 'there'} <SmileOutlined style={{ fontSize: 18 }} />
+                Welcome back, {user?.firstName ?? 'there'}{' '}
+                <SmileOutlined style={{ fontSize: 18 }} />
               </Title>
               <Text type="secondary">Here&apos;s your tax summary at a glance</Text>
             </div>
           </div>
           <Space>
-            <Button icon={<UploadOutlined />} onClick={() => { router.push('/vault'); }}>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => {
+                router.push('/vault');
+              }}
+            >
               Upload Document
             </Button>
-            <Button type="primary" icon={<MessageOutlined />} onClick={() => { router.push('/chat'); }}>
+            <Button
+              type="primary"
+              icon={<MessageOutlined />}
+              onClick={() => {
+                router.push('/chat');
+              }}
+            >
               Start Chat
             </Button>
           </Space>
@@ -176,22 +186,47 @@ export function DashboardPage(): ReactNode {
       {/* ─── Stat Cards ────────────────────────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col xs={12} sm={6}>
-          <StatCard title="Active Orders" value={activeOrderCount} icon={<ShoppingCartOutlined />} iconColor="#1677ff" />
+          <StatCard
+            title="Active Orders"
+            value={activeOrderCount}
+            icon={<ShoppingCartOutlined />}
+            iconColor="#1677ff"
+          />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="Documents" value={documentCount} icon={<FileTextOutlined />} iconColor="#52c41a" />
+          <StatCard
+            title="Documents"
+            value={documentCount}
+            icon={<FileTextOutlined />}
+            iconColor="#52c41a"
+          />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="Appointments" value={appointments?.length ?? 0} icon={<CalendarOutlined />} iconColor="#722ed1" />
+          <StatCard
+            title="Appointments"
+            value={appointments?.length ?? 0}
+            icon={<CalendarOutlined />}
+            iconColor="#722ed1"
+          />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="Notifications" value={unreadCount ?? 0} icon={<BellOutlined />} iconColor="#fa8c16" />
+          <StatCard
+            title="Notifications"
+            value={unreadCount ?? 0}
+            icon={<BellOutlined />}
+            iconColor="#fa8c16"
+          />
         </Col>
       </Row>
 
       {/* ─── Tax Season Progress ───────────────────────────────────────── */}
       <Card
-        title={<><CalendarOutlined style={{ marginRight: 8 }} />Tax Season Progress</>}
+        title={
+          <>
+            <CalendarOutlined style={{ marginRight: 8 }} />
+            Tax Season Progress
+          </>
+        }
         style={{ borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 20 }}
       >
         <Steps
@@ -208,9 +243,19 @@ export function DashboardPage(): ReactNode {
 
       {/* ─── Recent Orders ─────────────────────────────────────────────── */}
       <Card
-        title={<><ShoppingCartOutlined style={{ marginRight: 8 }} />Recent Orders</>}
+        title={
+          <>
+            <ShoppingCartOutlined style={{ marginRight: 8 }} />
+            Recent Orders
+          </>
+        }
         extra={
-          <Button type="link" onClick={() => { router.push('/orders'); }}>
+          <Button
+            type="link"
+            onClick={() => {
+              router.push('/orders');
+            }}
+          >
             View all <ArrowRightOutlined />
           </Button>
         }
@@ -225,7 +270,9 @@ export function DashboardPage(): ReactNode {
                 key={order._id}
                 size="small"
                 hoverable
-                onClick={() => { router.push(`/orders/${order._id}`); }}
+                onClick={() => {
+                  router.push(`/orders/${order._id}`);
+                }}
                 style={{ borderRadius: 8, cursor: 'pointer', border: '1px solid #f0f0f0' }}
                 styles={{ body: { padding: '12px 16px' } }}
               >

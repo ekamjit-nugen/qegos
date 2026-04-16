@@ -31,9 +31,7 @@ export function payzooWebhookVerify(): RequestHandler {
     }
 
     // Compute expected signature
-    const body = typeof req.body === 'string'
-      ? req.body
-      : JSON.stringify(req.body);
+    const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
 
     const expectedSignature = crypto
       .createHmac('sha256', _webhookSecret)

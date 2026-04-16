@@ -1,5 +1,5 @@
-import { Schema, type Model, type Connection } from 'mongoose';
 import crypto from 'crypto';
+import { Schema, type Model, type Connection } from 'mongoose';
 import { authPlugin } from '@nugen/auth';
 import { rbacPlugin } from '@nugen/rbac';
 import { getConfig } from '../../config/env';
@@ -60,7 +60,11 @@ const userSchema = new Schema<IUserDocument>(
       type: String,
       enum: ['single', 'married', 'de_facto', 'separated', 'divorced', 'widowed'],
     },
-    preferredLanguage: { type: String, default: 'en', enum: ['en', 'zh', 'hi', 'pa', 'vi', 'ar', 'other'] },
+    preferredLanguage: {
+      type: String,
+      default: 'en',
+      enum: ['en', 'zh', 'hi', 'pa', 'vi', 'ar', 'other'],
+    },
     preferredContact: { type: String, default: 'sms', enum: ['call', 'sms', 'email', 'whatsapp'] },
     timezone: { type: String, default: 'Australia/Sydney' },
     referralCode: { type: String, unique: true, sparse: true },

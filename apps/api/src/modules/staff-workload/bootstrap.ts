@@ -18,10 +18,7 @@ export interface StaffWorkloadDeps {
   AppointmentModel: Model<any>;
 }
 
-export function bootstrapStaffWorkload(
-  ctx: AppContext,
-  deps: StaffWorkloadDeps,
-): BootstrapResult {
+export function bootstrapStaffWorkload(ctx: AppContext, deps: StaffWorkloadDeps): BootstrapResult {
   const workloadRouter = createWorkloadRoutes({
     UserModel: deps.UserModel as never,
     LeadModel: deps.LeadModel as never,

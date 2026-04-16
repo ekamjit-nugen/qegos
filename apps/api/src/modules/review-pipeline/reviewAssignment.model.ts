@@ -75,6 +75,8 @@ reviewAssignmentSchema.index({ status: 1, updatedAt: -1, reviewerId: 1 });
 /**
  * Factory function to create the ReviewAssignment model.
  */
-export function createReviewAssignmentModel(connection: Connection): Model<IReviewAssignmentDocument> {
+export function createReviewAssignmentModel(
+  connection: Connection,
+): Model<IReviewAssignmentDocument> {
   return connection.model<IReviewAssignmentDocument>('ReviewAssignment', reviewAssignmentSchema);
 }

@@ -57,7 +57,14 @@ export function WidgetCard({
       styles={{ body: { minHeight: minHeight - 58 } }}
     >
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: minHeight - 80 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: minHeight - 80,
+          }}
+        >
           <Spin />
         </div>
       ) : error ? (
@@ -65,9 +72,13 @@ export function WidgetCard({
           type="error"
           message="Failed to load"
           description={error.message || 'An unexpected error occurred.'}
-          action={onRetry && (
-            <Button size="small" onClick={onRetry}>Retry</Button>
-          )}
+          action={
+            onRetry && (
+              <Button size="small" onClick={onRetry}>
+                Retry
+              </Button>
+            )
+          }
           showIcon
         />
       ) : empty ? (

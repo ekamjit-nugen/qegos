@@ -137,9 +137,7 @@ supportTicketSchema.index({ status: 1, resolvedAt: -1, assignedTo: 1 });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 
-export function createSupportTicketModel(
-  connection: Connection,
-): Model<ISupportTicketDocument> {
+export function createSupportTicketModel(connection: Connection): Model<ISupportTicketDocument> {
   if (connection.models.SupportTicket) {
     return connection.models.SupportTicket as Model<ISupportTicketDocument>;
   }

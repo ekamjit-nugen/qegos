@@ -62,9 +62,10 @@ export function decryptContent(encrypted: string): string {
  * Process a message: redact TFN in content, encrypt original if TFN detected.
  * Returns { content, contentOriginal? }
  */
-export function processMessageContent(
-  rawContent: string,
-): { content: string; contentOriginal?: string } {
+export function processMessageContent(rawContent: string): {
+  content: string;
+  contentOriginal?: string;
+} {
   TFN_PATTERN.lastIndex = 0;
   if (!containsTfn(rawContent)) {
     return { content: rawContent };

@@ -1,9 +1,6 @@
 import type { Model, FilterQuery } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
-import type {
-  ILeadDocument,
-  ILeadActivityDocument,
-} from './lead.types';
+import type { ILeadDocument, ILeadActivityDocument } from './lead.types';
 
 export interface LeadActivityServiceDeps {
   LeadModel: Model<ILeadDocument>;
@@ -21,21 +18,46 @@ export interface ActivityListResult {
 
 export interface LeadActivityServiceResult {
   logActivity: (data: Partial<ILeadActivityDocument>) => Promise<ILeadActivityDocument>;
-  getActivities: (leadId: string, pagination: { page?: number; limit?: number }, scopeFilter?: Record<string, unknown>) => Promise<ActivityListResult>;
-  updateActivity: (id: string, data: Partial<ILeadActivityDocument>) => Promise<ILeadActivityDocument>;
-  logCall: (data: { leadId: string; callDuration: number; callDirection: string; outcome?: string; description: string; nextAction?: string; nextActionDate?: string; performedBy: string }) => Promise<ILeadActivityDocument>;
+  getActivities: (
+    leadId: string,
+    pagination: { page?: number; limit?: number },
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ActivityListResult>;
+  updateActivity: (
+    id: string,
+    data: Partial<ILeadActivityDocument>,
+  ) => Promise<ILeadActivityDocument>;
+  logCall: (data: {
+    leadId: string;
+    callDuration: number;
+    callDirection: string;
+    outcome?: string;
+    description: string;
+    nextAction?: string;
+    nextActionDate?: string;
+    performedBy: string;
+  }) => Promise<ILeadActivityDocument>;
   getTodaysCalls: (staffId: string) => Promise<ILeadActivityDocument[]>;
-  getStaffActivities: (staffId: string, pagination: { page?: number; limit?: number }) => Promise<ActivityListResult>;
+  getStaffActivities: (
+    staffId: string,
+    pagination: { page?: number; limit?: number },
+  ) => Promise<ActivityListResult>;
 }
 
-export function createLeadActivityService(deps: LeadActivityServiceDeps): LeadActivityServiceResult {
+export function createLeadActivityService(
+  deps: LeadActivityServiceDeps,
+): LeadActivityServiceResult {
   const { LeadModel, LeadActivityModel, recalculateScore } = deps;
 
   async function logActivity(data: Partial<ILeadActivityDocument>): Promise<ILeadActivityDocument> {
-    if (!data.leadId) throw AppError.badRequest('Lead ID is required');
+    if (!data.leadId) {
+      throw AppError.badRequest('Lead ID is required');
+    }
 
     const lead = await LeadModel.findById(data.leadId);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     const activity = await LeadActivityModel.create({
       ...data,
@@ -48,8 +70,12 @@ export function createLeadActivityService(deps: LeadActivityServiceDeps): LeadAc
     const updateData: Record<string, unknown> = {
       lastContactedAt: new Date(),
     };
-    if (data.nextAction) updateData.nextAction = data.nextAction;
-    if (data.nextActionDate) updateData.nextActionDate = data.nextActionDate;
+    if (data.nextAction) {
+      updateData.nextAction = data.nextAction;
+    }
+    if (data.nextActionDate) {
+      updateData.nextActionDate = data.nextActionDate;
+    }
 
     await LeadModel.findByIdAndUpdate(data.leadId, {
       $set: updateData,
@@ -77,7 +103,9 @@ export function createLeadActivityService(deps: LeadActivityServiceDeps): LeadAc
       Object.assign(leadFilter, scopeFilter);
     }
     const lead = await LeadModel.findOne(leadFilter);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     const filter: FilterQuery<ILeadActivityDocument> = { leadId };
 
@@ -106,17 +134,26 @@ export function createLeadActivityService(deps: LeadActivityServiceDeps): LeadAc
   ): Promise<ILeadActivityDocument> {
     // Only allow editing notes/outcome
     const allowedFields: Record<string, unknown> = {};
-    if (data.description !== undefined) allowedFields.description = data.description;
-    if (data.outcome !== undefined) allowedFields.outcome = data.outcome;
-    if (data.subject !== undefined) allowedFields.subject = data.subject;
-    if (data.sentiment !== undefined) allowedFields.sentiment = data.sentiment;
+    if (data.description !== undefined) {
+      allowedFields.description = data.description;
+    }
+    if (data.outcome !== undefined) {
+      allowedFields.outcome = data.outcome;
+    }
+    if (data.subject !== undefined) {
+      allowedFields.subject = data.subject;
+    }
+    if (data.sentiment !== undefined) {
+      allowedFields.sentiment = data.sentiment;
+    }
 
-    const activity = await LeadActivityModel.findByIdAndUpdate(
-      id,
-      allowedFields,
-      { new: true, runValidators: true },
-    );
-    if (!activity) throw AppError.notFound('Activity');
+    const activity = await LeadActivityModel.findByIdAndUpdate(id, allowedFields, {
+      new: true,
+      runValidators: true,
+    });
+    if (!activity) {
+      throw AppError.notFound('Activity');
+    }
     return activity;
   }
 

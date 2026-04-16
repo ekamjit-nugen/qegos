@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
 import {
@@ -99,10 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
 
   const login = useCallback(
     async (email: string, password: string): Promise<void> => {
-      const res = await api.post<ApiResponse<LoginTokens>>(
-        '/auth/signin',
-        { email, password },
-      );
+      const res = await api.post<ApiResponse<LoginTokens>>('/auth/signin', { email, password });
       const data = res.data.data;
       setAccessToken(data.accessToken);
       setRefreshToken(data.refreshToken);
@@ -115,16 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     await api.post('/auth/send-otp', { mobile });
   }, []);
 
-  const verifyOtp = useCallback(
-    async (mobile: string, otp: string): Promise<OtpVerifyResult> => {
-      const res = await api.post<ApiResponse<OtpVerifyResult>>(
-        '/auth/verify-otp',
-        { mobile, otp },
-      );
-      return res.data.data;
-    },
-    [],
-  );
+  const verifyOtp = useCallback(async (mobile: string, otp: string): Promise<OtpVerifyResult> => {
+    const res = await api.post<ApiResponse<OtpVerifyResult>>('/auth/verify-otp', { mobile, otp });
+    return res.data.data;
+  }, []);
 
   const loginWithOtp = useCallback(
     async (mobile: string, otp: string): Promise<void> => {
@@ -146,10 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
       mobile: string;
       otp: string;
     }): Promise<void> => {
-      const res = await api.post<ApiResponse<LoginTokens>>(
-        '/auth/signup',
-        data,
-      );
+      const res = await api.post<ApiResponse<LoginTokens>>('/auth/signup', data);
       const tokens = res.data.data;
       setAccessToken(tokens.accessToken);
       setRefreshToken(tokens.refreshToken);

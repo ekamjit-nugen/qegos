@@ -2,7 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import { validationResult } from 'express-validator';
 import * as _auditLog from '@nugen/audit-log';
 import { getRequestId } from '../../lib/requestContext';
-import type { PromoCodeRouteDeps, CreatePromoCodeInput, PromoCodeListQuery } from './promoCode.types';
+import type {
+  PromoCodeRouteDeps,
+  CreatePromoCodeInput,
+  PromoCodeListQuery,
+} from './promoCode.types';
 import { createPromoCodeService } from './promoCode.service';
 import {
   createPromoCodeValidation,
@@ -86,7 +90,9 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         res.status(200).json({ status: 200, data: result });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );
@@ -109,7 +115,9 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         res.status(200).json({ status: 200, data: { promoCode: promo, usage } });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );
@@ -146,7 +154,9 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         res.status(200).json({ status: 200, data: promo });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );
@@ -180,7 +190,9 @@ export function createPromoCodeRoutes(deps: PromoCodeRouteDeps): Router {
         res.status(200).json({ status: 200, data: promo });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );

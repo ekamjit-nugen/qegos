@@ -142,7 +142,9 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
       <Button
         type="link"
         icon={<ArrowLeftOutlined />}
-        onClick={() => { router.push('/orders'); }}
+        onClick={() => {
+          router.push('/orders');
+        }}
         style={{ padding: 0, marginBottom: 16 }}
       >
         Back to Orders
@@ -174,7 +176,9 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
                 <Button
                   type="primary"
                   icon={<CreditCardOutlined />}
-                  onClick={() => { setPayOpen(true); }}
+                  onClick={() => {
+                    setPayOpen(true);
+                  }}
                 >
                   Pay Now
                 </Button>
@@ -183,7 +187,9 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
                 type="primary"
                 ghost
                 icon={<FileTextOutlined />}
-                onClick={() => { router.push(`/tax-summary?fy=${order.financialYear}`); }}
+                onClick={() => {
+                  router.push(`/tax-summary?fy=${order.financialYear}`);
+                }}
               >
                 View FY Tax Summary
               </Button>
@@ -192,7 +198,10 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
         </Row>
         <div style={{ marginTop: 16 }}>
           <Text type="secondary">Overall progress</Text>
-          <Progress percent={order.completionPercent} strokeColor={{ from: '#1677ff', to: '#52c41a' }} />
+          <Progress
+            percent={order.completionPercent}
+            strokeColor={{ from: '#1677ff', to: '#52c41a' }}
+          />
         </div>
       </Card>
 
@@ -202,14 +211,21 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
           <Col xs={24} sm={12} md={8}>
             <Card size="small">
               <Statistic
-                title={<><DollarCircleOutlined /> Payment</>}
+                title={
+                  <>
+                    <DollarCircleOutlined /> Payment
+                  </>
+                }
                 value={PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
                 valueStyle={{
                   fontSize: 18,
                   color: order.paymentStatus === 'succeeded' ? '#52c41a' : '#faad14',
                 }}
               />
-              <Tag color={PAYMENT_STATUS_COLORS[order.paymentStatus] ?? 'default'} style={{ marginTop: 8 }}>
+              <Tag
+                color={PAYMENT_STATUS_COLORS[order.paymentStatus] ?? 'default'}
+                style={{ marginTop: 8 }}
+              >
                 {formatCurrency(order.finalAmount)}
               </Tag>
             </Card>
@@ -220,11 +236,18 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
           <Col xs={24} sm={12} md={8}>
             <Card size="small">
               <Statistic
-                title={<><BankOutlined /> ATO Lodgement</>}
+                title={
+                  <>
+                    <BankOutlined /> ATO Lodgement
+                  </>
+                }
                 value={EFILE_STATUS_LABELS[order.eFileStatus] ?? order.eFileStatus}
                 valueStyle={{ fontSize: 18 }}
               />
-              <Tag color={EFILE_STATUS_COLORS[order.eFileStatus] ?? 'default'} style={{ marginTop: 8 }}>
+              <Tag
+                color={EFILE_STATUS_COLORS[order.eFileStatus] ?? 'default'}
+                style={{ marginTop: 8 }}
+              >
                 {order.eFileReference ? `Ref: ${order.eFileReference}` : 'Not yet submitted'}
               </Tag>
             </Card>
@@ -263,13 +286,15 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
           style={{ marginBottom: 16 }}
           message={
             <Text strong>
-              Upcoming Appointment: {order.scheduledAppointment.date} · {order.scheduledAppointment.timeSlot}
+              Upcoming Appointment: {order.scheduledAppointment.date} ·{' '}
+              {order.scheduledAppointment.timeSlot}
             </Text>
           }
           description={
             <div>
               <Text type="secondary">
-                Type: {order.scheduledAppointment.type} · Status: {order.scheduledAppointment.status}
+                Type: {order.scheduledAppointment.type} · Status:{' '}
+                {order.scheduledAppointment.status}
               </Text>
               {order.scheduledAppointment.meetingLink && (
                 <div style={{ marginTop: 8 }}>
@@ -295,7 +320,11 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
           showIcon
           icon={<UserOutlined />}
           style={{ marginBottom: 16 }}
-          message={<Text>Your tax preparer: <Text strong>{order.processingByName}</Text></Text>}
+          message={
+            <Text>
+              Your tax preparer: <Text strong>{order.processingByName}</Text>
+            </Text>
+          }
         />
       )}
 
@@ -382,7 +411,9 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
                           size="small"
                           icon={<EditOutlined />}
                           loading={generateUriMutation.isPending}
-                          onClick={() => { handleSign(doc); }}
+                          onClick={() => {
+                            handleSign(doc);
+                          }}
                         >
                           Sign Document
                         </Button>
@@ -395,7 +426,9 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
                           Fully Signed
                         </Tag>
                       ) : ss === 'declined' ? (
-                        <Tag key="status" color="red">Declined</Tag>
+                        <Tag key="status" color="red">
+                          Declined
+                        </Tag>
                       ) : null,
                     ].filter(Boolean)}
                   >
@@ -405,10 +438,7 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
                         <div>
                           <Text type="secondary">{doc.documentType ?? '-'}</Text>
                           {ss !== 'not_started' && (
-                            <Tag
-                              color={SIGNING_STATUS_COLORS[ss]}
-                              style={{ marginLeft: 8 }}
-                            >
+                            <Tag color={SIGNING_STATUS_COLORS[ss]} style={{ marginLeft: 8 }}>
                               {SIGNING_STATUS_LABELS[ss]}
                             </Tag>
                           )}
@@ -437,57 +467,66 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
                 ),
               },
               ...(order.paymentStatus === 'succeeded'
-                ? [{
-                    color: 'green' as const,
-                    children: (
-                      <>
-                        <Text strong>Payment Received</Text>
-                        <Paragraph type="secondary" style={{ margin: 0 }}>
-                          {formatCurrency(order.finalAmount)} paid
-                        </Paragraph>
-                      </>
-                    ),
-                  }]
+                ? [
+                    {
+                      color: 'green' as const,
+                      children: (
+                        <>
+                          <Text strong>Payment Received</Text>
+                          <Paragraph type="secondary" style={{ margin: 0 }}>
+                            {formatCurrency(order.finalAmount)} paid
+                          </Paragraph>
+                        </>
+                      ),
+                    },
+                  ]
                 : []),
               ...(order.processingByName
-                ? [{
-                    color: 'blue' as const,
-                    children: (
-                      <>
-                        <Text strong>Assigned to {order.processingByName}</Text>
-                      </>
-                    ),
-                  }]
+                ? [
+                    {
+                      color: 'blue' as const,
+                      children: (
+                        <>
+                          <Text strong>Assigned to {order.processingByName}</Text>
+                        </>
+                      ),
+                    },
+                  ]
                 : []),
               ...(order.eFileStatus && order.eFileStatus !== 'not_filed'
-                ? [{
-                    color: order.eFileStatus === 'rejected' ? 'red' as const : 'blue' as const,
-                    children: (
-                      <>
-                        <Text strong>{EFILE_STATUS_LABELS[order.eFileStatus]}</Text>
-                        {order.eFileReference && (
-                          <Paragraph type="secondary" style={{ margin: 0 }}>
-                            Reference: {order.eFileReference}
-                          </Paragraph>
-                        )}
-                      </>
-                    ),
-                  }]
+                ? [
+                    {
+                      color:
+                        order.eFileStatus === 'rejected' ? ('red' as const) : ('blue' as const),
+                      children: (
+                        <>
+                          <Text strong>{EFILE_STATUS_LABELS[order.eFileStatus]}</Text>
+                          {order.eFileReference && (
+                            <Paragraph type="secondary" style={{ margin: 0 }}>
+                              Reference: {order.eFileReference}
+                            </Paragraph>
+                          )}
+                        </>
+                      ),
+                    },
+                  ]
                 : []),
               ...(order.noaReceived
-                ? [{
-                    color: 'green' as const,
-                    children: (
-                      <>
-                        <Text strong>Notice of Assessment Received</Text>
-                        {order.noaDate && (
-                          <Paragraph type="secondary" style={{ margin: 0 }}>
-                            {formatDateTime(order.noaDate)}
-                          </Paragraph>
-                        )}
-                      </>
-                    ),
-                  }]
+                ? [
+                    {
+                      color: 'green' as const,
+                      children: (
+                        <>
+                          <Text strong>Notice of Assessment Received</Text>
+                          {order.noaDate && (
+                            <Paragraph type="secondary" style={{ margin: 0 }}>
+                              {formatDateTime(order.noaDate)}
+                            </Paragraph>
+                          )}
+                        </>
+                      ),
+                    },
+                  ]
                 : []),
               {
                 color: 'gray',
@@ -514,11 +553,13 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
             }
           >
             <Descriptions column={1} size="small" bordered>
-              {Object.entries(order.formAnswers).slice(0, 20).map(([key, value]) => (
-                <Descriptions.Item key={key} label={key}>
-                  <Text>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</Text>
-                </Descriptions.Item>
-              ))}
+              {Object.entries(order.formAnswers)
+                .slice(0, 20)
+                .map(([key, value]) => (
+                  <Descriptions.Item key={key} label={key}>
+                    <Text>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</Text>
+                  </Descriptions.Item>
+                ))}
             </Descriptions>
           </Card>
         )}
@@ -526,7 +567,9 @@ export function OrderDetailPage({ id }: OrderDetailPageProps): React.ReactNode {
 
       <PayNowModal
         open={payOpen}
-        onClose={() => { setPayOpen(false); }}
+        onClose={() => {
+          setPayOpen(false);
+        }}
         orderId={id}
         orderNumber={order.orderNumber}
         baseAmount={order.finalAmount}

@@ -2,11 +2,7 @@
 
 import React, { useState } from 'react';
 import { Row, Col, DatePicker, Button, Space, Segmented, Tooltip } from 'antd';
-import {
-  ReloadOutlined,
-  DownloadOutlined,
-  CalendarOutlined,
-} from '@ant-design/icons';
+import { ReloadOutlined, DownloadOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { AnalyticsProvider, useAnalyticsContext } from './AnalyticsContext';
 import { ExportModal } from './ExportModal';
@@ -30,12 +26,15 @@ const rangePresets: Array<{ label: string; value: [dayjs.Dayjs, dayjs.Dayjs] }> 
   { label: 'Last 90 Days', value: [dayjs().subtract(90, 'day'), dayjs()] },
   { label: 'Last 6 Months', value: [dayjs().subtract(6, 'month'), dayjs()] },
   { label: 'Last 12 Months', value: [dayjs().subtract(1, 'year'), dayjs()] },
-  { label: 'This FY', value: [
-    dayjs().month() >= 6
-      ? dayjs().month(6).startOf('month')
-      : dayjs().subtract(1, 'year').month(6).startOf('month'),
-    dayjs(),
-  ]},
+  {
+    label: 'This FY',
+    value: [
+      dayjs().month() >= 6
+        ? dayjs().month(6).startOf('month')
+        : dayjs().subtract(1, 'year').month(6).startOf('month'),
+      dayjs(),
+    ],
+  },
 ];
 
 // ─── Toolbar (inside provider) ──────────────────────────────────────
@@ -46,14 +45,16 @@ function AnalyticsToolbar(): React.ReactNode {
 
   return (
     <>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 12,
-        marginBottom: 20,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <CalendarOutlined style={{ fontSize: 22, color: '#1677ff' }} />
           <h2 style={{ margin: 0, fontSize: 20 }}>Analytics Dashboard</h2>
@@ -87,11 +88,7 @@ function AnalyticsToolbar(): React.ReactNode {
             <Button icon={<ReloadOutlined />} onClick={refresh} />
           </Tooltip>
 
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={() => setExportOpen(true)}
-          >
+          <Button type="primary" icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>
             Export
           </Button>
         </Space>

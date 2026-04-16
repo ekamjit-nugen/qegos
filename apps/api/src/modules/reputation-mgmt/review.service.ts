@@ -23,7 +23,9 @@ export function initReviewService(deps: {
 
 export async function requestReview(orderId: string): Promise<IReviewDocument> {
   const order = await OrderModel.findById(orderId);
-  if (!order) throw AppError.notFound('Order');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
 
   // REV-INV-05: Verify payment succeeded before requesting review
   if (order.paymentStatus !== 'succeeded') {
@@ -32,7 +34,9 @@ export async function requestReview(orderId: string): Promise<IReviewDocument> {
 
   // Check if review already exists for this order+user
   const existing = await ReviewModel.findOne({ orderId, userId: order.userId });
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
 
   return ReviewModel.create({
     orderId,
@@ -62,10 +66,10 @@ export async function submitReview(
   // Ownership: the caller must own the order they're reviewing. Without
   // this check, any authenticated user can drop 1-star reviews on anyone's
   // order (reputation poisoning) or plant 5-star reviews on behalf of others.
-  const order = await OrderModel.findById(orderId)
-    .select('userId')
-    .lean<{ userId?: unknown }>();
-  if (!order) throw AppError.notFound('Order');
+  const order = await OrderModel.findById(orderId).select('userId').lean<{ userId?: unknown }>();
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
   if (String(order.userId) !== String(userId)) {
     throw AppError.forbidden('Cannot review an order that does not belong to you');
   }
@@ -85,9 +89,15 @@ export async function submitReview(
   }
 
   review.rating = rating;
-  if (npsScore !== undefined) review.npsScore = npsScore;
-  if (comment !== undefined) review.comment = comment;
-  if (tags) review.tags = tags as IReviewDocument['tags'];
+  if (npsScore !== undefined) {
+    review.npsScore = npsScore;
+  }
+  if (comment !== undefined) {
+    review.comment = comment;
+  }
+  if (tags) {
+    review.tags = tags as IReviewDocument['tags'];
+  }
   review.status = 'submitted';
 
   // REV-INV-01: Google review prompt is always shown (unconditional)
@@ -105,12 +115,11 @@ export async function submitReview(
 
 // ─── Log Google Click ───────────────────────────────────────────────────────
 
-export async function logGoogleClick(
-  reviewId: string,
-  userId: string,
-): Promise<IReviewDocument> {
+export async function logGoogleClick(reviewId: string, userId: string): Promise<IReviewDocument> {
   const review = await ReviewModel.findById(reviewId);
-  if (!review) throw AppError.notFound('Review');
+  if (!review) {
+    throw AppError.notFound('Review');
+  }
 
   // Ownership: only the review author may flip their own googleReviewClicked
   // flag. Otherwise any user could pollute another user's engagement metric.
@@ -131,16 +140,16 @@ export async function respondToReview(
   response: string,
 ): Promise<IReviewDocument> {
   const review = await ReviewModel.findById(reviewId);
-  if (!review) throw AppError.notFound('Review');
+  if (!review) {
+    throw AppError.notFound('Review');
+  }
 
   // State guard: only actually-existing reviews can be responded to. 'requested'
   // means the client hasn't submitted anything yet; responding pre-fabricates
   // a response to nothing. 'responded' is allowed so admins can edit replies.
   const allowed: ReviewStatus[] = ['submitted', 'flagged', 'responded'];
   if (!allowed.includes(review.status)) {
-    throw AppError.badRequest(
-      `Cannot respond to a review in status '${review.status}'`,
-    );
+    throw AppError.badRequest(`Cannot respond to a review in status '${review.status}'`);
   }
 
   review.adminResponse = response;
@@ -168,18 +177,20 @@ export async function listReviews(
   const { status, rating, staffId, page = 1, limit = 20 } = params;
 
   const filter: Record<string, unknown> = {};
-  if (status) filter.status = status;
-  if (rating) filter.rating = rating;
-  if (staffId) filter.staffId = staffId;
+  if (status) {
+    filter.status = status;
+  }
+  if (rating) {
+    filter.rating = rating;
+  }
+  if (staffId) {
+    filter.staffId = staffId;
+  }
 
   const skip = (page - 1) * limit;
 
   const [reviews, total] = await Promise.all([
-    ReviewModel.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    ReviewModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     ReviewModel.countDocuments(filter),
   ]);
 
@@ -218,14 +229,7 @@ export async function getStats(): Promise<{
   byStaff: Array<{ _id: string; avgRating: number; count: number }>;
   byMonth: Array<{ _id: { year: number; month: number }; count: number; avgRating: number }>;
 }> {
-  const [
-    totalReviews,
-    ratingAgg,
-    histogramAgg,
-    npsAgg,
-    byStaff,
-    byMonth,
-  ] = await Promise.all([
+  const [totalReviews, ratingAgg, histogramAgg, npsAgg, byStaff, byMonth] = await Promise.all([
     ReviewModel.countDocuments({ status: { $in: ['submitted', 'responded'] } }),
     ReviewModel.aggregate([
       { $match: { rating: { $exists: true } } },
@@ -277,14 +281,16 @@ export async function getStats(): Promise<{
   const allScores: number[] = npsAgg[0]?.scores ?? [];
   for (const score of allScores) {
     const cat = getNpsCategory(score);
-    if (cat === 'promoter') promoters++;
-    else if (cat === 'passive') passives++;
-    else detractors++;
+    if (cat === 'promoter') {
+      promoters++;
+    } else if (cat === 'passive') {
+      passives++;
+    } else {
+      detractors++;
+    }
   }
   const totalNps = allScores.length;
-  const npsScore = totalNps > 0
-    ? Math.round(((promoters - detractors) / totalNps) * 100)
-    : 0;
+  const npsScore = totalNps > 0 ? Math.round(((promoters - detractors) / totalNps) * 100) : 0;
 
   return {
     totalReviews,

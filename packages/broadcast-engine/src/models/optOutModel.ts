@@ -17,7 +17,14 @@ const optOutSchema = new Schema<IOptOutDocument>(
     reason: {
       type: String,
       required: true,
-      enum: ['user_request', 'reply_stop', 'bounce_hard', 'bounce_soft_3x', 'admin_manual', 'spam_complaint'],
+      enum: [
+        'user_request',
+        'reply_stop',
+        'bounce_hard',
+        'bounce_soft_3x',
+        'admin_manual',
+        'spam_complaint',
+      ],
     },
     campaignId: { type: Schema.Types.ObjectId, ref: 'BroadcastCampaign' },
   },

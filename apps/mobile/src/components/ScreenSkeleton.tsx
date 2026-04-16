@@ -244,16 +244,23 @@ const styles = StyleSheet.create({
   // Dashboard
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   statCard: {
-    width: '47%', flexGrow: 1, backgroundColor: '#fff',
-    borderRadius: 12, padding: 16, elevation: 1,
+    width: '47%',
+    flexGrow: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 1,
   },
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   actionBtn: { flexGrow: 1 },
 
   // List
   listCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    marginBottom: 12, elevation: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 1,
   },
   listCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listCardFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
@@ -267,16 +274,38 @@ const styles = StyleSheet.create({
 
   // Chat
   chatItem: {
-    flexDirection: 'row', gap: 12, padding: 12,
-    backgroundColor: '#fff', borderRadius: 12, marginBottom: 8, elevation: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 8,
+    elevation: 1,
   },
   chatItemHeader: { flexDirection: 'row', justifyContent: 'space-between' },
 
   // Vault
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  storageBar: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 1 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  storageBar: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 1,
+  },
   docCard: {
-    flexDirection: 'row', gap: 12, alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    elevation: 1,
   },
 });

@@ -14,11 +14,7 @@ export default function NotificationsLoading(): React.ReactNode {
       </div>
 
       {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-        <Card
-          key={i}
-          style={{ marginBottom: 8 }}
-          bodyStyle={{ padding: '12px 16px' }}
-        >
+        <Card key={i} style={{ marginBottom: 8 }} bodyStyle={{ padding: '12px 16px' }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
             <Skeleton.Avatar active size={36} />
             <div style={{ flex: 1 }}>

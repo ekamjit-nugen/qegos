@@ -1,18 +1,9 @@
-import type { Model } from 'mongoose';
 import * as crypto from 'crypto';
-import {
-  uploadToS3,
-  quarantineFile,
-  getPresignedUrl,
-  scanBuffer,
-} from '@nugen/file-storage';
-import {
-  ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE,
-  MAX_DOCUMENTS_PER_ORDER,
-} from './document.types';
-import * as zohoSign from './zohoSign.service';
+import type { Model } from 'mongoose';
+import { uploadToS3, quarantineFile, getPresignedUrl, scanBuffer } from '@nugen/file-storage';
 import type { AuditLogDI } from '@nugen/audit-log';
+import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, MAX_DOCUMENTS_PER_ORDER } from './document.types';
+import * as zohoSign from './zohoSign.service';
 
 // ─── Service Interface ─────────────────────────────────────────────────────
 
@@ -25,7 +16,9 @@ export interface DocumentServiceResult {
   uploadDocument: (params: UploadParams) => Promise<{ fileUrl: string; documentIndex: number }>;
   uploadProof: (params: UploadProofParams) => Promise<{ fileUrl: string; documentIndex: number }>;
   listOrderDocuments: (params: ListParams) => Promise<OrderDocView[]>;
-  createSigningRequest: (params: CreateSignParams) => Promise<{ zohoRequestId: string; clientActionId: string; adminActionId: string }>;
+  createSigningRequest: (
+    params: CreateSignParams,
+  ) => Promise<{ zohoRequestId: string; clientActionId: string; adminActionId: string }>;
   sendForSignature: (orderId: string, zohoRequestId: string) => Promise<void>;
   generateEmbeddedUri: (params: GenerateUriParams) => Promise<{ signUrl: string }>;
   processZohoWebhook: (payload: import('./document.types').ZohoWebhookPayload) => Promise<void>;
@@ -112,24 +105,26 @@ function buildOrderDocS3Key(orderId: string, fileName: string): string {
  * Uses simple header matching for PDF, JPEG, PNG, TIFF, HEIC.
  */
 function detectMimeType(buffer: Buffer): string | null {
-  if (buffer.length < 4) return null;
+  if (buffer.length < 4) {
+    return null;
+  }
 
   // PDF: %PDF
   if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
     return 'application/pdf';
   }
   // JPEG: FF D8 FF
-  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return 'image/jpeg';
   }
   // PNG: 89 50 4E 47
-  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
     return 'image/png';
   }
   // TIFF: 49 49 2A 00 (little-endian) or 4D 4D 00 2A (big-endian)
   if (
-    (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2A && buffer[3] === 0x00) ||
-    (buffer[0] === 0x4D && buffer[1] === 0x4D && buffer[2] === 0x00 && buffer[3] === 0x2A)
+    (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2a && buffer[3] === 0x00) ||
+    (buffer[0] === 0x4d && buffer[1] === 0x4d && buffer[2] === 0x00 && buffer[3] === 0x2a)
   ) {
     return 'image/tiff';
   }
@@ -156,13 +151,17 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
    * Upload a document to an order.
    * Enforces DOC-INV-01 (virus scan), DOC-INV-02 (magic bytes), DOC-INV-03 (limits), DOC-INV-04 (SSE-S3).
    */
-  async function uploadDocument(params: UploadParams): Promise<{ fileUrl: string; documentIndex: number }> {
+  async function uploadDocument(
+    params: UploadParams,
+  ): Promise<{ fileUrl: string; documentIndex: number }> {
     const { orderId, file, documentType } = params;
 
     // DOC-INV-02: Validate by magic bytes
     const detectedMime = detectMimeType(file.buffer);
     if (!detectedMime || !ALLOWED_MIME_TYPES[detectedMime]) {
-      throw Object.assign(new Error('File type not allowed. Accepted: PDF, JPG, PNG, HEIC, TIFF'), { status: 422 });
+      throw Object.assign(new Error('File type not allowed. Accepted: PDF, JPG, PNG, HEIC, TIFF'), {
+        status: 422,
+      });
     }
 
     // DOC-INV-03: File size check (belt + suspenders with multer limit)
@@ -171,14 +170,16 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     }
 
     // Load order and check document count (DOC-INV-03)
-    const order = await OrderModel.findById(orderId) as Record<string, unknown> | null;
+    const order = (await OrderModel.findById(orderId)) as Record<string, unknown> | null;
     if (!order) {
       throw Object.assign(new Error('Order not found'), { status: 404 });
     }
 
     const documents = (order.documents ?? []) as unknown[];
     if (documents.length >= MAX_DOCUMENTS_PER_ORDER) {
-      throw Object.assign(new Error(`Maximum ${MAX_DOCUMENTS_PER_ORDER} documents per order`), { status: 422 });
+      throw Object.assign(new Error(`Maximum ${MAX_DOCUMENTS_PER_ORDER} documents per order`), {
+        status: 422,
+      });
     }
 
     // DOC-INV-01: Virus scan
@@ -186,10 +187,14 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     if (scanResult === 'infected') {
       const s3Key = buildOrderDocS3Key(orderId, file.originalname);
       await quarantineFile(file.buffer, s3Key, detectedMime);
-      throw Object.assign(new Error('File failed virus scan and has been quarantined'), { status: 422 });
+      throw Object.assign(new Error('File failed virus scan and has been quarantined'), {
+        status: 422,
+      });
     }
     if (scanResult === 'error') {
-      throw Object.assign(new Error('Virus scan unavailable. Upload rejected for safety.'), { status: 503 });
+      throw Object.assign(new Error('Virus scan unavailable. Upload rejected for safety.'), {
+        status: 503,
+      });
     }
 
     // DOC-INV-04: Upload to S3
@@ -214,7 +219,9 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   /**
    * Upload ID verification document (client-only).
    */
-  async function uploadProof(params: UploadProofParams): Promise<{ fileUrl: string; documentIndex: number }> {
+  async function uploadProof(
+    params: UploadProofParams,
+  ): Promise<{ fileUrl: string; documentIndex: number }> {
     return uploadDocument({
       ...params,
       userType: 7, // client
@@ -229,7 +236,7 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   async function listOrderDocuments(params: ListParams): Promise<OrderDocView[]> {
     const { orderId, userId, userType } = params;
 
-    const order = await OrderModel.findById(orderId).lean() as Record<string, unknown> | null;
+    const order = (await OrderModel.findById(orderId).lean()) as Record<string, unknown> | null;
     if (!order) {
       throw Object.assign(new Error('Order not found'), { status: 404 });
     }
@@ -290,15 +297,21 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
    * Create a Zoho Sign dual-signature request for a document in an order.
    * Client signs first (signing_order 1), then admin countersigns (signing_order 2).
    */
-  async function createSigningRequest(params: CreateSignParams): Promise<{ zohoRequestId: string; clientActionId: string; adminActionId: string }> {
+  async function createSigningRequest(
+    params: CreateSignParams,
+  ): Promise<{ zohoRequestId: string; clientActionId: string; adminActionId: string }> {
     const { orderId, documentIndex, clientName, clientEmail, adminName, adminEmail } = params;
 
-    const order = await OrderModel.findById(orderId) as Record<string, unknown> | null;
+    const order = (await OrderModel.findById(orderId)) as Record<string, unknown> | null;
     if (!order) {
       throw Object.assign(new Error('Order not found'), { status: 404 });
     }
 
-    const documents = (order.documents ?? []) as Array<{ fileName: string; fileUrl: string; signingStatus?: string }>;
+    const documents = (order.documents ?? []) as Array<{
+      fileName: string;
+      fileUrl: string;
+      signingStatus?: string;
+    }>;
     if (documentIndex < 0 || documentIndex >= documents.length) {
       throw Object.assign(new Error('Document not found at specified index'), { status: 404 });
     }
@@ -307,11 +320,14 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
 
     // Prevent duplicate signing requests
     if (doc.signingStatus && doc.signingStatus !== 'not_started') {
-      throw Object.assign(new Error('A signing request already exists for this document'), { status: 409 });
+      throw Object.assign(new Error('A signing request already exists for this document'), {
+        status: 409,
+      });
     }
 
     // Download from S3 to get buffer for Zoho
-    const { GetObjectCommand: _GetObjectCommand, S3Client: _S3Client } = await import('@aws-sdk/client-s3');
+    const { GetObjectCommand: _GetObjectCommand, S3Client: _S3Client } =
+      await import('@aws-sdk/client-s3');
     // We use getPresignedUrl + fetch as a simpler approach
     const presignedUrl = await getPresignedUrl(doc.fileUrl);
     const response = await fetch(presignedUrl);
@@ -412,15 +428,19 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
    * Process Zoho Sign webhook. Idempotent — skips if already completed/signed.
    * Handles dual-signature flow: client signs first, then admin countersigns.
    */
-  async function processZohoWebhook(payload: import('./document.types').ZohoWebhookPayload): Promise<void> {
+  async function processZohoWebhook(
+    payload: import('./document.types').ZohoWebhookPayload,
+  ): Promise<void> {
     const { request_id, request_status, document_ids, actions } = payload.requests;
 
     // Find the order with this zohoRequestId
-    const order = await OrderModel.findOne({
+    const order = (await OrderModel.findOne({
       'documents.zohoRequestId': request_id,
-    }) as Record<string, unknown> | null;
+    })) as Record<string, unknown> | null;
 
-    if (!order) return; // Unknown request, ignore
+    if (!order) {
+      return;
+    } // Unknown request, ignore
 
     const documents = (order.documents ?? []) as Array<{
       zohoRequestId?: string;
@@ -435,12 +455,16 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     }>;
 
     const docIndex = documents.findIndex((d) => d.zohoRequestId === request_id);
-    if (docIndex === -1) return;
+    if (docIndex === -1) {
+      return;
+    }
 
     const doc = documents[docIndex];
 
     // Idempotent: skip if already completed or signed
-    if (doc.signingStatus === 'completed' || doc.status === 'signed') return;
+    if (doc.signingStatus === 'completed' || doc.status === 'signed') {
+      return;
+    }
 
     // Handle declined actions
     const declinedAction = actions.find((a) => a.action_status === 'declined');
@@ -475,7 +499,9 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
 
     // Handle per-action signing events
     for (const action of actions) {
-      if (action.action_status !== 'signed') continue;
+      if (action.action_status !== 'signed') {
+        continue;
+      }
 
       // Client signed
       if (action.action_id === doc.clientActionId) {
@@ -494,7 +520,10 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       if (action.action_id === doc.adminActionId) {
         // Download signed PDF from Zoho and re-upload to S3
         if (document_ids.length > 0) {
-          const signedPdf = await zohoSign.getSignedDocument(request_id, document_ids[0].document_id);
+          const signedPdf = await zohoSign.getSignedDocument(
+            request_id,
+            document_ids[0].document_id,
+          );
           await uploadToS3(signedPdf, doc.fileUrl, 'application/pdf');
         }
 
@@ -518,7 +547,7 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   async function getSigningStatus(params: SigningStatusParams): Promise<SigningStatusResult> {
     const { orderId, documentIndex } = params;
 
-    const order = await OrderModel.findById(orderId).lean() as Record<string, unknown> | null;
+    const order = (await OrderModel.findById(orderId).lean()) as Record<string, unknown> | null;
     if (!order) {
       throw Object.assign(new Error('Order not found'), { status: 404 });
     }

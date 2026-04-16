@@ -51,12 +51,7 @@ export type {
   WhatsAppMediaDeps,
 } from './types';
 
-export {
-  WHATSAPP_MESSAGE_TYPES,
-  FREEFORM_WINDOW_HOURS,
-  toMetaFormat,
-  toE164,
-} from './types';
+export { WHATSAPP_MESSAGE_TYPES, FREEFORM_WINDOW_HOURS, toMetaFormat, toE164 } from './types';
 
 export { createWhatsAppConfigModel } from './models/whatsappConfigModel';
 export { createWhatsAppMessageModel } from './models/whatsappMessageModel';
@@ -84,10 +79,7 @@ export {
 
 export { createWhatsAppRoutes } from './routes/whatsappRoutes';
 
-export {
-  initMediaService,
-  processMediaDownload,
-} from './services/mediaService';
+export { initMediaService, processMediaDownload } from './services/mediaService';
 export type { MediaDownloadResult } from './services/mediaService';
 
 export {

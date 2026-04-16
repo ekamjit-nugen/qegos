@@ -5,11 +5,7 @@
  * Verifies: module exports, socket event types, emit helper safety.
  */
 
-import {
-  CONVERSATION_STATUSES,
-  MESSAGE_TYPES,
-  CANNED_RESPONSE_CATEGORIES,
-} from '../src/types';
+import { CONVERSATION_STATUSES, MESSAGE_TYPES, CANNED_RESPONSE_CATEGORIES } from '../src/types';
 
 import type {
   ServerToClientEvents,

@@ -39,12 +39,18 @@ let socketInstance: Socket | null = null;
  * Authenticates using the current access token.
  */
 function getSocket(): Socket | null {
-  if (typeof window === 'undefined') { return null; }
+  if (typeof window === 'undefined') {
+    return null;
+  }
 
-  if (socketInstance?.connected) { return socketInstance; }
+  if (socketInstance?.connected) {
+    return socketInstance;
+  }
 
   const token = getAccessToken();
-  if (!token) { return null; }
+  if (!token) {
+    return null;
+  }
 
   if (socketInstance) {
     socketInstance.auth = { token };
@@ -96,7 +102,9 @@ export function useChatSocket(
 
   useEffect(() => {
     const socket = getSocket();
-    if (!socket) { return; }
+    if (!socket) {
+      return;
+    }
     socketRef.current = socket;
 
     const handleNewMessage = (payload: NewMessagePayload): void => {
@@ -139,7 +147,9 @@ export function useChatSocket(
   // Auto-join/leave conversation room when activeConversationId changes
   useEffect(() => {
     const socket = socketRef.current;
-    if (!socket) { return; }
+    if (!socket) {
+      return;
+    }
 
     if (joinedRef.current && joinedRef.current !== activeConversationId) {
       socket.emit('leave_conversation', { conversationId: joinedRef.current });

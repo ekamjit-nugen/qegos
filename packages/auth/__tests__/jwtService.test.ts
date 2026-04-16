@@ -1,4 +1,10 @@
-import { initJwtService, generateAccessToken, verifyAccessToken, generateMfaChallengeToken, verifyMfaChallengeToken } from '../src/services/jwtService';
+import {
+  initJwtService,
+  generateAccessToken,
+  verifyAccessToken,
+  generateMfaChallengeToken,
+  verifyMfaChallengeToken,
+} from '../src/services/jwtService';
 import type { AuthConfig, TokenPayload } from '../src/types';
 
 const testConfig: AuthConfig = {

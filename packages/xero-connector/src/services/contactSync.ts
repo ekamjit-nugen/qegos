@@ -24,8 +24,10 @@ export function initContactSync(
 export async function syncContact(
   userId: string,
 ): Promise<{ xeroContactId: string; created: boolean }> {
-  const user = await UserModel.findById(userId).lean() as any;
-  if (!user) throw new Error('User not found');
+  const user = (await UserModel.findById(userId).lean()) as any;
+  if (!user) {
+    throw new Error('User not found');
+  }
 
   // Check if already synced via sync log
   const existingLog = await XeroSyncLogModel.findOne({
@@ -49,7 +51,12 @@ export async function syncContact(
   try {
     const result = await callXeroApi(async (accessToken, tenantId) => {
       // XRO-INV-06: Search by email first
-      let existingContact = await searchXeroContact(accessToken, tenantId, 'EmailAddress', user.email);
+      let existingContact = await searchXeroContact(
+        accessToken,
+        tenantId,
+        'EmailAddress',
+        user.email,
+      );
 
       // XRO-INV-06: Then by mobile
       if (!existingContact && user.mobile) {
@@ -78,7 +85,7 @@ export async function syncContact(
         throw new Error(`Xero contact creation failed: ${res.status} ${errBody}`);
       }
 
-      const data = await res.json() as { Contacts: Array<{ ContactID: string }> };
+      const data = (await res.json()) as { Contacts: Array<{ ContactID: string }> };
       return { contactId: data.Contacts[0].ContactID, created: true };
     });
 
@@ -89,7 +96,7 @@ export async function syncContact(
 
     return { xeroContactId: result.contactId, created: result.created };
   } catch (err: unknown) {
-    syncLog.status = (err instanceof XeroOfflineError) ? 'queued' : 'failed';
+    syncLog.status = err instanceof XeroOfflineError ? 'queued' : 'failed';
     syncLog.error = (err as Error).message;
     await syncLog.save();
     throw err;
@@ -107,7 +114,9 @@ export async function bulkSyncContacts(): Promise<{ synced: number; failed: numb
 
   const unsyncedUsers = await UserModel.find({
     _id: { $nin: syncedUserIds },
-  }).select('_id').lean();
+  })
+    .select('_id')
+    .lean();
 
   let synced = 0;
   let failed = 0;
@@ -132,9 +141,8 @@ async function searchXeroContact(
   field: string,
   value: string,
 ): Promise<Record<string, unknown> | null> {
-  const where = field === 'Phones'
-    ? `Phones.Any(Phone.PhoneNumber=="${value}")`
-    : `${field}=="${value}"`;
+  const where =
+    field === 'Phones' ? `Phones.Any(Phone.PhoneNumber=="${value}")` : `${field}=="${value}"`;
 
   const res = await fetch(
     `https://api.xero.com/api.xro/2.0/Contacts?where=${encodeURIComponent(where)}`,
@@ -147,9 +155,11 @@ async function searchXeroContact(
     },
   );
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return null;
+  }
 
-  const data = await res.json() as { Contacts: Array<Record<string, unknown>> };
+  const data = (await res.json()) as { Contacts: Array<Record<string, unknown>> };
   return data.Contacts?.[0] ?? null;
 }
 
@@ -162,21 +172,25 @@ function buildContactPayload(user: Record<string, any>): Record<string, unknown>
   };
 
   if (user.mobile) {
-    contact.Phones = [{
-      PhoneType: 'MOBILE',
-      PhoneNumber: user.mobile,
-    }];
+    contact.Phones = [
+      {
+        PhoneType: 'MOBILE',
+        PhoneNumber: user.mobile,
+      },
+    ];
   }
 
   if (user.address) {
-    contact.Addresses = [{
-      AddressType: 'STREET',
-      AddressLine1: user.address.street,
-      City: user.address.suburb,
-      Region: user.address.state,
-      PostalCode: user.address.postcode,
-      Country: 'Australia',
-    }];
+    contact.Addresses = [
+      {
+        AddressType: 'STREET',
+        AddressLine1: user.address.street,
+        City: user.address.suburb,
+        Region: user.address.state,
+        PostalCode: user.address.postcode,
+        Country: 'Australia',
+      },
+    ];
   }
 
   return contact;

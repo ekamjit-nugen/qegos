@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Appbar,
-  Button,
-  Text,
-  TextInput,
-  useTheme,
-} from 'react-native-paper';
+import { Appbar, Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/lib/api/client';
 
@@ -42,8 +36,8 @@ export default function ResetPasswordScreen(): React.ReactNode {
       setTimeout(() => router.replace('/login'), 2000);
     } catch (err) {
       const msg =
-        (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message ?? 'Reset link is invalid or expired';
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+        'Reset link is invalid or expired';
       setError(msg);
     } finally {
       setLoading(false);

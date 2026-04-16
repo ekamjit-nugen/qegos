@@ -5,10 +5,7 @@
  * retention policies, and privacy route configuration.
  */
 
-import {
-  ERASURE_REQUEST_STATUSES,
-  DATA_EXPORT_STATUSES,
-} from '@nugen/data-lifecycle/src/types';
+import { ERASURE_REQUEST_STATUSES, DATA_EXPORT_STATUSES } from '@nugen/data-lifecycle/src/types';
 
 import type {
   ErasureRequestStatus,
@@ -23,7 +20,6 @@ import type {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Privacy & Data Lifecycle (Privacy Act 1988)', () => {
-
   // ─── Erasure Request Workflow (GAP-C01) ────────────────────────────────────
 
   describe('Erasure Request Workflow', () => {
@@ -179,7 +175,11 @@ describe('Privacy & Data Lifecycle (Privacy Act 1988)', () => {
         { displayName: 'Orders', userIdField: 'userId', piiFields: {} },
         { displayName: 'Payments', userIdField: 'userId', piiFields: {} },
         { displayName: 'Leads', userIdField: '_id', piiFields: { firstName: 'REDACTED' } },
-        { displayName: 'Chat Messages', userIdField: 'senderId', piiFields: { content: '[message deleted]' } },
+        {
+          displayName: 'Chat Messages',
+          userIdField: 'senderId',
+          piiFields: { content: '[message deleted]' },
+        },
       ];
 
       for (const config of configs) {

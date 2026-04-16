@@ -7,7 +7,13 @@ import type {
   AvailableSlot,
   CalendarDayEntry,
 } from './appointment.types';
-import { ACTIVE_STATUSES, STATUS_TRANSITIONS, TERMINAL_STATUSES, timesOverlap, timeToMinutes } from './appointment.types';
+import {
+  ACTIVE_STATUSES,
+  STATUS_TRANSITIONS,
+  TERMINAL_STATUSES,
+  timesOverlap,
+  timeToMinutes,
+} from './appointment.types';
 
 interface AppointmentServiceDeps {
   AppointmentModel: Model<IAppointmentDocument>;
@@ -20,32 +26,70 @@ interface AppointmentServiceDeps {
 }
 
 export interface AppointmentServiceResult {
-  createAppointment: (data: Record<string, unknown>, actorUserId: string) => Promise<IAppointmentDocument>;
-  getAppointment: (id: string, scopeFilter?: Record<string, unknown>) => Promise<IAppointmentDocument | null>;
-  listAppointments: (query: AppointmentListQuery) => Promise<{ appointments: IAppointmentDocument[]; total: number; page: number; limit: number }>;
-  updateAppointment: (id: string, data: Record<string, unknown>, scopeFilter?: Record<string, unknown>) => Promise<IAppointmentDocument | null>;
-  transitionStatus: (id: string, newStatus: AppointmentStatus, scopeFilter?: Record<string, unknown>) => Promise<IAppointmentDocument>;
-  softDelete: (id: string, scopeFilter?: Record<string, unknown>) => Promise<IAppointmentDocument | null>;
-  getStaffAvailability: (staffId: string, dateFrom: string, dateTo: string) => Promise<AvailableSlot[]>;
-  setStaffAvailability: (staffId: string, data: Record<string, unknown>) => Promise<IStaffAvailabilityDocument>;
+  createAppointment: (
+    data: Record<string, unknown>,
+    actorUserId: string,
+  ) => Promise<IAppointmentDocument>;
+  getAppointment: (
+    id: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<IAppointmentDocument | null>;
+  listAppointments: (query: AppointmentListQuery) => Promise<{
+    appointments: IAppointmentDocument[];
+    total: number;
+    page: number;
+    limit: number;
+  }>;
+  updateAppointment: (
+    id: string,
+    data: Record<string, unknown>,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<IAppointmentDocument | null>;
+  transitionStatus: (
+    id: string,
+    newStatus: AppointmentStatus,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<IAppointmentDocument>;
+  softDelete: (
+    id: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<IAppointmentDocument | null>;
+  getStaffAvailability: (
+    staffId: string,
+    dateFrom: string,
+    dateTo: string,
+  ) => Promise<AvailableSlot[]>;
+  setStaffAvailability: (
+    staffId: string,
+    data: Record<string, unknown>,
+  ) => Promise<IStaffAvailabilityDocument>;
   getUpcomingAppointments: (userId: string) => Promise<IAppointmentDocument[]>;
-  getCalendarView: (dateFrom: string, dateTo: string, staffId?: string) => Promise<CalendarDayEntry[]>;
+  getCalendarView: (
+    dateFrom: string,
+    dateTo: string,
+    staffId?: string,
+  ) => Promise<CalendarDayEntry[]>;
   processReminders: () => Promise<number>;
   markNoShows: () => Promise<number>;
 }
 
 export function createAppointmentService(deps: AppointmentServiceDeps): AppointmentServiceResult {
-  const { AppointmentModel, StaffAvailabilityModel, OrderModel, notificationSend, getSetting } = deps;
+  const { AppointmentModel, StaffAvailabilityModel, OrderModel, notificationSend, getSetting } =
+    deps;
 
   /**
    * Read the configured buffer (break) minutes from settings.
    * Falls back to 5 minutes if settings are unavailable.
    */
   async function getBufferMinutes(): Promise<number> {
-    if (!getSetting) return 5;
+    if (!getSetting) {
+      return 5;
+    }
     try {
       const val = await getSetting('appointment.bufferMinutes');
-      if (typeof val === 'number' && val >= 0) return val;
+      if (typeof val === 'number' && val >= 0) {
+        return val;
+      }
     } catch {
       // fall back
     }
@@ -120,7 +164,9 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
    * Sync appointment data back to Order.scheduledAppointment embedded field.
    */
   async function syncOrderAppointment(appointment: IAppointmentDocument): Promise<void> {
-    if (!appointment.orderId) return;
+    if (!appointment.orderId) {
+      return;
+    }
     try {
       await OrderModel.findByIdAndUpdate(appointment.orderId, {
         scheduledAppointment: {
@@ -130,9 +176,7 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
           type: appointment.type,
           meetingLink: appointment.meetingLink ?? undefined,
           // Map extended status to legacy 4-status set
-          status: TERMINAL_STATUSES.includes(appointment.status)
-            ? appointment.status
-            : 'scheduled',
+          status: TERMINAL_STATUSES.includes(appointment.status) ? appointment.status : 'scheduled',
         },
       });
     } catch {
@@ -202,13 +246,25 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
 
     if (query.dateFrom || query.dateTo) {
       filter.date = {};
-      if (query.dateFrom) (filter.date as Record<string, unknown>).$gte = new Date(query.dateFrom);
-      if (query.dateTo) (filter.date as Record<string, unknown>).$lte = new Date(query.dateTo);
+      if (query.dateFrom) {
+        (filter.date as Record<string, unknown>).$gte = new Date(query.dateFrom);
+      }
+      if (query.dateTo) {
+        (filter.date as Record<string, unknown>).$lte = new Date(query.dateTo);
+      }
     }
-    if (query.staffId) filter.staffId = query.staffId;
-    if (query.userId) filter.userId = query.userId;
-    if (query.status) filter.status = query.status;
-    if (query.orderId) filter.orderId = query.orderId;
+    if (query.staffId) {
+      filter.staffId = query.staffId;
+    }
+    if (query.userId) {
+      filter.userId = query.userId;
+    }
+    if (query.status) {
+      filter.status = query.status;
+    }
+    if (query.orderId) {
+      filter.orderId = query.orderId;
+    }
 
     const [appointments, total] = await Promise.all([
       AppointmentModel.find(filter)
@@ -229,7 +285,9 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     scopeFilter?: Record<string, unknown>,
   ): Promise<IAppointmentDocument | null> {
     const appointment = await AppointmentModel.findOne({ _id: id, ...scopeFilter });
-    if (!appointment) return null;
+    if (!appointment) {
+      return null;
+    }
 
     // Don't allow updating terminal appointments
     if (TERMINAL_STATUSES.includes(appointment.status)) {
@@ -247,13 +305,7 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     const newEnd = (data.endTime as string) ?? appointment.endTime;
 
     if (data.date || data.startTime || data.endTime) {
-      await checkOverlap(
-        String(appointment.staffId),
-        newDate,
-        newStart,
-        newEnd,
-        id,
-      );
+      await checkOverlap(String(appointment.staffId), newDate, newStart, newEnd, id);
     }
 
     // Validate endTime > startTime for partial updates
@@ -272,7 +324,9 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     }
 
     const updated = await AppointmentModel.findByIdAndUpdate(id, { $set: update }, { new: true });
-    if (updated) await syncOrderAppointment(updated);
+    if (updated) {
+      await syncOrderAppointment(updated);
+    }
     return updated;
   }
 
@@ -393,9 +447,7 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
       );
 
       // Check booked appointments on this date
-      const dayBooked = booked.filter(
-        (a) => a.date.toISOString().split('T')[0] === dateStr,
-      );
+      const dayBooked = booked.filter((a) => a.date.toISOString().split('T')[0] === dateStr);
 
       for (const window of dayWindows) {
         // Split each availability window into discrete slots
@@ -493,7 +545,9 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     const filter: Record<string, unknown> = {
       date: { $gte: new Date(dateFrom), $lte: new Date(dateTo) },
     };
-    if (staffId) filter.staffId = staffId;
+    if (staffId) {
+      filter.staffId = staffId;
+    }
 
     const appointments = await AppointmentModel.find(filter)
       .populate('userId', 'firstName lastName email')
@@ -504,7 +558,9 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
     const dayMap = new Map<string, IAppointmentDocument[]>();
     for (const appt of appointments) {
       const dateStr = appt.date.toISOString().split('T')[0];
-      if (!dayMap.has(dateStr)) dayMap.set(dateStr, []);
+      if (!dayMap.has(dateStr)) {
+        dayMap.set(dateStr, []);
+      }
       dayMap.get(dateStr)!.push(appt);
     }
 
@@ -543,7 +599,11 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
       const msUntil = apptTime.getTime() - now.getTime();
 
       // 24h email reminder (send when <= 24h away and not yet sent)
-      if (msUntil <= 24 * 60 * 60 * 1000 && msUntil > 0 && !appt.remindersSent.includes('24h_email')) {
+      if (
+        msUntil <= 24 * 60 * 60 * 1000 &&
+        msUntil > 0 &&
+        !appt.remindersSent.includes('24h_email')
+      ) {
         if (notificationSend) {
           try {
             await notificationSend({
@@ -567,7 +627,11 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
       }
 
       // 2h push+SMS reminder
-      if (msUntil <= 2 * 60 * 60 * 1000 && msUntil > 0 && !appt.remindersSent.includes('2h_push_sms')) {
+      if (
+        msUntil <= 2 * 60 * 60 * 1000 &&
+        msUntil > 0 &&
+        !appt.remindersSent.includes('2h_push_sms')
+      ) {
         if (notificationSend) {
           try {
             await notificationSend({
@@ -618,7 +682,9 @@ export function createAppointmentService(deps: AppointmentServiceDeps): Appointm
       endDateTime.setUTCHours(hours, minutes, 0, 0);
 
       // Only mark if 30+ minutes past end time
-      if (endDateTime.getTime() + 30 * 60 * 1000 > now.getTime()) continue;
+      if (endDateTime.getTime() + 30 * 60 * 1000 > now.getTime()) {
+        continue;
+      }
 
       appt.status = 'no_show';
       appt.noShowFollowUp = true;

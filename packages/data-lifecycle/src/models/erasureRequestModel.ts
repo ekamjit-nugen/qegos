@@ -30,9 +30,7 @@ const erasureRequestSchema = new Schema<IErasureRequestDocument>(
 
 erasureRequestSchema.index({ status: 1, createdAt: -1 });
 
-export function createErasureRequestModel(
-  connection: Connection,
-): Model<IErasureRequestDocument> {
+export function createErasureRequestModel(connection: Connection): Model<IErasureRequestDocument> {
   if (connection.models.ErasureRequest) {
     return connection.models.ErasureRequest as Model<IErasureRequestDocument>;
   }

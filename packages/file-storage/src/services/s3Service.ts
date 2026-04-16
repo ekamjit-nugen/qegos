@@ -44,11 +44,7 @@ export function buildS3Key(
 
 // ─── Upload ─────────────────────────────────────────────────────────────────
 
-export async function uploadToS3(
-  buffer: Buffer,
-  key: string,
-  mimeType: string,
-): Promise<string> {
+export async function uploadToS3(buffer: Buffer, key: string, mimeType: string): Promise<string> {
   await s3Client.send(
     new PutObjectCommand({
       Bucket: bucket,
@@ -63,11 +59,7 @@ export async function uploadToS3(
 /**
  * Upload infected file to quarantine bucket (CPV-INV-01).
  */
-export async function quarantineFile(
-  buffer: Buffer,
-  key: string,
-  mimeType: string,
-): Promise<void> {
+export async function quarantineFile(buffer: Buffer, key: string, mimeType: string): Promise<void> {
   await s3Client.send(
     new PutObjectCommand({
       Bucket: quarantineBucket,

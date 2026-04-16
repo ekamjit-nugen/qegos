@@ -193,10 +193,7 @@ export const payzooProvider: IPaymentProvider = {
   },
 
   async getPaymentStatus(gatewayTxnId: string): Promise<PaymentStatusResult> {
-    const result = await payzooRequest<PayzooStatusResponse>(
-      'GET',
-      `/v1/payments/${gatewayTxnId}`,
-    );
+    const result = await payzooRequest<PayzooStatusResponse>('GET', `/v1/payments/${gatewayTxnId}`);
 
     return {
       gatewayTxnId: result.transactionId,

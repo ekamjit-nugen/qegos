@@ -29,7 +29,12 @@ export default function PaymentsLoading(): React.ReactNode {
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div
             key={i}
-            style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}
+            style={{
+              display: 'flex',
+              gap: 16,
+              padding: '12px 0',
+              borderBottom: '1px solid #f0f0f0',
+            }}
           >
             <Skeleton.Input active size="small" style={{ width: '15%' }} />
             <Skeleton.Input active size="small" style={{ width: '20%' }} />

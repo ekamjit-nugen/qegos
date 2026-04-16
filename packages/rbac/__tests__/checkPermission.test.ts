@@ -5,18 +5,18 @@ import type { IPermission } from '../src/types';
 describe('@nugen/rbac', () => {
   describe('computeDiff (PRM-INV-01)', () => {
     it('should detect added resources', () => {
-      const before: IPermission[] = [
-        { resource: 'users', actions: ['read'], scope: 'all' },
-      ];
+      const before: IPermission[] = [{ resource: 'users', actions: ['read'], scope: 'all' }];
       const after: IPermission[] = [
         { resource: 'users', actions: ['read'], scope: 'all' },
         { resource: 'orders', actions: ['create', 'read'], scope: 'own' },
       ];
       const diff = computeDiff(before, after);
-      expect(diff).toContainEqual(expect.objectContaining({
-        resource: 'orders',
-        changeType: 'added',
-      }));
+      expect(diff).toContainEqual(
+        expect.objectContaining({
+          resource: 'orders',
+          changeType: 'added',
+        }),
+      );
     });
 
     it('should detect removed resources', () => {
@@ -24,66 +24,62 @@ describe('@nugen/rbac', () => {
         { resource: 'users', actions: ['read'], scope: 'all' },
         { resource: 'orders', actions: ['read'], scope: 'own' },
       ];
-      const after: IPermission[] = [
-        { resource: 'users', actions: ['read'], scope: 'all' },
-      ];
+      const after: IPermission[] = [{ resource: 'users', actions: ['read'], scope: 'all' }];
       const diff = computeDiff(before, after);
-      expect(diff).toContainEqual(expect.objectContaining({
-        resource: 'orders',
-        changeType: 'removed',
-      }));
+      expect(diff).toContainEqual(
+        expect.objectContaining({
+          resource: 'orders',
+          changeType: 'removed',
+        }),
+      );
     });
 
     it('should detect scope changes', () => {
-      const before: IPermission[] = [
-        { resource: 'orders', actions: ['read'], scope: 'assigned' },
-      ];
-      const after: IPermission[] = [
-        { resource: 'orders', actions: ['read'], scope: 'all' },
-      ];
+      const before: IPermission[] = [{ resource: 'orders', actions: ['read'], scope: 'assigned' }];
+      const after: IPermission[] = [{ resource: 'orders', actions: ['read'], scope: 'all' }];
       const diff = computeDiff(before, after);
-      expect(diff).toContainEqual(expect.objectContaining({
-        resource: 'orders',
-        changeType: 'scope_changed',
-        before: 'assigned',
-        after: 'all',
-      }));
+      expect(diff).toContainEqual(
+        expect.objectContaining({
+          resource: 'orders',
+          changeType: 'scope_changed',
+          before: 'assigned',
+          after: 'all',
+        }),
+      );
     });
 
     it('should detect added actions', () => {
-      const before: IPermission[] = [
-        { resource: 'users', actions: ['read'], scope: 'all' },
-      ];
+      const before: IPermission[] = [{ resource: 'users', actions: ['read'], scope: 'all' }];
       const after: IPermission[] = [
         { resource: 'users', actions: ['read', 'update'], scope: 'all' },
       ];
       const diff = computeDiff(before, after);
-      expect(diff).toContainEqual(expect.objectContaining({
-        resource: 'users',
-        action: 'update',
-        changeType: 'added',
-      }));
+      expect(diff).toContainEqual(
+        expect.objectContaining({
+          resource: 'users',
+          action: 'update',
+          changeType: 'added',
+        }),
+      );
     });
 
     it('should detect removed actions', () => {
       const before: IPermission[] = [
         { resource: 'users', actions: ['read', 'delete'], scope: 'all' },
       ];
-      const after: IPermission[] = [
-        { resource: 'users', actions: ['read'], scope: 'all' },
-      ];
+      const after: IPermission[] = [{ resource: 'users', actions: ['read'], scope: 'all' }];
       const diff = computeDiff(before, after);
-      expect(diff).toContainEqual(expect.objectContaining({
-        resource: 'users',
-        action: 'delete',
-        changeType: 'removed',
-      }));
+      expect(diff).toContainEqual(
+        expect.objectContaining({
+          resource: 'users',
+          action: 'delete',
+          changeType: 'removed',
+        }),
+      );
     });
 
     it('should return empty diff when nothing changed', () => {
-      const perms: IPermission[] = [
-        { resource: 'users', actions: ['read'], scope: 'all' },
-      ];
+      const perms: IPermission[] = [{ resource: 'users', actions: ['read'], scope: 'all' }];
       const diff = computeDiff(perms, perms);
       expect(diff).toHaveLength(0);
     });

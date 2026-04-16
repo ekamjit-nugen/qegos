@@ -7,10 +7,22 @@ export type WhatsAppDirection = 'inbound' | 'outbound';
 export type WhatsAppContactType = 'lead' | 'user' | 'unknown';
 
 export type WhatsAppMessageType =
-  | 'template' | 'text' | 'image' | 'document' | 'audio' | 'video' | 'reaction';
+  | 'template'
+  | 'text'
+  | 'image'
+  | 'document'
+  | 'audio'
+  | 'video'
+  | 'reaction';
 
 export const WHATSAPP_MESSAGE_TYPES: WhatsAppMessageType[] = [
-  'template', 'text', 'image', 'document', 'audio', 'video', 'reaction',
+  'template',
+  'text',
+  'image',
+  'document',
+  'audio',
+  'video',
+  'reaction',
 ];
 
 export type WhatsAppMessageStatus = 'sent' | 'delivered' | 'read' | 'failed';

@@ -3,7 +3,9 @@ import { body, param, query } from 'express-validator';
 export const sendTemplateValidation = [
   body('contactId').isMongoId().withMessage('Invalid contact ID'),
   body('contactType').isIn(['lead', 'user']).withMessage('contactType must be lead or user'),
-  body('contactMobile').matches(/^\+61\d{9}$/).withMessage('Must be E.164 Australian format'),
+  body('contactMobile')
+    .matches(/^\+61\d{9}$/)
+    .withMessage('Must be E.164 Australian format'),
   body('templateName').isString().isLength({ min: 1 }).withMessage('Template name required'),
   body('params').optional().isArray(),
   body('params.*').optional().isString(),
@@ -12,7 +14,9 @@ export const sendTemplateValidation = [
 export const sendFreeformValidation = [
   body('contactId').isMongoId().withMessage('Invalid contact ID'),
   body('contactType').isIn(['lead', 'user']).withMessage('contactType must be lead or user'),
-  body('contactMobile').matches(/^\+61\d{9}$/).withMessage('Must be E.164 Australian format'),
+  body('contactMobile')
+    .matches(/^\+61\d{9}$/)
+    .withMessage('Must be E.164 Australian format'),
   body('content').isString().isLength({ min: 1 }).withMessage('Message content required'),
 ];
 

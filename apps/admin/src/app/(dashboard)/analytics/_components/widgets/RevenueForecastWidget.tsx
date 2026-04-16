@@ -26,19 +26,21 @@ export function RevenueForecastWidget(): React.ReactNode {
   const isEmpty = !data || (data.historical.length === 0 && data.forecast.length === 0);
 
   // Combine historical + forecast into single chart dataset
-  const chartData = data ? [
-    ...data.historical.map((h) => ({
-      period: h.period,
-      revenue: h.totalCents / 100,
-      count: h.count,
-    })),
-    ...data.forecast.map((f) => ({
-      period: f.quarter,
-      forecast: f.predictedCents / 100,
-      lower: f.lowerBoundCents / 100,
-      upper: f.upperBoundCents / 100,
-    })),
-  ] : [];
+  const chartData = data
+    ? [
+        ...data.historical.map((h) => ({
+          period: h.period,
+          revenue: h.totalCents / 100,
+          count: h.count,
+        })),
+        ...data.forecast.map((f) => ({
+          period: f.quarter,
+          forecast: f.predictedCents / 100,
+          lower: f.lowerBoundCents / 100,
+          upper: f.upperBoundCents / 100,
+        })),
+      ]
+    : [];
 
   // Find the transition point between historical and forecast
   const transitionIdx = data ? data.historical.length - 1 : -1;
@@ -70,7 +72,7 @@ export function RevenueForecastWidget(): React.ReactNode {
           <XAxis dataKey="period" fontSize={11} tickMargin={4} />
           <YAxis
             fontSize={11}
-            tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+            tickFormatter={(v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`)}
           />
           <Tooltip
             formatter={(value: number, name: string) => [formatCurrency(value * 100), name]}

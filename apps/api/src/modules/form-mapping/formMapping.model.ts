@@ -76,8 +76,6 @@ formMappingSchema.pre('countDocuments', function () {
   }
 });
 
-export function createFormMappingModel(
-  connection: Connection,
-): Model<IFormMappingDocument> {
+export function createFormMappingModel(connection: Connection): Model<IFormMappingDocument> {
   return connection.model<IFormMappingDocument>('FormMapping', formMappingSchema);
 }

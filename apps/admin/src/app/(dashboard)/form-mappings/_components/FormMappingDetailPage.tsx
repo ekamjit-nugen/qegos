@@ -89,7 +89,8 @@ export function FormMappingDetailPage({ mappingId }: { mappingId: string }): Rea
   const onPublish = (version: number): void => {
     Modal.confirm({
       title: `Publish v${version}?`,
-      content: 'Published versions become immutable. You can still disable or set as default later.',
+      content:
+        'Published versions become immutable. You can still disable or set as default later.',
       onOk: async () => {
         try {
           await publish.mutateAsync(version);
@@ -199,9 +200,7 @@ export function FormMappingDetailPage({ mappingId }: { mappingId: string }): Rea
             <Button
               size="small"
               icon={<EditOutlined />}
-              onClick={() =>
-                router.push(`/form-mappings/${mappingId}/versions/${record.version}`)
-              }
+              onClick={() => router.push(`/form-mappings/${mappingId}/versions/${record.version}`)}
             >
               {isDraft ? 'Edit' : 'View'}
             </Button>
@@ -217,11 +216,7 @@ export function FormMappingDetailPage({ mappingId }: { mappingId: string }): Rea
             )}
             {isPublished && (
               <Tooltip title="Creates a new draft copy you can edit">
-                <Button
-                  size="small"
-                  icon={<ForkOutlined />}
-                  onClick={() => onFork(record.version)}
-                >
+                <Button size="small" icon={<ForkOutlined />} onClick={() => onFork(record.version)}>
                   Fork
                 </Button>
               </Tooltip>

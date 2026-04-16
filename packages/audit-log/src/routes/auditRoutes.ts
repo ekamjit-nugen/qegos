@@ -44,26 +44,52 @@ export function createAuditRoutes(deps: AuditRouteDeps): Router {
   const queryHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const body = req.body as Record<string, unknown>;
     const page = parseInt(body.page as string) || parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(body.limit as string) || parseInt(req.query.limit as string) || 20, 100);
+    const limit = Math.min(
+      parseInt(body.limit as string) || parseInt(req.query.limit as string) || 20,
+      100,
+    );
     const skip = (page - 1) * limit;
 
     const {
-      actor, actorType, action, resource, resourceId, severity,
-      dateFrom, dateTo, search: searchTerm,
+      actor,
+      actorType,
+      action,
+      resource,
+      resourceId,
+      severity,
+      dateFrom,
+      dateTo,
+      search: searchTerm,
     } = req.body as Record<string, string | undefined>;
 
     const filter: Record<string, unknown> = {};
-    if (actor) { filter.actor = actor; }
-    if (actorType) { filter.actorType = actorType; }
-    if (action) { filter.action = action; }
-    if (resource) { filter.resource = resource; }
-    if (resourceId) { filter.resourceId = resourceId; }
-    if (severity) { filter.severity = severity; }
+    if (actor) {
+      filter.actor = actor;
+    }
+    if (actorType) {
+      filter.actorType = actorType;
+    }
+    if (action) {
+      filter.action = action;
+    }
+    if (resource) {
+      filter.resource = resource;
+    }
+    if (resourceId) {
+      filter.resourceId = resourceId;
+    }
+    if (severity) {
+      filter.severity = severity;
+    }
 
     if (dateFrom || dateTo) {
       filter.timestamp = {};
-      if (dateFrom) { (filter.timestamp as Record<string, unknown>).$gte = new Date(dateFrom); }
-      if (dateTo) { (filter.timestamp as Record<string, unknown>).$lte = new Date(dateTo); }
+      if (dateFrom) {
+        (filter.timestamp as Record<string, unknown>).$gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        (filter.timestamp as Record<string, unknown>).$lte = new Date(dateTo);
+      }
     }
 
     // FIX for Vegeta S-6: Use $text search with text index instead of $regex (prevents ReDoS)
@@ -98,15 +124,26 @@ export function createAuditRoutes(deps: AuditRouteDeps): Router {
     check('audit_logs', 'export') as never,
     ...validate([...dateRange()]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const { dateFrom, dateTo, resource, severity } = req.body as Record<string, string | undefined>;
+      const { dateFrom, dateTo, resource, severity } = req.body as Record<
+        string,
+        string | undefined
+      >;
 
       const filter: Record<string, unknown> = {};
-      if (resource) { filter.resource = resource; }
-      if (severity) { filter.severity = severity; }
+      if (resource) {
+        filter.resource = resource;
+      }
+      if (severity) {
+        filter.severity = severity;
+      }
       if (dateFrom || dateTo) {
         filter.timestamp = {};
-        if (dateFrom) { (filter.timestamp as Record<string, unknown>).$gte = new Date(dateFrom); }
-        if (dateTo) { (filter.timestamp as Record<string, unknown>).$lte = new Date(dateTo); }
+        if (dateFrom) {
+          (filter.timestamp as Record<string, unknown>).$gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          (filter.timestamp as Record<string, unknown>).$lte = new Date(dateTo);
+        }
       }
 
       // FIX for Vegeta G-5: Use cursor-based streaming for large exports
@@ -114,9 +151,7 @@ export function createAuditRoutes(deps: AuditRouteDeps): Router {
       res.setHeader('Content-Disposition', 'attachment; filename="audit-log-export.json"');
       res.write('[\n');
 
-      const cursor = AuditLogModel.find(filter)
-        .sort({ timestamp: -1 })
-        .cursor();
+      const cursor = AuditLogModel.find(filter).sort({ timestamp: -1 }).cursor();
 
       let first = true;
       for await (const doc of cursor) {

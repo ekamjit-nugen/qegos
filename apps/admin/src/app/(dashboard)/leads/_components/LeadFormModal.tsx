@@ -1,14 +1,31 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Radio, Row, Col, App, Switch, Divider } from 'antd';
+import {
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Radio,
+  Row,
+  Col,
+  App,
+  Switch,
+  Divider,
+} from 'antd';
 import { useCreateLead, useUpdateLead } from '@/hooks/useLeads';
 import {
-  LEAD_SOURCES, LEAD_SOURCE_LABELS,
-  MARITAL_STATUSES, MARITAL_STATUS_LABELS,
-  EMPLOYMENT_TYPES, EMPLOYMENT_TYPE_LABELS,
-  PREFERRED_LANGUAGES, PREFERRED_LANGUAGE_LABELS,
-  PREFERRED_CONTACTS, PREFERRED_CONTACT_LABELS,
+  LEAD_SOURCES,
+  LEAD_SOURCE_LABELS,
+  MARITAL_STATUSES,
+  MARITAL_STATUS_LABELS,
+  EMPLOYMENT_TYPES,
+  EMPLOYMENT_TYPE_LABELS,
+  PREFERRED_LANGUAGES,
+  PREFERRED_LANGUAGE_LABELS,
+  PREFERRED_CONTACTS,
+  PREFERRED_CONTACT_LABELS,
 } from '@/types/lead';
 import type { Lead } from '@/types/lead';
 import { AU_STATES, getFinancialYears } from '@/lib/utils/constants';
@@ -65,17 +82,25 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
       title={isEdit ? 'Edit Lead' : 'New Lead'}
       open={open}
       onCancel={onClose}
-      onOk={() => { void handleSubmit(); }}
+      onOk={() => {
+        void handleSubmit();
+      }}
       confirmLoading={createMutation.isPending || updateMutation.isPending}
       width={720}
       destroyOnClose
     >
       <Form form={form} layout="vertical" size="middle">
         {/* ─── Basic Info ──────────────────────────────────────────── */}
-        <Divider orientation="left" style={{ fontSize: 13, margin: '0 0 16px' }}>Basic Information</Divider>
+        <Divider orientation="left" style={{ fontSize: 13, margin: '0 0 16px' }}>
+          Basic Information
+        </Divider>
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="firstName" label="First Name" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item
+              name="firstName"
+              label="First Name"
+              rules={[{ required: true, message: 'Required' }]}
+            >
               <Input />
             </Form.Item>
           </Col>
@@ -87,19 +112,31 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
         </Row>
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="mobile" label="Mobile" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item
+              name="mobile"
+              label="Mobile"
+              rules={[{ required: true, message: 'Required' }]}
+            >
               <Input placeholder="+61412345678" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Invalid email' }]}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ type: 'email', message: 'Invalid email' }]}
+            >
               <Input />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="source" label="Source" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item
+              name="source"
+              label="Source"
+              rules={[{ required: true, message: 'Required' }]}
+            >
               <Select options={sourceOptions} />
             </Form.Item>
           </Col>
@@ -115,13 +152,18 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
         </Row>
 
         {/* ─── Contact Preferences ─────────────────────────────────── */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>Contact Preferences</Divider>
+        <Divider orientation="left" style={{ fontSize: 13 }}>
+          Contact Preferences
+        </Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="preferredLanguage" label="Preferred Language">
               <Select
                 allowClear
-                options={PREFERRED_LANGUAGES.map((l) => ({ value: l, label: PREFERRED_LANGUAGE_LABELS[l] }))}
+                options={PREFERRED_LANGUAGES.map((l) => ({
+                  value: l,
+                  label: PREFERRED_LANGUAGE_LABELS[l],
+                }))}
               />
             </Form.Item>
           </Col>
@@ -129,14 +171,19 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
             <Form.Item name="preferredContact" label="Preferred Contact">
               <Select
                 allowClear
-                options={PREFERRED_CONTACTS.map((c) => ({ value: c, label: PREFERRED_CONTACT_LABELS[c] }))}
+                options={PREFERRED_CONTACTS.map((c) => ({
+                  value: c,
+                  label: PREFERRED_CONTACT_LABELS[c],
+                }))}
               />
             </Form.Item>
           </Col>
         </Row>
 
         {/* ─── Location ────────────────────────────────────────────── */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>Location</Divider>
+        <Divider orientation="left" style={{ fontSize: 13 }}>
+          Location
+        </Divider>
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item name="suburb" label="Suburb">
@@ -160,7 +207,9 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
         </Row>
 
         {/* ─── Financial ───────────────────────────────────────────── */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>Financial</Divider>
+        <Divider orientation="left" style={{ fontSize: 13 }}>
+          Financial
+        </Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="financialYear" label="Financial Year">
@@ -178,13 +227,18 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
         </Row>
 
         {/* ─── Demographics ────────────────────────────────────────── */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>Demographics</Divider>
+        <Divider orientation="left" style={{ fontSize: 13 }}>
+          Demographics
+        </Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="maritalStatus" label="Marital Status">
               <Select
                 allowClear
-                options={MARITAL_STATUSES.map((m) => ({ value: m, label: MARITAL_STATUS_LABELS[m] }))}
+                options={MARITAL_STATUSES.map((m) => ({
+                  value: m,
+                  label: MARITAL_STATUS_LABELS[m],
+                }))}
               />
             </Form.Item>
           </Col>
@@ -192,7 +246,10 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
             <Form.Item name="employmentType" label="Employment Type">
               <Select
                 allowClear
-                options={EMPLOYMENT_TYPES.map((e) => ({ value: e, label: EMPLOYMENT_TYPE_LABELS[e] }))}
+                options={EMPLOYMENT_TYPES.map((e) => ({
+                  value: e,
+                  label: EMPLOYMENT_TYPE_LABELS[e],
+                }))}
               />
             </Form.Item>
           </Col>
@@ -228,7 +285,9 @@ export function LeadFormModal({ open, onClose, lead }: LeadFormModalProps): Reac
         </Row>
 
         {/* ─── Notes ───────────────────────────────────────────────── */}
-        <Divider orientation="left" style={{ fontSize: 13 }}>Notes</Divider>
+        <Divider orientation="left" style={{ fontSize: 13 }}>
+          Notes
+        </Divider>
         <Form.Item name="notes" label="Notes">
           <Input.TextArea rows={3} />
         </Form.Item>

@@ -23,9 +23,9 @@ import {
   type PaymentGateway,
 } from '@nugen/payment-gateway';
 import { getRequestId } from '../../lib/requestContext';
-import type { IOrderDocument2 } from './order.types';
 import type { PromoCodeServiceResult } from '../promo-code/promoCode.service';
 import type { CreditServiceResult } from '../credit/credit.service';
+import type { IOrderDocument2 } from './order.types';
 
 const auditLog = {
   log: (params: Record<string, unknown>): void => {

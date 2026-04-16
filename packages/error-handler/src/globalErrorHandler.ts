@@ -73,7 +73,9 @@ export function globalErrorHandler(
       logError('Non-operational error', { message: err.message, stack: err.stack, requestId });
     }
     const json = err.toJSON();
-    if (requestId) (json as Record<string, unknown>).requestId = requestId;
+    if (requestId) {
+      (json as Record<string, unknown>).requestId = requestId;
+    }
     res.status(err.statusCode).json(json);
     return;
   }

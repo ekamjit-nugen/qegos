@@ -59,7 +59,12 @@ export function init(
     providers.set('sms', twilioProvider);
   }
 
-  if (config.sesRegion && config.sesAccessKeyId && config.sesSecretAccessKey && config.sesFromEmail) {
+  if (
+    config.sesRegion &&
+    config.sesAccessKeyId &&
+    config.sesSecretAccessKey &&
+    config.sesFromEmail
+  ) {
     initSESProvider({
       region: config.sesRegion,
       accessKeyId: config.sesAccessKeyId,
@@ -79,7 +84,12 @@ export function init(
 
   // Initialize services
   initTemplateService(TemplateModel, config);
-  initAudienceService(externalModels.LeadModel, externalModels.UserModel, OptOutModel, ConsentModel);
+  initAudienceService(
+    externalModels.LeadModel,
+    externalModels.UserModel,
+    OptOutModel,
+    ConsentModel,
+  );
   initMessageService(MessageModel, CampaignModel, OptOutModel);
   initCampaignService(CampaignModel, TemplateModel, config, providers);
   initQueueProcessor(CampaignModel, MessageModel, providers, config);
@@ -115,11 +125,7 @@ export {
   getTemplateById,
   initTemplateService,
 } from './services/templateService';
-export {
-  resolveAudience,
-  getAudienceCount,
-  initAudienceService,
-} from './services/audienceService';
+export { resolveAudience, getAudienceCount, initAudienceService } from './services/audienceService';
 export {
   createMessages,
   getQueuedMessages,

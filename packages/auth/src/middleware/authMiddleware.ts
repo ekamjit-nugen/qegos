@@ -19,7 +19,9 @@ export function authenticate(): RequestHandler {
   return async (req, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!_UserModel) {
-        throw new Error('Auth middleware not initialized. Call initAuthMiddleware(UserModel) first.');
+        throw new Error(
+          'Auth middleware not initialized. Call initAuthMiddleware(UserModel) first.',
+        );
       }
 
       // Extract token from Authorization header
@@ -38,10 +40,13 @@ export function authenticate(): RequestHandler {
       }
 
       // Fetch user to verify current state
-      const user = await _UserModel
-        .findById(decoded.userId)
-        .select('+passwordChangedAt')
-        .lean<{ _id: string; passwordChangedAt?: Date; accountLockedUntil?: Date; status: boolean; isDeleted: boolean }>();
+      const user = await _UserModel.findById(decoded.userId).select('+passwordChangedAt').lean<{
+        _id: string;
+        passwordChangedAt?: Date;
+        accountLockedUntil?: Date;
+        status: boolean;
+        isDeleted: boolean;
+      }>();
 
       if (!user) {
         throw AppError.unauthorized('User no longer exists');

@@ -4,14 +4,39 @@ import { body, param, query } from 'express-validator';
 
 const CHANNELS = ['sms', 'email', 'whatsapp', 'sms_email', 'all'];
 const SINGLE_CHANNELS = ['sms', 'email', 'whatsapp'];
-const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'paused', 'sent', 'failed', 'cancelled'];
-const AUDIENCE_TYPES = ['all_leads', 'filtered_leads', 'all_users', 'filtered_users', 'custom_list'];
+const CAMPAIGN_STATUSES = [
+  'draft',
+  'scheduled',
+  'sending',
+  'paused',
+  'sent',
+  'failed',
+  'cancelled',
+];
+const AUDIENCE_TYPES = [
+  'all_leads',
+  'filtered_leads',
+  'all_users',
+  'filtered_users',
+  'custom_list',
+];
 const TEMPLATE_CATEGORIES = [
-  'follow_up', 'promotion', 'reminder', 'announcement',
-  'welcome', 're_engagement', 'deadline', 'review_request',
+  'follow_up',
+  'promotion',
+  'reminder',
+  'announcement',
+  'welcome',
+  're_engagement',
+  'deadline',
+  'review_request',
 ];
 const OPT_OUT_REASONS = [
-  'user_request', 'reply_stop', 'bounce_hard', 'bounce_soft_3x', 'admin_manual', 'spam_complaint',
+  'user_request',
+  'reply_stop',
+  'bounce_hard',
+  'bounce_soft_3x',
+  'admin_manual',
+  'spam_complaint',
 ];
 const OPT_OUT_CHANNELS = ['sms', 'email', 'whatsapp', 'all'];
 
@@ -31,7 +56,9 @@ export function createCampaignValidation(): ReturnType<typeof body>[] {
     body('audienceFilters.financialYear').optional().isString(),
     body('audienceFilters.hasConsent').optional().isBoolean(),
     body('customList').optional().isArray({ max: 10000 }),
-    body('customList.*.mobile').optional().matches(/^\+61\d{9}$/),
+    body('customList.*.mobile')
+      .optional()
+      .matches(/^\+61\d{9}$/),
     body('customList.*.email').optional().isEmail(),
     body('customList.*.firstName').optional().isString().trim().isLength({ max: 100 }),
     body('customList.*.lastName').optional().isString().trim().isLength({ max: 100 }),
@@ -89,9 +116,19 @@ export function campaignMessagesValidation(): ReturnType<typeof param | typeof q
     param('id').isMongoId(),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('status').optional().isIn([
-      'queued', 'sending', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked', 'opted_out',
-    ]),
+    query('status')
+      .optional()
+      .isIn([
+        'queued',
+        'sending',
+        'sent',
+        'delivered',
+        'failed',
+        'bounced',
+        'opened',
+        'clicked',
+        'opted_out',
+      ]),
   ];
 }
 

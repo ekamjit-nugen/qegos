@@ -36,11 +36,7 @@ export function createTaxRuleRoutes(deps: TaxRuleRouteDeps): Router {
       }
 
       const [rules, total] = await Promise.all([
-        TaxRuleConfigModel.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        TaxRuleConfigModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
         TaxRuleConfigModel.countDocuments(filter),
       ]);
 
@@ -157,10 +153,7 @@ export function createTaxRuleRoutes(deps: TaxRuleRouteDeps): Router {
       );
 
       // Use updateOne to set status without triggering pre-save immutability check
-      await TaxRuleConfigModel.updateOne(
-        { _id: rule._id },
-        { $set: { status: 'active' } },
-      );
+      await TaxRuleConfigModel.updateOne({ _id: rule._id }, { $set: { status: 'active' } });
 
       const updated = await TaxRuleConfigModel.findById(rule._id).lean();
       res.status(200).json({ status: 200, data: updated });

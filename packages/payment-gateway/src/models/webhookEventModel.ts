@@ -1,9 +1,5 @@
 import { Schema, type Model, type Connection } from 'mongoose';
-import type {
-  IWebhookEventDocument,
-  PaymentGateway,
-  WebhookEventStatus,
-} from '../types';
+import type { IWebhookEventDocument, PaymentGateway, WebhookEventStatus } from '../types';
 
 const webhookEventSchema = new Schema<IWebhookEventDocument>(
   {

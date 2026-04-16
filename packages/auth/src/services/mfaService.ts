@@ -23,7 +23,9 @@ function getConfig(): AuthConfig {
  * FIX for Vegeta S-3: Backup codes are hashed before storage.
  */
 // Fix for S-3.20: Use configurable backup code count
-async function generateBackupCodes(count?: number): Promise<{ plaintext: string[]; hashed: string[] }> {
+async function generateBackupCodes(
+  count?: number,
+): Promise<{ plaintext: string[]; hashed: string[] }> {
   const config = getConfig();
   const codeCount = count ?? config.mfaBackupCodeCount ?? 10;
   const codes: string[] = [];
@@ -98,10 +100,7 @@ export function verifyToken(secret: string, token: string): boolean {
  * FIX for Vegeta S-3: Compares against hashed backup codes.
  * Removes the used code after successful verification.
  */
-export async function verifyBackupCode(
-  user: IAuthDocument,
-  code: string,
-): Promise<boolean> {
+export async function verifyBackupCode(user: IAuthDocument, code: string): Promise<boolean> {
   for (let i = 0; i < user.mfaBackupCodes.length; i++) {
     const isMatch = await bcrypt.compare(code, user.mfaBackupCodes[i]);
     if (isMatch) {
@@ -117,10 +116,7 @@ export async function verifyBackupCode(
 /**
  * Complete MFA enrollment by verifying a TOTP token.
  */
-export async function completeEnrollment(
-  user: IAuthDocument,
-  token: string,
-): Promise<boolean> {
+export async function completeEnrollment(user: IAuthDocument, token: string): Promise<boolean> {
   if (!user.mfaSecret) {
     return false;
   }

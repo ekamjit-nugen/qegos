@@ -26,20 +26,19 @@ export const DEFAULT_XERO_SCOPES: string[] = [
 export type XeroSyncEntityType = 'contact' | 'invoice' | 'payment' | 'credit_note';
 
 export const XERO_SYNC_ENTITY_TYPES: XeroSyncEntityType[] = [
-  'contact', 'invoice', 'payment', 'credit_note',
+  'contact',
+  'invoice',
+  'payment',
+  'credit_note',
 ];
 
 export type XeroSyncAction = 'create' | 'update' | 'void' | 'delete';
 
-export const XERO_SYNC_ACTIONS: XeroSyncAction[] = [
-  'create', 'update', 'void', 'delete',
-];
+export const XERO_SYNC_ACTIONS: XeroSyncAction[] = ['create', 'update', 'void', 'delete'];
 
 export type XeroSyncStatus = 'queued' | 'processing' | 'success' | 'failed';
 
-export const XERO_SYNC_STATUSES: XeroSyncStatus[] = [
-  'queued', 'processing', 'success', 'failed',
-];
+export const XERO_SYNC_STATUSES: XeroSyncStatus[] = ['queued', 'processing', 'success', 'failed'];
 
 // ─── Rate Limiting & Retry Constants ──────────────────────────────────────
 
@@ -47,9 +46,7 @@ export const XERO_SYNC_STATUSES: XeroSyncStatus[] = [
 export const XERO_RATE_LIMIT_PER_MINUTE = 60;
 
 /** XRO-INV-05: Exponential backoff delays in ms (1min, 5min, 30min, 2hr) */
-export const RETRY_DELAYS_MS: readonly number[] = [
-  60_000, 300_000, 1_800_000, 7_200_000,
-];
+export const RETRY_DELAYS_MS: readonly number[] = [60_000, 300_000, 1_800_000, 7_200_000];
 
 /** XRO-INV-05: Max retry attempts before permanent failure */
 export const MAX_RETRIES = 4;
@@ -62,13 +59,13 @@ export const RECONCILIATION_THRESHOLD_CENTS = 1;
 export interface IXeroConfig {
   xeroConnected: boolean;
   xeroTenantId?: string;
-  xeroAccessToken?: string;  // AES-256-GCM encrypted (XRO-INV-01)
+  xeroAccessToken?: string; // AES-256-GCM encrypted (XRO-INV-01)
   xeroRefreshToken?: string; // AES-256-GCM encrypted (XRO-INV-01)
   xeroTokenExpiresAt?: Date;
   xeroRevenueAccountCode?: string; // e.g., "200"
   xeroBankAccountId?: string;
-  xeroGstAccountCode?: string;     // Australian GST
-  xeroDefaultTaxType?: string;     // "OUTPUT" for sales
+  xeroGstAccountCode?: string; // Australian GST
+  xeroDefaultTaxType?: string; // "OUTPUT" for sales
   lastSyncAt?: Date;
   syncErrorCount: number;
   updatedBy?: Types.ObjectId;

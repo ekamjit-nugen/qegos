@@ -11,7 +11,12 @@ export type ErasureRequestStatus =
   | 'rejected';
 
 export const ERASURE_REQUEST_STATUSES: ErasureRequestStatus[] = [
-  'pending', 'approved', 'in_progress', 'completed', 'failed', 'rejected',
+  'pending',
+  'approved',
+  'in_progress',
+  'completed',
+  'failed',
+  'rejected',
 ];
 
 export interface IErasureRequest {
@@ -38,7 +43,11 @@ export interface IErasureRequestDocument extends IErasureRequest, Document {}
 export type DataExportStatus = 'pending' | 'processing' | 'ready' | 'expired' | 'failed';
 
 export const DATA_EXPORT_STATUSES: DataExportStatus[] = [
-  'pending', 'processing', 'ready', 'expired', 'failed',
+  'pending',
+  'processing',
+  'ready',
+  'expired',
+  'failed',
 ];
 
 export type DataExportFormat = 'json' | 'csv';

@@ -4,7 +4,12 @@ import type { IRoleDocument, AnomalyResult } from '../types';
 // Simplified user interface — the actual model is provided by the consuming app
 interface UserLike {
   _id: string;
-  roleId: { _id: string; name: string; isActive: boolean; permissions: IRoleDocument['permissions'] };
+  roleId: {
+    _id: string;
+    name: string;
+    isActive: boolean;
+    permissions: IRoleDocument['permissions'];
+  };
   userType: number;
   lastLoginAt?: Date;
   status: boolean;
@@ -76,9 +81,7 @@ export async function detectAnomalies(
       return false;
     }
     return u.roleId.permissions.some(
-      (p) =>
-        ['orders', 'vault_documents', 'payments'].includes(p.resource) &&
-        p.scope === 'all',
+      (p) => ['orders', 'vault_documents', 'payments'].includes(p.resource) && p.scope === 'all',
     );
   });
   if (scopeIssues.length > 0) {
@@ -95,9 +98,12 @@ export async function detectAnomalies(
   }
 
   // Rule 4: No reviewer available
-  const reviewRoles = roles.filter((r) =>
-    r.isActive &&
-    r.permissions.some((p) => p.resource === 'reviews' && p.actions.includes('update') && p.scope === 'all'),
+  const reviewRoles = roles.filter(
+    (r) =>
+      r.isActive &&
+      r.permissions.some(
+        (p) => p.resource === 'reviews' && p.actions.includes('update') && p.scope === 'all',
+      ),
   );
   if (reviewRoles.length === 0) {
     results.push({
@@ -111,10 +117,7 @@ export async function detectAnomalies(
   // Rule 5: Unused admin accounts — admin with no login in 90+ days
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const staleAdmins = users.filter(
-    (u) =>
-      u.userType <= 1 &&
-      u.status &&
-      (!u.lastLoginAt || u.lastLoginAt < ninetyDaysAgo),
+    (u) => u.userType <= 1 && u.status && (!u.lastLoginAt || u.lastLoginAt < ninetyDaysAgo),
   );
   if (staleAdmins.length > 0) {
     results.push({

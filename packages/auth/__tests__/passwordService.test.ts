@@ -1,4 +1,9 @@
-import { initPasswordService, hashPassword, comparePassword, validatePolicy } from '../src/services/passwordService';
+import {
+  initPasswordService,
+  hashPassword,
+  comparePassword,
+  validatePolicy,
+} from '../src/services/passwordService';
 import type { AuthConfig } from '../src/types';
 
 const testConfig: AuthConfig = {

@@ -9,10 +9,7 @@ import {
   getUnreadCount,
   listNotifications,
 } from '../services/notificationService';
-import {
-  getPreferences,
-  upsertPreferences,
-} from '../services/preferenceService';
+import { getPreferences, upsertPreferences } from '../services/preferenceService';
 import {
   validateListNotifications,
   validateMarkRead,

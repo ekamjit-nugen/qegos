@@ -22,9 +22,14 @@ export function useConversationList(filters: ConversationListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
-      const res = await api.get<{ status: number; data: { conversations: Conversation[]; total: number } }>(`/chat/conversations?${params.toString()}`);
+      const res = await api.get<{
+        status: number;
+        data: { conversations: Conversation[]; total: number };
+      }>(`/chat/conversations?${params.toString()}`);
       const { conversations, total } = res.data.data;
       // Normalize to PaginatedResponse shape expected by the table
       return {

@@ -13,11 +13,7 @@ import {
 } from 'react-native-paper';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import {
-  usePricingPreview,
-  usePayOrder,
-  type PricingBreakdown,
-} from '@/hooks/useOrderPayment';
+import { usePricingPreview, usePayOrder, type PricingBreakdown } from '@/hooks/useOrderPayment';
 
 function generateIdempotencyKey(): string {
   return `pay-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
@@ -42,7 +38,9 @@ export default function PayOrderScreen(): React.ReactNode {
 
   // Initial preview
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
     previewMutation.mutate(
       { orderId: id, useCredits: false },
       {
@@ -65,7 +63,9 @@ export default function PayOrderScreen(): React.ReactNode {
   }
 
   async function handlePay(): Promise<void> {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
     setError('');
     payMutation.mutate(
       {
@@ -197,9 +197,7 @@ export default function PayOrderScreen(): React.ReactNode {
         </Card>
 
         {error ? (
-          <Text style={{ color: theme.colors.error, marginBottom: 12 }}>
-            {error}
-          </Text>
+          <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
         ) : null}
 
         <Button

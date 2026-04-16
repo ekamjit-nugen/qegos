@@ -68,11 +68,7 @@ import {
   getNpsCategory,
 } from '../src/modules/reputation-mgmt/review.types';
 
-import type {
-  ReviewStatus,
-  ReviewTag,
-  IReview,
-} from '../src/modules/reputation-mgmt/review.types';
+import type { ReviewStatus, ReviewTag, IReview } from '../src/modules/reputation-mgmt/review.types';
 
 import {
   validateSubmitReview,
@@ -96,7 +92,14 @@ describe('Referral Engine — Types & Constants', () => {
   test('referral has 6 statuses', () => {
     expect(REFERRAL_STATUSES).toHaveLength(6);
     expect(REFERRAL_STATUSES).toEqual(
-      expect.arrayContaining(['pending', 'signed_up', 'order_created', 'completed', 'rewarded', 'expired']),
+      expect.arrayContaining([
+        'pending',
+        'signed_up',
+        'order_created',
+        'completed',
+        'rewarded',
+        'expired',
+      ]),
     );
   });
 
@@ -197,9 +200,16 @@ describe('Tax Calendar — Types & Constants', () => {
     expect(DEADLINE_TYPES).toHaveLength(10);
     expect(DEADLINE_TYPES).toEqual(
       expect.arrayContaining([
-        'individual_filing', 'bas_quarterly', 'bas_monthly',
-        'payg_instalment', 'super_guarantee', 'fringe_benefits',
-        'company_return', 'trust_return', 'smsf_return', 'custom',
+        'individual_filing',
+        'bas_quarterly',
+        'bas_monthly',
+        'payg_instalment',
+        'super_guarantee',
+        'fringe_benefits',
+        'company_return',
+        'trust_return',
+        'smsf_return',
+        'custom',
       ]),
     );
   });
@@ -219,7 +229,7 @@ describe('Tax Calendar — Types & Constants', () => {
 
   test('federal holidays has 5 fixed-date holidays', () => {
     expect(FEDERAL_HOLIDAYS_FIXED).toHaveLength(5);
-    const names = FEDERAL_HOLIDAYS_FIXED.map(h => h.name);
+    const names = FEDERAL_HOLIDAYS_FIXED.map((h) => h.name);
     expect(names).toContain("New Year's Day");
     expect(names).toContain('Australia Day');
     expect(names).toContain('Anzac Day');
@@ -338,17 +348,33 @@ describe('Reputation Management — Types & Constants', () => {
     expect(REVIEW_TAGS).toHaveLength(8);
     expect(REVIEW_TAGS).toEqual(
       expect.arrayContaining([
-        'quick_filing', 'friendly_staff', 'good_communication', 'thorough_review',
-        'too_slow', 'pricing_concern', 'missing_documents', 'great_refund',
+        'quick_filing',
+        'friendly_staff',
+        'good_communication',
+        'thorough_review',
+        'too_slow',
+        'pricing_concern',
+        'missing_documents',
+        'great_refund',
       ]),
     );
   });
 
   test('tags include both positive and negative sentiments', () => {
-    const positive = ['quick_filing', 'friendly_staff', 'good_communication', 'thorough_review', 'great_refund'];
+    const positive = [
+      'quick_filing',
+      'friendly_staff',
+      'good_communication',
+      'thorough_review',
+      'great_refund',
+    ];
     const negative = ['too_slow', 'pricing_concern', 'missing_documents'];
-    for (const tag of positive) expect(REVIEW_TAGS).toContain(tag);
-    for (const tag of negative) expect(REVIEW_TAGS).toContain(tag);
+    for (const tag of positive) {
+      expect(REVIEW_TAGS).toContain(tag);
+    }
+    for (const tag of negative) {
+      expect(REVIEW_TAGS).toContain(tag);
+    }
   });
 });
 

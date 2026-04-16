@@ -64,7 +64,8 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
   // ── 1. Executive Summary (pre-computed, read from Redis) ──────────────
   router.get(
     '/executive-summary',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     handleValidation,
     async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -78,14 +79,17 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           return;
         }
         res.status(200).json({ status: 200, data: summary });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 2. Revenue Forecast ───────────────────────────────────────────────
   router.get(
     '/revenue-forecast',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -96,41 +100,51 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           getRevenueForecast(deps.PaymentModel, deps.config, dateRange),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 3. CLV (POST) ────────────────────────────────────────────────────
   router.post(
     '/clv',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateClv(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const { topN, segment, dateFrom, dateTo } = req.body as {
-          topN?: number; segment?: string; dateFrom?: string; dateTo?: string;
+          topN?: number;
+          segment?: string;
+          dateFrom?: string;
+          dateTo?: string;
         };
         const params = {
           topN,
           segment,
-          dateRange: dateFrom && dateTo
-            ? { dateFrom: new Date(dateFrom), dateTo: new Date(dateTo) }
-            : undefined,
+          dateRange:
+            dateFrom && dateTo
+              ? { dateFrom: new Date(dateFrom), dateTo: new Date(dateTo) }
+              : undefined,
         };
         const key = buildCacheKey('clv', req.body as Record<string, unknown>);
         const data = await withCache(deps.redisClient, key, cacheTtl, () =>
           getClv(deps.PaymentModel, deps.UserModel, params),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 4. Staff Benchmark ────────────────────────────────────────────────
   router.get(
     '/staff-benchmark',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -138,48 +152,63 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
         const dateRange = parseDateRange(req);
         const key = buildCacheKey('staff-benchmark', req.query as Record<string, unknown>);
         const data = await withCache(deps.redisClient, key, cacheTtl, () =>
-          getStaffBenchmark({
-            OrderModel: deps.OrderModel,
-            LeadActivityModel: deps.LeadActivityModel,
-            ReviewAssignmentModel: deps.ReviewAssignmentModel,
-            SupportTicketModel: deps.SupportTicketModel,
-            UserModel: deps.UserModel,
-          }, dateRange),
+          getStaffBenchmark(
+            {
+              OrderModel: deps.OrderModel,
+              LeadActivityModel: deps.LeadActivityModel,
+              ReviewAssignmentModel: deps.ReviewAssignmentModel,
+              SupportTicketModel: deps.SupportTicketModel,
+              UserModel: deps.UserModel,
+            },
+            dateRange,
+          ),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 5. Channel ROI (POST) ─────────────────────────────────────────────
   router.post(
     '/channel-roi',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateChannelRoi(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const { dateFrom, dateTo, channels } = req.body as {
-          dateFrom: string; dateTo: string; channels?: string[];
+          dateFrom: string;
+          dateTo: string;
+          channels?: string[];
         };
         const dateRange = { dateFrom: new Date(dateFrom), dateTo: new Date(dateTo) };
         const key = buildCacheKey('channel-roi', req.body as Record<string, unknown>);
         const data = await withCache(deps.redisClient, key, cacheTtl, () =>
-          getChannelRoi({
-            CampaignModel: deps.CampaignModel,
-            LeadModel: deps.LeadModel,
-            PaymentModel: deps.PaymentModel,
-          }, dateRange, channels),
+          getChannelRoi(
+            {
+              CampaignModel: deps.CampaignModel,
+              LeadModel: deps.LeadModel,
+              PaymentModel: deps.PaymentModel,
+            },
+            dateRange,
+            channels,
+          ),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 6. Seasonal Trends ────────────────────────────────────────────────
   router.get(
     '/seasonal-trends',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     ...validateGranularity(),
     handleValidation,
@@ -192,14 +221,17 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           getSeasonalTrends(deps.OrderModel, deps.PaymentModel, dateRange, granularity),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 7. Churn Risk ─────────────────────────────────────────────────────
   router.get(
     '/churn-risk',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateFinancialYear(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -210,14 +242,17 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           getChurnRisk(deps.TaxYearSummaryModel, deps.UserModel, fy),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 8. Service Mix ────────────────────────────────────────────────────
   router.get(
     '/service-mix',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -228,14 +263,17 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           getServiceMix(deps.OrderModel, dateRange),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 9. Collection Rate ────────────────────────────────────────────────
   router.get(
     '/collection-rate',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -246,14 +284,17 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           getCollectionRate(deps.PaymentModel, deps.OrderModel, dateRange),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 10. Pipeline Health ───────────────────────────────────────────────
   router.get(
     '/pipeline-health',
-    auth, readPerm,
+    auth,
+    readPerm,
     ...validateDateRange(),
     handleValidation,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -264,14 +305,17 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
           getPipelineHealth(deps.LeadModel, deps.LeadActivityModel, dateRange),
         );
         res.status(200).json({ status: 200, data });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 
   // ── 11. Export (POST, async) ──────────────────────────────────────────
   router.post(
     '/export',
-    auth, readPerm,
+    auth,
+    readPerm,
     deps.checkPermission('analytics', 'export'),
     ...validateExport(),
     handleValidation,
@@ -303,7 +347,9 @@ export function createAnalyticsRoutes(deps: AnalyticsRouteDeps): Router {
         });
 
         res.status(202).json({ status: 202, data: job });
-      } catch (err) { next(err); }
+      } catch (err) {
+        next(err);
+      }
     },
   );
 

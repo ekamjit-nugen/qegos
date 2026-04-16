@@ -112,9 +112,11 @@ describe('GST Calculator', () => {
     });
 
     it('should validate line item prices', () => {
-      expect(() => calculateOrderGST([
-        { description: 'Bad', priceInCents: -100, quantity: 1, gstInclusive: true },
-      ])).toThrow('non-negative integer');
+      expect(() =>
+        calculateOrderGST([
+          { description: 'Bad', priceInCents: -100, quantity: 1, gstInclusive: true },
+        ]),
+      ).toThrow('non-negative integer');
     });
   });
 });

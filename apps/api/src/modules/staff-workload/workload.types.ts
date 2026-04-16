@@ -11,10 +11,10 @@ import type { CheckPermissionFn } from '@nugen/rbac';
  */
 export const DEFAULT_WEIGHTS: WorkloadWeights = {
   activeLeads: 1.0,
-  ordersInProgress: 2.0,        // orders are heavier than leads
+  ordersInProgress: 2.0, // orders are heavier than leads
   pendingReviews: 1.5,
   openTickets: 0.8,
-  upcomingAppointments: 1.2,    // within next 48h
+  upcomingAppointments: 1.2, // within next 48h
 };
 
 export interface WorkloadWeights {
@@ -72,12 +72,7 @@ export interface StaffWorkloadSnapshot {
 
 // ─── Assignment Types ───────────────────────────────────────────────────────
 
-export type AssignmentContext =
-  | 'lead'
-  | 'order'
-  | 'review'
-  | 'ticket'
-  | 'appointment';
+export type AssignmentContext = 'lead' | 'order' | 'review' | 'ticket' | 'appointment';
 
 export interface AssignmentRequest {
   context: AssignmentContext;

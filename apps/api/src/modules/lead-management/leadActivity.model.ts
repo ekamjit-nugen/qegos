@@ -1,11 +1,6 @@
 import { Schema, type Model, type Connection } from 'mongoose';
 import type { ILeadActivityDocument } from './lead.types';
-import {
-  ACTIVITY_TYPES,
-  ACTIVITY_OUTCOMES,
-  SENTIMENTS,
-  CALL_DIRECTIONS,
-} from './lead.types';
+import { ACTIVITY_TYPES, ACTIVITY_OUTCOMES, SENTIMENTS, CALL_DIRECTIONS } from './lead.types';
 
 const leadActivitySchema = new Schema<ILeadActivityDocument>(
   {

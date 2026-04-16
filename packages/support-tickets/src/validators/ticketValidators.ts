@@ -8,21 +8,15 @@ import {
 } from '../types';
 
 export const createTicketValidation = [
-  body('category')
-    .isIn(TICKET_CATEGORIES).withMessage('Invalid ticket category'),
-  body('priority')
-    .optional()
-    .isIn(TICKET_PRIORITIES).withMessage('Invalid priority'),
+  body('category').isIn(TICKET_CATEGORIES).withMessage('Invalid ticket category'),
+  body('priority').optional().isIn(TICKET_PRIORITIES).withMessage('Invalid priority'),
   body('subject')
-    .isString().isLength({ min: 1, max: 200 }).withMessage('Subject required, max 200 chars'),
-  body('description')
-    .isString().isLength({ min: 1 }).withMessage('Description is required'),
-  body('orderId')
-    .optional()
-    .isMongoId(),
-  body('source')
-    .optional()
-    .isIn(TICKET_SOURCES),
+    .isString()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Subject required, max 200 chars'),
+  body('description').isString().isLength({ min: 1 }).withMessage('Description is required'),
+  body('orderId').optional().isMongoId(),
+  body('source').optional().isIn(TICKET_SOURCES),
 ];
 
 export const listTicketsValidation = [
@@ -35,14 +29,11 @@ export const listTicketsValidation = [
   query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
 ];
 
-export const getTicketValidation = [
-  param('id').isMongoId().withMessage('Invalid ticket ID'),
-];
+export const getTicketValidation = [param('id').isMongoId().withMessage('Invalid ticket ID')];
 
 export const updateStatusValidation = [
   param('id').isMongoId(),
-  body('status')
-    .isIn(TICKET_STATUSES).withMessage('Invalid status'),
+  body('status').isIn(TICKET_STATUSES).withMessage('Invalid status'),
 ];
 
 export const assignTicketValidation = [
@@ -67,13 +58,10 @@ export const escalateValidation = [
 export const resolveValidation = [
   param('id').isMongoId(),
   body('resolution').isString().isLength({ min: 1 }).withMessage('Resolution is required'),
-  body('resolutionCategory')
-    .isIn(RESOLUTION_CATEGORIES).withMessage('Invalid resolution category'),
+  body('resolutionCategory').isIn(RESOLUTION_CATEGORIES).withMessage('Invalid resolution category'),
 ];
 
-export const reopenValidation = [
-  param('id').isMongoId(),
-];
+export const reopenValidation = [param('id').isMongoId()];
 
 export const satisfactionValidation = [
   param('id').isMongoId(),

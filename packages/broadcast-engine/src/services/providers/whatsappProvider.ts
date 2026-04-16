@@ -36,10 +36,12 @@ export const whatsappProvider: IChannelProvider = {
             name: content.templateName,
             language: { code: 'en' },
             components: content.templateParams?.length
-              ? [{
-                  type: 'body',
-                  parameters: content.templateParams.map((p) => ({ type: 'text', text: p })),
-                }]
+              ? [
+                  {
+                    type: 'body',
+                    parameters: content.templateParams.map((p) => ({ type: 'text', text: p })),
+                  },
+                ]
               : undefined,
           },
         };
@@ -70,7 +72,7 @@ export const whatsappProvider: IChannelProvider = {
         return { success: false, error: errorMsg };
       }
 
-      const data = await response.json() as { messages?: Array<{ id: string }> };
+      const data = (await response.json()) as { messages?: Array<{ id: string }> };
       const messageId = data.messages?.[0]?.id;
 
       return {

@@ -67,9 +67,13 @@ export function decryptField(envelope: EncryptedField): string {
  * "ending in 1234" identifier without ever holding ciphertext.
  */
 export function last4(value: string): string {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const digits = value.replace(/\D/g, '');
-  if (digits.length <= 4) return digits;
+  if (digits.length <= 4) {
+    return digits;
+  }
   return digits.slice(-4);
 }
 

@@ -30,7 +30,12 @@ export function SeasonalTrendsWidget(): React.ReactNode {
 
   return (
     <WidgetCard
-      title={<span><CalendarOutlined /><span style={{ marginLeft: 8 }}>Seasonal Trends</span></span>}
+      title={
+        <span>
+          <CalendarOutlined />
+          <span style={{ marginLeft: 8 }}>Seasonal Trends</span>
+        </span>
+      }
       loading={isLoading}
       error={error as Error | null}
       onRetry={() => void refetch()}
@@ -56,8 +61,13 @@ export function SeasonalTrendsWidget(): React.ReactNode {
             yAxisId="right"
             orientation="right"
             fontSize={11}
-            tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
-            label={{ value: 'Revenue', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
+            tickFormatter={(v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`)}
+            label={{
+              value: 'Revenue',
+              angle: 90,
+              position: 'insideRight',
+              style: { fontSize: 10 },
+            }}
           />
           <Tooltip
             formatter={(value: number, name: string) => {

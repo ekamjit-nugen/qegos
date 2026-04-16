@@ -162,7 +162,10 @@ export function runTaxRuleTestSuite(rules: ITaxRuleConfig): TaxRuleTestResult[] 
       : 0;
     results.push({
       name: 'Non-resident ($50K) — 30% flat, no LITO, no Medicare',
-      passed: output.baseTax === expectedBaseTax && output.litoOffset === 0 && output.medicareLevyAmount === 0,
+      passed:
+        output.baseTax === expectedBaseTax &&
+        output.litoOffset === 0 &&
+        output.medicareLevyAmount === 0,
       expected: { baseTax: expectedBaseTax, litoOffset: 0, medicareLevyAmount: 0 },
       actual: {
         baseTax: output.baseTax,
@@ -259,8 +262,8 @@ export function runTaxRuleTestSuite(rules: ITaxRuleConfig): TaxRuleTestResult[] 
       },
     });
     const output = calculateTaxEstimate(input, rules);
-    const hasStdDeductionWarning = output.warnings.some(
-      (w) => w.toLowerCase().includes('standard deduction'),
+    const hasStdDeductionWarning = output.warnings.some((w) =>
+      w.toLowerCase().includes('standard deduction'),
     );
     results.push({
       name: 'Standard deduction ($250 work-related only) — warning shown',

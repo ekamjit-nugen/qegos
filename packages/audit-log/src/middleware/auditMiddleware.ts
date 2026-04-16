@@ -46,7 +46,9 @@ export function auditMiddleware(schema: Schema, options: AuditMiddlewareOptions)
 
       const changes: Record<string, { from: unknown; to: unknown }> = {};
       if (!wasNew) {
-        const modifiedPaths = (doc.$locals as Record<string, unknown>)?._modifiedPaths as string[] | undefined;
+        const modifiedPaths = (doc.$locals as Record<string, unknown>)?._modifiedPaths as
+          | string[]
+          | undefined;
         if (modifiedPaths) {
           for (const path of modifiedPaths) {
             changes[path] = { from: undefined, to: doc.get(path) };

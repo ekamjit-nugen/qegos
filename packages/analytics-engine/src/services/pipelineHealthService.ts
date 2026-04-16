@@ -54,13 +54,17 @@ export async function getPipelineHealth(
   // Calculate avg days per stage from transitions
   const stageDaysMap = new Map<number, number[]>();
   for (const lead of stageTransitions) {
-    const sorted = (lead.transitions as Array<{ date: Date }>)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sorted = (lead.transitions as Array<{ date: Date }>).sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
     for (let i = 1; i < sorted.length; i++) {
-      const days = (new Date(sorted[i].date).getTime() - new Date(sorted[i - 1].date).getTime())
-        / (1000 * 60 * 60 * 24);
+      const days =
+        (new Date(sorted[i].date).getTime() - new Date(sorted[i - 1].date).getTime()) /
+        (1000 * 60 * 60 * 24);
       const stageNum = i; // approximate stage index
-      if (!stageDaysMap.has(stageNum)) stageDaysMap.set(stageNum, []);
+      if (!stageDaysMap.has(stageNum)) {
+        stageDaysMap.set(stageNum, []);
+      }
       stageDaysMap.get(stageNum)!.push(days);
     }
   }
@@ -75,9 +79,8 @@ export async function getPipelineHealth(
     const totalValueCents = stageData?.totalValueCents ?? 0;
 
     const daysArr = stageDaysMap.get(stage) ?? [];
-    const avgDaysInStage = daysArr.length > 0
-      ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length)
-      : 0;
+    const avgDaysInStage =
+      daysArr.length > 0 ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length) : 0;
 
     // Conversion rate: leads that moved past this stage / leads that entered
     const nextStageCount = stageCounts

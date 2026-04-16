@@ -60,7 +60,8 @@ function useRecentActivity(): { data: AuditLog[] | undefined; isLoading: boolean
 
 function getActivityIcon(action: string): ReactNode {
   if (action.includes('create')) return <UserAddOutlined style={{ color: '#52c41a' }} />;
-  if (action.includes('update') || action.includes('change')) return <EditOutlined style={{ color: '#1677ff' }} />;
+  if (action.includes('update') || action.includes('change'))
+    return <EditOutlined style={{ color: '#1677ff' }} />;
   if (action.includes('delete')) return <ClockCircleOutlined style={{ color: '#ff4d4f' }} />;
   if (action.includes('login')) return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
   if (action.includes('status')) return <SwapOutlined style={{ color: '#722ed1' }} />;
@@ -78,7 +79,14 @@ interface StatCardProps {
   valueStyle?: React.CSSProperties;
 }
 
-function StatCard({ title, value, icon, iconColor, loading, valueStyle }: StatCardProps): ReactNode {
+function StatCard({
+  title,
+  value,
+  icon,
+  iconColor,
+  loading,
+  valueStyle,
+}: StatCardProps): ReactNode {
   return (
     <Card
       loading={loading}
@@ -103,8 +111,12 @@ function StatCard({ title, value, icon, iconColor, loading, valueStyle }: StatCa
           {icon}
         </div>
         <div>
-          <Text type="secondary" style={{ fontSize: 13 }}>{title}</Text>
-          <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2, marginTop: 2, ...valueStyle }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            {title}
+          </Text>
+          <div
+            style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2, marginTop: 2, ...valueStyle }}
+          >
             {value}
           </div>
         </div>
@@ -127,25 +139,45 @@ export function DashboardPage(): ReactNode {
     { label: 'Completed', percent: 30, color: '#52c41a' },
   ];
 
-  const conversionRate = stats.activeLeads > 0
-    ? Math.round((stats.ordersInProgress / (stats.activeLeads + stats.ordersInProgress)) * 100)
-    : 0;
+  const conversionRate =
+    stats.activeLeads > 0
+      ? Math.round((stats.ordersInProgress / (stats.activeLeads + stats.ordersInProgress)) * 100)
+      : 0;
 
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 24,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div>
           <Title level={3} style={{ margin: 0 }}>
-            <BarChartOutlined style={{ marginRight: 8 }} />Dashboard
+            <BarChartOutlined style={{ marginRight: 8 }} />
+            Dashboard
           </Title>
           <Text type="secondary">Overview of your business at a glance</Text>
         </div>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { router.push('/leads?action=create'); }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              router.push('/leads?action=create');
+            }}
+          >
             New Lead
           </Button>
-          <Button icon={<PlusOutlined />} onClick={() => { router.push('/orders?action=create'); }}>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => {
+              router.push('/orders?action=create');
+            }}
+          >
             New Order
           </Button>
         </Space>
@@ -154,10 +186,22 @@ export function DashboardPage(): ReactNode {
       {/* ─── Stat Cards ──────────────────────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="Active Leads" value={stats.activeLeads} icon={<TeamOutlined />} iconColor="#1677ff" loading={isLoading} />
+          <StatCard
+            title="Active Leads"
+            value={stats.activeLeads}
+            icon={<TeamOutlined />}
+            iconColor="#1677ff"
+            loading={isLoading}
+          />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="New Today" value={stats.newLeadsToday} icon={<RiseOutlined />} iconColor="#52c41a" loading={isLoading} />
+          <StatCard
+            title="New Today"
+            value={stats.newLeadsToday}
+            icon={<RiseOutlined />}
+            iconColor="#52c41a"
+            loading={isLoading}
+          />
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <Card
@@ -183,7 +227,9 @@ export function DashboardPage(): ReactNode {
                 <DollarOutlined />
               </div>
               <div>
-                <Text type="secondary" style={{ fontSize: 13 }}>Revenue (This Month)</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Revenue (This Month)
+                </Text>
                 <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2, marginTop: 2 }}>
                   {formatCurrency(stats.revenueThisMonth)}
                 </div>
@@ -217,12 +263,19 @@ export function DashboardPage(): ReactNode {
         {/* Recent Activity */}
         <Col xs={24} lg={14}>
           <Card
-            title={<><ThunderboltOutlined style={{ marginRight: 8 }} />Recent Activity</>}
+            title={
+              <>
+                <ThunderboltOutlined style={{ marginRight: 8 }} />
+                Recent Activity
+              </>
+            }
             style={{ borderRadius: 8, border: '1px solid #f0f0f0', height: '100%' }}
             styles={{ body: { padding: '16px 24px', maxHeight: 420, overflow: 'auto' } }}
           >
             {activitiesLoading ? (
-              <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <Spin />
+              </div>
             ) : !activities || activities.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No recent activity" />
             ) : (
@@ -279,7 +332,9 @@ export function DashboardPage(): ReactNode {
                   <AuditOutlined />
                 </div>
                 <div>
-                  <Text type="secondary" style={{ fontSize: 13 }}>Pending Reviews</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Pending Reviews
+                  </Text>
                   <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2, marginTop: 2 }}>
                     {stats.pendingReviews}
                   </div>
@@ -289,7 +344,12 @@ export function DashboardPage(): ReactNode {
 
             {/* Lead Conversion */}
             <Card
-              title={<><TeamOutlined style={{ marginRight: 8 }} />Lead Conversion</>}
+              title={
+                <>
+                  <TeamOutlined style={{ marginRight: 8 }} />
+                  Lead Conversion
+                </>
+              }
               style={{ borderRadius: 8, border: '1px solid #f0f0f0' }}
               styles={{ body: { textAlign: 'center', padding: '20px' } }}
             >
@@ -300,7 +360,9 @@ export function DashboardPage(): ReactNode {
                 format={(pct) => (
                   <div>
                     <div style={{ fontSize: 26, fontWeight: 700 }}>{pct}%</div>
-                    <Text type="secondary" style={{ fontSize: 11 }}>Leads to Orders</Text>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      Leads to Orders
+                    </Text>
                   </div>
                 )}
               />
@@ -308,17 +370,31 @@ export function DashboardPage(): ReactNode {
 
             {/* Orders by Status */}
             <Card
-              title={<><FileTextOutlined style={{ marginRight: 8 }} />Orders by Status</>}
+              title={
+                <>
+                  <FileTextOutlined style={{ marginRight: 8 }} />
+                  Orders by Status
+                </>
+              }
               style={{ borderRadius: 8, border: '1px solid #f0f0f0' }}
             >
               <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 {orderStatusBreakdown.map((item) => (
                   <div key={item.label}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div
+                      style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}
+                    >
                       <Text style={{ fontSize: 13 }}>{item.label}</Text>
-                      <Text strong style={{ fontSize: 13 }}>{item.percent}%</Text>
+                      <Text strong style={{ fontSize: 13 }}>
+                        {item.percent}%
+                      </Text>
                     </div>
-                    <Progress percent={item.percent} showInfo={false} strokeColor={item.color} size="small" />
+                    <Progress
+                      percent={item.percent}
+                      showInfo={false}
+                      strokeColor={item.color}
+                      size="small"
+                    />
                   </div>
                 ))}
               </Space>

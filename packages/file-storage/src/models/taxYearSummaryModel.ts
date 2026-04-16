@@ -56,9 +56,7 @@ taxYearSummarySchema.index({ financialYear: 1, userId: 1 });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 
-export function createTaxYearSummaryModel(
-  connection: Connection,
-): Model<ITaxYearSummaryDocument> {
+export function createTaxYearSummaryModel(connection: Connection): Model<ITaxYearSummaryDocument> {
   if (connection.models.TaxYearSummary) {
     return connection.models.TaxYearSummary as Model<ITaxYearSummaryDocument>;
   }

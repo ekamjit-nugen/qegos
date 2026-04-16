@@ -23,7 +23,8 @@ export async function getStaffBenchmark(
   deps: StaffBenchmarkDeps,
   dateRange: DateRangeParams,
 ): Promise<StaffBenchmarkEntry[]> {
-  const { OrderModel, LeadActivityModel, ReviewAssignmentModel, SupportTicketModel, UserModel } = deps;
+  const { OrderModel, LeadActivityModel, ReviewAssignmentModel, SupportTicketModel, UserModel } =
+    deps;
 
   // Run 4 aggregations in parallel (with early $project to minimize pipeline memory)
   const [ordersCompleted, leadsContacted, reviewTimes, ticketsResolved] = await Promise.all([
@@ -100,12 +101,15 @@ export async function getStaffBenchmark(
   ]);
 
   // Merge into Map by staffId
-  const staffMap = new Map<string, {
-    ordersCompleted: number;
-    leadsContacted: number;
-    avgReviewMinutes: number;
-    ticketsResolved: number;
-  }>();
+  const staffMap = new Map<
+    string,
+    {
+      ordersCompleted: number;
+      leadsContacted: number;
+      avgReviewMinutes: number;
+      ticketsResolved: number;
+    }
+  >();
 
   const ensureEntry = (id: string): void => {
     if (!staffMap.has(id)) {
@@ -153,12 +157,14 @@ export async function getStaffBenchmark(
     ]),
   );
 
-  return staffIds.map((id) => {
-    const data = staffMap.get(id)!;
-    return {
-      staffId: id,
-      displayName: nameMap.get(id) ?? 'Unknown',
-      ...data,
-    };
-  }).sort((a, b) => b.ordersCompleted - a.ordersCompleted);
+  return staffIds
+    .map((id) => {
+      const data = staffMap.get(id)!;
+      return {
+        staffId: id,
+        displayName: nameMap.get(id) ?? 'Unknown',
+        ...data,
+      };
+    })
+    .sort((a, b) => b.ordersCompleted - a.ordersCompleted);
 }

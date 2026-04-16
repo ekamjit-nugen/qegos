@@ -8,10 +8,10 @@
  */
 
 export const AU_STATES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'] as const;
-export type AuState = typeof AU_STATES[number];
+export type AuState = (typeof AU_STATES)[number];
 
 export const WORK_TYPES = ['TFN', 'ABN', 'ACN'] as const;
-export type WorkType = typeof WORK_TYPES[number];
+export type WorkType = (typeof WORK_TYPES)[number];
 
 export type Gender = 'male' | 'female';
 
@@ -23,7 +23,7 @@ export const PRIMARY_ID_TYPES = [
   'foreign_passport',
   'drivers_license',
 ] as const;
-export type PrimaryIdType = typeof PRIMARY_ID_TYPES[number];
+export type PrimaryIdType = (typeof PRIMARY_ID_TYPES)[number];
 
 export const PRIMARY_ID_LABELS: Record<PrimaryIdType, string> = {
   australian_full_birth_certificate: 'Australian Full Birth Certificate',
@@ -41,7 +41,7 @@ export const SECONDARY_ID_TYPES = [
   'drivers_license',
   'bank_statement_or_card',
 ] as const;
-export type SecondaryIdType = typeof SECONDARY_ID_TYPES[number];
+export type SecondaryIdType = (typeof SECONDARY_ID_TYPES)[number];
 
 export const SECONDARY_ID_LABELS: Record<SecondaryIdType, string> = {
   national_photo_id_card: 'National Photo ID Card',

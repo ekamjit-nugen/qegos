@@ -4,8 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Table, Tag, Button, Input, Select, Card, Row, Col, Statistic, Alert } from 'antd';
 import {
-  PlusOutlined, SearchOutlined, EyeOutlined,
-  TeamOutlined, RiseOutlined, TrophyOutlined, DollarOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  EyeOutlined,
+  TeamOutlined,
+  RiseOutlined,
+  TrophyOutlined,
+  DollarOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useLeadList, useLeadStats } from '@/hooks/useLeads';
@@ -53,23 +58,17 @@ export function LeadListPage(): React.ReactNode {
     {
       title: 'Source',
       dataIndex: 'source',
-      render: (val: string) => (
-        <Tag>{LEAD_SOURCE_LABELS[val] ?? val}</Tag>
-      ),
+      render: (val: string) => <Tag>{LEAD_SOURCE_LABELS[val] ?? val}</Tag>,
     },
     {
       title: 'Status',
       dataIndex: 'status',
-      render: (val: number) => (
-        <Tag color={LEAD_STATUS_COLORS[val]}>{LEAD_STATUS_LABELS[val]}</Tag>
-      ),
+      render: (val: number) => <Tag color={LEAD_STATUS_COLORS[val]}>{LEAD_STATUS_LABELS[val]}</Tag>,
     },
     {
       title: 'Priority',
       dataIndex: 'priority',
-      render: (val: string) => (
-        <Tag color={LEAD_PRIORITY_COLORS[val]}>{val?.toUpperCase()}</Tag>
-      ),
+      render: (val: string) => <Tag color={LEAD_PRIORITY_COLORS[val]}>{val?.toUpperCase()}</Tag>,
     },
     {
       title: 'Score',
@@ -137,11 +136,7 @@ export function LeadListPage(): React.ReactNode {
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={12} sm={6}>
             <Card>
-              <Statistic
-                title="Active Leads"
-                value={stats.totalActive}
-                prefix={<TeamOutlined />}
-              />
+              <Statistic title="Active Leads" value={stats.totalActive} prefix={<TeamOutlined />} />
             </Card>
           </Col>
           <Col xs={12} sm={6}>

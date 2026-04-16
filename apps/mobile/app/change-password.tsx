@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Appbar,
-  Button,
-  Text,
-  TextInput,
-  useTheme,
-} from 'react-native-paper';
+import { Appbar, Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/useAuth';
@@ -45,8 +39,8 @@ export default function ChangePasswordScreen(): React.ReactNode {
       router.replace('/login');
     } catch (err) {
       const msg =
-        (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message ?? 'Failed to change password';
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+        'Failed to change password';
       setError(msg);
     } finally {
       setLoading(false);

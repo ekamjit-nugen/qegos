@@ -56,9 +56,10 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
 
   // deps.authenticate may be a factory (() => RequestHandler) or a direct RequestHandler.
   // Handle both patterns for compatibility.
-  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
-    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
-    : deps.authenticate;
+  const authMiddleware =
+    typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+      ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+      : deps.authenticate;
   router.use(authMiddleware);
 
   // ── POST /chat/conversations ──────────────────────────────────────────
@@ -67,7 +68,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     '/conversations',
     ...createConversationValidation,
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const conv = await findOrCreateConversation(
@@ -87,7 +90,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     '/conversations',
     ...listConversationsValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
       const q = req.query as Record<string, string>;
 
@@ -98,7 +103,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
       } else if (user.userType > 1) {
         filters.staffId = user.userId;
       }
-      if (q.status) filters.status = q.status;
+      if (q.status) {
+        filters.status = q.status;
+      }
 
       const result = await listConversations(
         filters as never,
@@ -116,7 +123,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     '/conversations/:id/messages',
     ...getConversationValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const q = req.query as Record<string, string>;
 
       const result = await getMessages(
@@ -135,7 +144,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     '/messages',
     ...sendMessageValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const message = await sendMessage({
@@ -151,10 +162,7 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
       });
 
       // Real-time delivery: broadcast to anyone joined to the conversation room.
-      emitNewMessage(
-        message.conversationId.toString(),
-        message.toObject() as never,
-      );
+      emitNewMessage(message.conversationId.toString(), message.toObject() as never);
 
       // Offline fallback: if the recipient isn't connected via Socket.io,
       // fire a push notification. Fire-and-forget — delivery failures must
@@ -167,19 +175,24 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
               userId: unknown;
               staffId?: unknown;
             }>();
-            if (!conv) return;
+            if (!conv) {
+              return;
+            }
             const senderIdStr = user.userId;
             const senderIsClient = user.userType >= 5;
-            const recipientId = senderIsClient
-              ? conv.staffId?.toString()
-              : conv.userId?.toString();
-            if (!recipientId || recipientId === senderIdStr) return;
+            const recipientId = senderIsClient ? conv.staffId?.toString() : conv.userId?.toString();
+            if (!recipientId || recipientId === senderIdStr) {
+              return;
+            }
             const online = await isUserOnline(recipientId);
-            if (online) return;
+            if (online) {
+              return;
+            }
             // `content` is TFN-redacted (chatService.sendMessage → tfnRedaction).
-            const preview = message.content.length > 120
-              ? `${message.content.slice(0, 117)}...`
-              : message.content;
+            const preview =
+              message.content.length > 120
+                ? `${message.content.slice(0, 117)}...`
+                : message.content;
             await deps.notifyOffline!({
               recipientUserId: recipientId,
               recipientType: senderIsClient ? 'staff' : 'client',
@@ -204,7 +217,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     '/messages/:id/read',
     ...markReadValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const message = await markMessageRead(req.params.id as unknown as Types.ObjectId);
       if (!message) {
@@ -229,7 +244,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     deps.checkPermission('chat', 'manage') as import('express').RequestHandler,
     ...resolveConversationValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const conv = await resolveConversation(req.params.id as unknown as Types.ObjectId);
       if (!conv) {
@@ -250,7 +267,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     deps.checkPermission('chat', 'admin') as import('express').RequestHandler,
     ...transferConversationValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const conv = await transferConversation(
@@ -279,14 +298,14 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
 
   // ── GET /chat/unread-count ────────────────────────────────────────────
 
-  router.get(
-    '/unread-count',
-    async (req: Request, res: Response): Promise<void> => {
-      const user = (req as AuthRequest).user!;
-      const count = await getUnreadCount(new mongoose.Types.ObjectId(user.userId), user.userType >= 5 ? 'client' : 'staff');
-      res.status(200).json({ status: 200, data: { unreadCount: count } });
-    },
-  );
+  router.get('/unread-count', async (req: Request, res: Response): Promise<void> => {
+    const user = (req as AuthRequest).user!;
+    const count = await getUnreadCount(
+      new mongoose.Types.ObjectId(user.userId),
+      user.userType >= 5 ? 'client' : 'staff',
+    );
+    res.status(200).json({ status: 200, data: { unreadCount: count } });
+  });
 
   // ── GET /chat/canned-responses ────────────────────────────────────────
 
@@ -313,7 +332,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     deps.checkPermission('chat', 'manage') as import('express').RequestHandler,
     ...createCannedResponseValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const response = await createCannedResponse({
@@ -332,7 +353,9 @@ export function createChatRoutes(deps: ChatEngineRouteDeps): Router {
     deps.checkPermission('chat', 'admin') as import('express').RequestHandler,
     ...searchMessagesValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const { query: searchQuery, page = 1, limit = 20 } = req.body;
       const messages = await deps.MessageModel.find(

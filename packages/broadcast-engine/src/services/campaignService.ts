@@ -60,12 +60,18 @@ async function transitionStatus(
 
 function getChannelsForBroadcast(channel: BroadcastChannel): SingleChannel[] {
   switch (channel) {
-    case 'sms': return ['sms'];
-    case 'email': return ['email'];
-    case 'whatsapp': return ['whatsapp'];
-    case 'sms_email': return ['sms', 'email'];
-    case 'all': return ['sms', 'email', 'whatsapp'];
-    default: return [];
+    case 'sms':
+      return ['sms'];
+    case 'email':
+      return ['email'];
+    case 'whatsapp':
+      return ['whatsapp'];
+    case 'sms_email':
+      return ['sms', 'email'];
+    case 'all':
+      return ['sms', 'email', 'whatsapp'];
+    default:
+      return [];
   }
 }
 
@@ -137,8 +143,12 @@ export async function listCampaigns(filters: {
   limit?: number;
 }): Promise<{ campaigns: IBroadcastCampaignDocument[]; total: number }> {
   const query: Record<string, unknown> = {};
-  if (filters.status) query.status = filters.status;
-  if (filters.channel) query.channel = filters.channel;
+  if (filters.status) {
+    query.status = filters.status;
+  }
+  if (filters.channel) {
+    query.channel = filters.channel;
+  }
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
@@ -178,7 +188,9 @@ export async function updateCampaign(
   }>,
 ): Promise<IBroadcastCampaignDocument | null> {
   const campaign = await CampaignModel.findById(id);
-  if (!campaign) return null;
+  if (!campaign) {
+    return null;
+  }
 
   if (campaign.status !== 'draft' && campaign.status !== 'paused') {
     return null; // BRC-INV-05
@@ -197,7 +209,9 @@ export async function sendCampaign(
   id: string,
 ): Promise<{ success: boolean; error?: string; totalQueued?: number }> {
   const campaign = await CampaignModel.findById(id);
-  if (!campaign) return { success: false, error: 'Campaign not found' };
+  if (!campaign) {
+    return { success: false, error: 'Campaign not found' };
+  }
 
   if (campaign.status !== 'draft' && campaign.status !== 'scheduled') {
     return { success: false, error: `Cannot send campaign in ${campaign.status} status` };
@@ -214,7 +228,9 @@ export async function sendCampaign(
   let totalQueued = 0;
 
   for (const ch of channels) {
-    if (!providers.has(ch)) continue;
+    if (!providers.has(ch)) {
+      continue;
+    }
 
     const recipients = await resolveAudience(
       campaign.audienceType,
@@ -223,7 +239,9 @@ export async function sendCampaign(
       campaign.customList,
     );
 
-    if (recipients.length === 0) continue;
+    if (recipients.length === 0) {
+      continue;
+    }
 
     // Create message docs for queue processing.
     // mergeData is frozen here so per-recipient personalization
@@ -253,9 +271,15 @@ export async function sendCampaign(
   });
 
   // Increment template usage counts
-  if (campaign.smsTemplateId) await incrementUsageCount(String(campaign.smsTemplateId));
-  if (campaign.emailTemplateId) await incrementUsageCount(String(campaign.emailTemplateId));
-  if (campaign.whatsappTemplateId) await incrementUsageCount(String(campaign.whatsappTemplateId));
+  if (campaign.smsTemplateId) {
+    await incrementUsageCount(String(campaign.smsTemplateId));
+  }
+  if (campaign.emailTemplateId) {
+    await incrementUsageCount(String(campaign.emailTemplateId));
+  }
+  if (campaign.whatsappTemplateId) {
+    await incrementUsageCount(String(campaign.whatsappTemplateId));
+  }
 
   return { success: true, totalQueued };
 }
@@ -264,27 +288,38 @@ export async function sendCampaign(
 
 export async function pauseCampaign(id: string): Promise<IBroadcastCampaignDocument | null> {
   const campaign = await CampaignModel.findById(id);
-  if (!campaign) return null;
+  if (!campaign) {
+    return null;
+  }
   return transitionStatus(campaign._id, campaign.status, 'paused');
 }
 
 export async function resumeCampaign(id: string): Promise<IBroadcastCampaignDocument | null> {
   const campaign = await CampaignModel.findById(id);
-  if (!campaign) return null;
+  if (!campaign) {
+    return null;
+  }
   return transitionStatus(campaign._id, campaign.status, 'sending');
 }
 
 export async function cancelCampaign(id: string): Promise<IBroadcastCampaignDocument | null> {
   const campaign = await CampaignModel.findById(id);
-  if (!campaign) return null;
+  if (!campaign) {
+    return null;
+  }
   return transitionStatus(campaign._id, campaign.status, 'cancelled');
 }
 
 // ─── Duplicate ───────────────────────────────────────────────────────────────
 
-export async function duplicateCampaign(id: string, createdBy: string): Promise<IBroadcastCampaignDocument | null> {
+export async function duplicateCampaign(
+  id: string,
+  createdBy: string,
+): Promise<IBroadcastCampaignDocument | null> {
   const original = await CampaignModel.findById(id);
-  if (!original) return null;
+  if (!original) {
+    return null;
+  }
 
   const clone = await CampaignModel.create({
     name: `${original.name} (Copy)`,
@@ -332,7 +367,9 @@ export async function getAudienceCountAndCost(
   id: string,
 ): Promise<{ count: number; costEstimate: number } | null> {
   const campaign = await CampaignModel.findById(id);
-  if (!campaign) return null;
+  if (!campaign) {
+    return null;
+  }
 
   const count = await getAudienceCount(
     campaign.audienceType,

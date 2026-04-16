@@ -40,8 +40,12 @@ export function requestLoggerMiddleware(req: Request, res: Response, next: NextF
       ip,
     };
 
-    if (contentLength) meta.contentLength = contentLength;
-    if (userAgent) meta.userAgent = userAgent;
+    if (contentLength) {
+      meta.contentLength = contentLength;
+    }
+    if (userAgent) {
+      meta.userAgent = userAgent;
+    }
 
     // Log level based on status code
     const message = `${req.method} ${req.originalUrl} ${statusCode} ${duration}ms`;

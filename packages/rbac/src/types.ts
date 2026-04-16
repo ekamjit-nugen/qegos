@@ -9,10 +9,7 @@ import type { Request, RequestHandler } from 'express';
  * `(resource: string, action: string) => RequestHandler` inline
  * (which loses the `PermissionAction` union narrowing).
  */
-export type CheckPermissionFn = (
-  resource: string,
-  action: PermissionAction,
-) => RequestHandler;
+export type CheckPermissionFn = (resource: string, action: PermissionAction) => RequestHandler;
 
 export type PermissionAction =
   | 'create'

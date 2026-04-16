@@ -2,7 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import type { PromoCode, PromoCodeUsage, PromoCodeListQuery, CreatePromoCodeInput } from '@/types/promoCode';
+import type {
+  PromoCode,
+  PromoCodeUsage,
+  PromoCodeListQuery,
+  CreatePromoCodeInput,
+} from '@/types/promoCode';
 import type { ApiResponse } from '@/types/api';
 
 interface PromoCodeListResponse {
@@ -36,7 +41,9 @@ export function usePromoCode(id: string | undefined) {
   return useQuery({
     queryKey: ['promoCodes', id],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ promoCode: PromoCode; usage: PromoCodeUsage[] }>>(`/promo-codes/${id}`);
+      const res = await api.get<ApiResponse<{ promoCode: PromoCode; usage: PromoCodeUsage[] }>>(
+        `/promo-codes/${id}`,
+      );
       return res.data.data;
     },
     enabled: !!id,

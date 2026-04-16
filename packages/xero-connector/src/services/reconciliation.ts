@@ -47,8 +47,12 @@ export async function runReconciliation(
   };
   if (dateFrom || dateTo) {
     orderFilter.createdAt = {};
-    if (dateFrom) (orderFilter.createdAt as Record<string, Date>).$gte = dateFrom;
-    if (dateTo) (orderFilter.createdAt as Record<string, Date>).$lte = dateTo;
+    if (dateFrom) {
+      (orderFilter.createdAt as Record<string, Date>).$gte = dateFrom;
+    }
+    if (dateTo) {
+      (orderFilter.createdAt as Record<string, Date>).$lte = dateTo;
+    }
   }
 
   const orders = await OrderModel.find(orderFilter)
@@ -61,10 +65,13 @@ export async function runReconciliation(
     const payments = await PaymentModel.find({
       orderId: order._id,
       status: 'succeeded',
-    }).select('amount').lean();
+    })
+      .select('amount')
+      .lean();
 
     const totalCents = (payments as any[]).reduce(
-      (sum: number, p: { amount: number }) => sum + p.amount, 0,
+      (sum: number, p: { amount: number }) => sum + p.amount,
+      0,
     );
     qegosPayments.set((order as any)._id.toString(), totalCents);
   }
@@ -94,7 +101,7 @@ export async function runReconciliation(
       );
 
       if (res.ok) {
-        const data = await res.json() as {
+        const data = (await res.json()) as {
           Invoices: Array<{
             InvoiceID: string;
             AmountPaid: number;

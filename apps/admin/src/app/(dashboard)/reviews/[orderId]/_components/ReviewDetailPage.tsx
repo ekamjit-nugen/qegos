@@ -1,8 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Row, Col, Card, Descriptions, Tag, Button, Spin, Empty, Space, Modal, Input, App } from 'antd';
-import { useReview, useStartReview, useApproveReview, useRequestChanges, useRejectReview } from '@/hooks/useReviews';
+import {
+  Row,
+  Col,
+  Card,
+  Descriptions,
+  Tag,
+  Button,
+  Spin,
+  Empty,
+  Space,
+  Modal,
+  Input,
+  App,
+} from 'antd';
+import {
+  useReview,
+  useStartReview,
+  useApproveReview,
+  useRequestChanges,
+  useRejectReview,
+} from '@/hooks/useReviews';
 import { REVIEW_STATUS_LABELS, REVIEW_STATUS_COLORS } from '@/types/review';
 import type { ReviewStatus } from '@/types/review';
 import { formatDate, formatDateTime } from '@/lib/utils/format';
@@ -20,8 +39,12 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!review) { return <Empty description="Review not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!review) {
+    return <Empty description="Review not found" />;
+  }
 
   const handleStart = async (): Promise<void> => {
     try {
@@ -42,7 +65,9 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
   };
 
   const handleRequestChanges = async (): Promise<void> => {
-    if (!changesText.trim()) { return; }
+    if (!changesText.trim()) {
+      return;
+    }
     try {
       await requestChanges.mutateAsync({
         orderId,
@@ -57,7 +82,9 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
   };
 
   const handleReject = async (): Promise<void> => {
-    if (!rejectReason.trim()) { return; }
+    if (!rejectReason.trim()) {
+      return;
+    }
     try {
       await rejectReview.mutateAsync({ orderId, reason: rejectReason });
       message.success('Review rejected');
@@ -88,7 +115,9 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
               Approve
             </Button>
             <Button onClick={() => setChangesModalOpen(true)}>Request Changes</Button>
-            <Button danger onClick={() => setRejectModalOpen(true)}>Reject</Button>
+            <Button danger onClick={() => setRejectModalOpen(true)}>
+              Reject
+            </Button>
           </Space>
         );
       case 'changes_requested':
@@ -106,9 +135,7 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
     <div>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <h2 style={{ margin: 0 }}>Review — Order {orderId}</h2>
-        <Tag color={REVIEW_STATUS_COLORS[review.status]}>
-          {REVIEW_STATUS_LABELS[review.status]}
-        </Tag>
+        <Tag color={REVIEW_STATUS_COLORS[review.status]}>{REVIEW_STATUS_LABELS[review.status]}</Tag>
       </div>
 
       <Row gutter={[16, 16]}>
@@ -205,14 +232,22 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
 
           <Card title="Timeline" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(review.createdAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(review.createdAt)}
+              </Descriptions.Item>
               {review.approvedAt && (
-                <Descriptions.Item label="Approved">{formatDateTime(review.approvedAt)}</Descriptions.Item>
+                <Descriptions.Item label="Approved">
+                  {formatDateTime(review.approvedAt)}
+                </Descriptions.Item>
               )}
               {review.rejectedAt && (
-                <Descriptions.Item label="Rejected">{formatDateTime(review.rejectedAt)}</Descriptions.Item>
+                <Descriptions.Item label="Rejected">
+                  {formatDateTime(review.rejectedAt)}
+                </Descriptions.Item>
               )}
-              <Descriptions.Item label="Updated">{formatDateTime(review.updatedAt)}</Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(review.updatedAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>
@@ -222,7 +257,10 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
         title="Request Changes"
         open={changesModalOpen}
         onOk={() => void handleRequestChanges()}
-        onCancel={() => { setChangesModalOpen(false); setChangesText(''); }}
+        onCancel={() => {
+          setChangesModalOpen(false);
+          setChangesText('');
+        }}
         confirmLoading={requestChanges.isPending}
         okText="Submit"
       >
@@ -238,7 +276,10 @@ export function ReviewDetailPage({ orderId }: { orderId: string }): React.ReactN
         title="Reject Review"
         open={rejectModalOpen}
         onOk={() => void handleReject()}
-        onCancel={() => { setRejectModalOpen(false); setRejectReason(''); }}
+        onCancel={() => {
+          setRejectModalOpen(false);
+          setRejectReason('');
+        }}
         confirmLoading={rejectReview.isPending}
         okText="Reject"
         okButtonProps={{ danger: true }}

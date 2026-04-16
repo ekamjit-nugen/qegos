@@ -26,10 +26,14 @@ interface TypingPayload {
 let socketInstance: Socket | null = null;
 
 async function getSocket(): Promise<Socket | null> {
-  if (socketInstance?.connected) { return socketInstance; }
+  if (socketInstance?.connected) {
+    return socketInstance;
+  }
 
   const token = await getAccessToken();
-  if (!token) { return null; }
+  if (!token) {
+    return null;
+  }
 
   if (socketInstance) {
     socketInstance.auth = { token };
@@ -76,7 +80,9 @@ export function useChatSocket(
     let mounted = true;
 
     void getSocket().then((socket) => {
-      if (!mounted || !socket) { return; }
+      if (!mounted || !socket) {
+        return;
+      }
       socketRef.current = socket;
 
       const handleNewMessage = (payload: NewMessagePayload): void => {

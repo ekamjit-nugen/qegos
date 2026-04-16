@@ -24,7 +24,12 @@ export default function TicketsLoading(): React.ReactNode {
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div
             key={i}
-            style={{ display: 'flex', gap: 16, padding: '14px 0', borderBottom: '1px solid #f0f0f0' }}
+            style={{
+              display: 'flex',
+              gap: 16,
+              padding: '14px 0',
+              borderBottom: '1px solid #f0f0f0',
+            }}
           >
             <Skeleton.Input active size="small" style={{ width: '10%' }} />
             <Skeleton.Input active size="small" style={{ width: '30%' }} />

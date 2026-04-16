@@ -14,8 +14,12 @@ export function UserDetailPage({ id }: { id: string }): React.ReactNode {
   const { message } = App.useApp();
   const [editOpen, setEditOpen] = useState(false);
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!user) { return <Empty description="User not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!user) {
+    return <Empty description="User not found" />;
+  }
 
   const handleToggleStatus = async (): Promise<void> => {
     try {
@@ -28,7 +32,14 @@ export function UserDetailPage({ id }: { id: string }): React.ReactNode {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <h2 style={{ margin: 0 }}>{fullName(user.firstName, user.lastName)}</h2>
         <Button icon={<EditOutlined />} onClick={() => setEditOpen(true)}>
           Edit
@@ -47,8 +58,12 @@ export function UserDetailPage({ id }: { id: string }): React.ReactNode {
               <Descriptions.Item label="Date of Birth">
                 {user.dateOfBirth ? formatDate(user.dateOfBirth) : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Preferred Contact">{user.preferredContact ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="Preferred Language">{user.preferredLanguage ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="Preferred Contact">
+                {user.preferredContact ?? '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Preferred Language">
+                {user.preferredLanguage ?? '-'}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -57,7 +72,9 @@ export function UserDetailPage({ id }: { id: string }): React.ReactNode {
               <Descriptions.Item label="Street">{user.address?.street ?? '-'}</Descriptions.Item>
               <Descriptions.Item label="Suburb">{user.address?.suburb ?? '-'}</Descriptions.Item>
               <Descriptions.Item label="State">{user.address?.state ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="Postcode">{user.address?.postcode ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="Postcode">
+                {user.address?.postcode ?? '-'}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>
@@ -73,7 +90,9 @@ export function UserDetailPage({ id }: { id: string }): React.ReactNode {
                   {user.status ? 'Active' : 'Inactive'}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Referral Code">{user.referralCode ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="Referral Code">
+                {user.referralCode ?? '-'}
+              </Descriptions.Item>
               <Descriptions.Item label="Created">{formatDate(user.createdAt)}</Descriptions.Item>
               <Descriptions.Item label="Updated">{formatDate(user.updatedAt)}</Descriptions.Item>
             </Descriptions>

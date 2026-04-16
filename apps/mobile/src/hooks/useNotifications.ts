@@ -10,10 +10,9 @@ export function useNotifications(
   return useQuery<PaginatedResponse<Notification>>({
     queryKey: ['notifications', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Notification>> => {
-      const res = await api.get<PaginatedResponse<Notification>>(
-        '/notifications',
-        { params: { page, limit } },
-      );
+      const res = await api.get<PaginatedResponse<Notification>>('/notifications', {
+        params: { page, limit },
+      });
       return res.data;
     },
   });
@@ -25,9 +24,7 @@ export function useUnreadNotificationCount(): ReturnType<
   return useQuery<ApiResponse<{ count: number }>>({
     queryKey: ['notifications-unread-count'],
     queryFn: async (): Promise<ApiResponse<{ count: number }>> => {
-      const res = await api.get<ApiResponse<{ count: number }>>(
-        '/notifications/unread-count',
-      );
+      const res = await api.get<ApiResponse<{ count: number }>>('/notifications/unread-count');
       return res.data;
     },
     refetchInterval: 30_000,
@@ -40,9 +37,7 @@ export function useMarkNotificationRead(): ReturnType<
   const queryClient = useQueryClient();
 
   return useMutation<ApiResponse<Notification>, Error, string>({
-    mutationFn: async (
-      notificationId: string,
-    ): Promise<ApiResponse<Notification>> => {
+    mutationFn: async (notificationId: string): Promise<ApiResponse<Notification>> => {
       const res = await api.patch<ApiResponse<Notification>>(
         `/notifications/${notificationId}/read`,
       );
@@ -64,9 +59,7 @@ export function useMarkAllRead(): ReturnType<
 
   return useMutation<ApiResponse<{ updated: number }>, Error, void>({
     mutationFn: async (): Promise<ApiResponse<{ updated: number }>> => {
-      const res = await api.patch<ApiResponse<{ updated: number }>>(
-        '/notifications/read-all',
-      );
+      const res = await api.patch<ApiResponse<{ updated: number }>>('/notifications/read-all');
       return res.data;
     },
     onSuccess: async (): Promise<void> => {

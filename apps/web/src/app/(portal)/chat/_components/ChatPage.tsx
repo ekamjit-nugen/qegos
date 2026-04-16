@@ -1,18 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Badge,
-  Button,
-  Card,
-  Empty,
-  Input,
-  List,
-  Modal,
-  Space,
-  Spin,
-  Typography,
-} from 'antd';
+import { Badge, Button, Card, Empty, Input, List, Modal, Space, Spin, Typography } from 'antd';
 import { PlusOutlined, SendOutlined } from '@ant-design/icons';
 import {
   useConversations,
@@ -48,8 +37,12 @@ export function ChatPage(): React.ReactNode {
     useCallback((payload) => {
       setTypingUser(payload.userId);
       // Clear typing indicator after 3 seconds
-      if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); }
-      typingTimeoutRef.current = setTimeout(() => { setTypingUser(null); }, 3000);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        setTypingUser(null);
+      }, 3000);
     }, []),
   );
 
@@ -66,15 +59,23 @@ export function ChatPage(): React.ReactNode {
   }, [messages]);
 
   const handleSend = useCallback(() => {
-    if (!selectedId || !messageText.trim()) { return; }
+    if (!selectedId || !messageText.trim()) {
+      return;
+    }
     sendMutation.mutate(
       { conversationId: selectedId, content: messageText.trim() },
-      { onSuccess: () => { setMessageText(''); } },
+      {
+        onSuccess: () => {
+          setMessageText('');
+        },
+      },
     );
   }, [selectedId, messageText, sendMutation]);
 
   const handleCreateConversation = useCallback(() => {
-    if (!newSubject.trim()) { return; }
+    if (!newSubject.trim()) {
+      return;
+    }
     createConvoMutation.mutate(newSubject.trim(), {
       onSuccess: (convo) => {
         setNewConvoOpen(false);
@@ -106,12 +107,23 @@ export function ChatPage(): React.ReactNode {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Chat</Title>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+        }}
+      >
+        <Title level={3} style={{ margin: 0 }}>
+          Chat
+        </Title>
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => { setNewConvoOpen(true); }}
+          onClick={() => {
+            setNewConvoOpen(true);
+          }}
         >
           New Conversation
         </Button>
@@ -120,14 +132,18 @@ export function ChatPage(): React.ReactNode {
       <Modal
         title="Start a Conversation"
         open={newConvoOpen}
-        onCancel={() => { setNewConvoOpen(false); }}
+        onCancel={() => {
+          setNewConvoOpen(false);
+        }}
         onOk={handleCreateConversation}
         confirmLoading={createConvoMutation.isPending}
       >
         <Input
           placeholder="Subject (e.g., Tax return query)"
           value={newSubject}
-          onChange={(e) => { setNewSubject(e.target.value); }}
+          onChange={(e) => {
+            setNewSubject(e.target.value);
+          }}
           onPressEnter={handleCreateConversation}
         />
       </Modal>
@@ -144,17 +160,16 @@ export function ChatPage(): React.ReactNode {
               <Spin />
             </div>
           ) : !conversations || conversations.length === 0 ? (
-            <Empty
-              description="No conversations"
-              style={{ padding: 24 }}
-            />
+            <Empty description="No conversations" style={{ padding: 24 }} />
           ) : (
             <List
               dataSource={conversations}
               renderItem={(convo: Conversation) => (
                 <List.Item
                   key={convo._id}
-                  onClick={() => { setSelectedId(convo._id); }}
+                  onClick={() => {
+                    setSelectedId(convo._id);
+                  }}
                   style={{
                     padding: '12px 16px',
                     cursor: 'pointer',
@@ -162,23 +177,21 @@ export function ChatPage(): React.ReactNode {
                   }}
                 >
                   <div style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text
-                        strong={convo.unreadCountUser > 0}
-                        ellipsis
-                        style={{ flex: 1 }}
-                      >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text strong={convo.unreadCountUser > 0} ellipsis style={{ flex: 1 }}>
                         {convo.subject ?? 'Conversation'}
                       </Text>
                       {convo.unreadCountUser > 0 && (
                         <Badge count={convo.unreadCountUser} size="small" />
                       )}
                     </div>
-                    <Text
-                      type="secondary"
-                      ellipsis
-                      style={{ display: 'block', fontSize: 12 }}
-                    >
+                    <Text type="secondary" ellipsis style={{ display: 'block', fontSize: 12 }}>
                       {convo.lastMessagePreview ?? 'No messages yet'}
                     </Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>
@@ -295,7 +308,14 @@ export function ChatPage(): React.ReactNode {
 
               {/* Typing indicator */}
               {typingUser && (
-                <div style={{ padding: '4px 16px', fontSize: 12, color: '#8c8c8c', fontStyle: 'italic' }}>
+                <div
+                  style={{
+                    padding: '4px 16px',
+                    fontSize: 12,
+                    color: '#8c8c8c',
+                    fontStyle: 'italic',
+                  }}
+                >
                   Staff is typing...
                 </div>
               )}

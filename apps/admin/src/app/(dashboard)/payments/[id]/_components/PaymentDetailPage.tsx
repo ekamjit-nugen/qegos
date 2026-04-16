@@ -10,12 +10,23 @@ import { formatCurrency, formatDateTime } from '@/lib/utils/format';
 export function PaymentDetailPage({ id }: { id: string }): React.ReactNode {
   const { data: payment, isLoading } = usePayment(id);
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!payment) { return <Empty description="Payment not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!payment) {
+    return <Empty description="Payment not found" />;
+  }
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <h2 style={{ margin: 0 }}>
           {payment.paymentNumber}{' '}
           <Tag color={PAYMENT_STATUS_COLORS[payment.status]}>
@@ -30,7 +41,9 @@ export function PaymentDetailPage({ id }: { id: string }): React.ReactNode {
             <Descriptions column={{ xs: 1, sm: 2 }} size="small">
               <Descriptions.Item label="Payment Number">{payment.paymentNumber}</Descriptions.Item>
               <Descriptions.Item label="Gateway">{payment.gateway}</Descriptions.Item>
-              <Descriptions.Item label="Gateway Txn ID">{payment.gatewayTxnId ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="Gateway Txn ID">
+                {payment.gatewayTxnId ?? '-'}
+              </Descriptions.Item>
               <Descriptions.Item label="Amount">{formatCurrency(payment.amount)}</Descriptions.Item>
               <Descriptions.Item label="Currency">{payment.currency}</Descriptions.Item>
               <Descriptions.Item label="Status">
@@ -38,10 +51,18 @@ export function PaymentDetailPage({ id }: { id: string }): React.ReactNode {
                   {PAYMENT_STATUS_LABELS[payment.status]}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Captured Amount">{formatCurrency(payment.capturedAmount)}</Descriptions.Item>
-              <Descriptions.Item label="Refunded Amount">{formatCurrency(payment.refundedAmount)}</Descriptions.Item>
-              <Descriptions.Item label="Failure Code">{payment.failureCode ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="Failure Message">{payment.failureMessage ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="Captured Amount">
+                {formatCurrency(payment.capturedAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Refunded Amount">
+                {formatCurrency(payment.refundedAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Failure Code">
+                {payment.failureCode ?? '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Failure Message">
+                {payment.failureMessage ?? '-'}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -75,8 +96,12 @@ export function PaymentDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Timeline" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(payment.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Updated">{formatDateTime(payment.updatedAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(payment.createdAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(payment.updatedAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 

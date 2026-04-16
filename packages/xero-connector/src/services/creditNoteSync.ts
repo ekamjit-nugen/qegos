@@ -27,7 +27,9 @@ export async function createCreditNote(
   reference: string,
 ): Promise<{ xeroCreditNoteId: string }> {
   const order = await OrderModel.findById(orderId);
-  if (!order) throw AppError.notFound('Order');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
   if (!order.xeroInvoiceId) {
     throw AppError.badRequest('Order has no Xero invoice to credit');
   }
@@ -61,7 +63,7 @@ export async function createCreditNote(
         throw new Error(`Failed to fetch Xero invoice: ${invoiceRes.status}`);
       }
 
-      const invoiceData = await invoiceRes.json() as {
+      const invoiceData = (await invoiceRes.json()) as {
         Invoices: Array<{ Contact: { ContactID: string } }>;
       };
       const contactId = invoiceData.Invoices[0]?.Contact?.ContactID;
@@ -72,12 +74,14 @@ export async function createCreditNote(
         Reference: reference,
         Status: 'AUTHORISED',
         LineAmountTypes: 'Inclusive',
-        LineItems: [{
-          Description: `Refund for ${order.orderNumber ?? orderId}`,
-          Quantity: 1,
-          UnitAmount: refundAmountCents / 100,
-          AccountCode: accountCode,
-        }],
+        LineItems: [
+          {
+            Description: `Refund for ${order.orderNumber ?? orderId}`,
+            Quantity: 1,
+            UnitAmount: refundAmountCents / 100,
+            AccountCode: accountCode,
+          },
+        ],
         CurrencyCode: 'AUD',
       };
 
@@ -97,30 +101,29 @@ export async function createCreditNote(
         throw new Error(`Xero credit note creation failed: ${res.status} ${errBody}`);
       }
 
-      const data = await res.json() as {
+      const data = (await res.json()) as {
         CreditNotes: Array<{ CreditNoteID: string }>;
       };
       const creditNoteId = data.CreditNotes[0].CreditNoteID;
 
       // Allocate credit note to invoice
-      await fetch(
-        `https://api.xero.com/api.xro/2.0/CreditNotes/${creditNoteId}/Allocations`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Xero-Tenant-Id': tenantId,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({
-            Allocations: [{
+      await fetch(`https://api.xero.com/api.xro/2.0/CreditNotes/${creditNoteId}/Allocations`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Xero-Tenant-Id': tenantId,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          Allocations: [
+            {
               Invoice: { InvoiceID: order.xeroInvoiceId },
               Amount: refundAmountCents / 100,
-            }],
-          }),
-        },
-      );
+            },
+          ],
+        }),
+      });
 
       return { creditNoteId };
     });
@@ -134,7 +137,7 @@ export async function createCreditNote(
 
     return { xeroCreditNoteId: result.creditNoteId };
   } catch (err: unknown) {
-    syncLog.status = (err instanceof XeroOfflineError) ? 'queued' : 'failed';
+    syncLog.status = err instanceof XeroOfflineError ? 'queued' : 'failed';
     syncLog.error = (err as Error).message;
     await syncLog.save();
     throw err;

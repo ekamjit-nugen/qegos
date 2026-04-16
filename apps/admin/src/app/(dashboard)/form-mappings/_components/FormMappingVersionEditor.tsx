@@ -372,13 +372,10 @@ export function FormMappingVersionEditor({ mappingId, version }: Props): React.R
             <ul style={{ margin: 0, paddingLeft: 16 }}>
               {validation.issues.slice(0, 20).map((issue, i) => (
                 <li key={i}>
-                  <Text code>{issue.path || '(root)'}</Text>{' '}
-                  <Tag>{issue.code}</Tag> {issue.message}
+                  <Text code>{issue.path || '(root)'}</Text> <Tag>{issue.code}</Tag> {issue.message}
                 </li>
               ))}
-              {validation.issues.length > 20 && (
-                <li>…and {validation.issues.length - 20} more</li>
-              )}
+              {validation.issues.length > 20 && <li>…and {validation.issues.length - 20} more</li>}
             </ul>
           }
           style={{ marginBottom: 12 }}
@@ -400,7 +397,12 @@ export function FormMappingVersionEditor({ mappingId, version }: Props): React.R
             title="Schema (JSON Schema draft-07 + x-qegos)"
             styles={{ body: { padding: 0 } }}
           >
-            <JsonEditor value={jsonText} onChange={onEditorChange} readOnly={!isDraft} height={600} />
+            <JsonEditor
+              value={jsonText}
+              onChange={onEditorChange}
+              readOnly={!isDraft}
+              height={600}
+            />
           </Card>
           {isDraft && (
             <Card size="small" title="Version notes" style={{ marginTop: 12 }}>

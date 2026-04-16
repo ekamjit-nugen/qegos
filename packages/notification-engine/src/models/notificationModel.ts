@@ -91,8 +91,6 @@ notificationSchema.index(
   { expireAfterSeconds: DEFAULT_RETENTION_DAYS * 24 * 60 * 60 },
 );
 
-export function createNotificationModel(
-  connection: Connection,
-): Model<INotificationDocument> {
+export function createNotificationModel(connection: Connection): Model<INotificationDocument> {
   return connection.model<INotificationDocument>('Notification', notificationSchema);
 }

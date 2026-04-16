@@ -176,8 +176,18 @@ describe('Review Pipeline', () => {
   describe('Change Resolution', () => {
     it('should track resolved changes count', () => {
       const changesRequested = [
-        { field: 'income', issue: 'Missing rental income', instruction: 'Add rental schedule', resolvedAt: null },
-        { field: 'deductions', issue: 'No receipts', instruction: 'Upload receipts', resolvedAt: null },
+        {
+          field: 'income',
+          issue: 'Missing rental income',
+          instruction: 'Add rental schedule',
+          resolvedAt: null,
+        },
+        {
+          field: 'deductions',
+          issue: 'No receipts',
+          instruction: 'Upload receipts',
+          resolvedAt: null,
+        },
       ];
       let changesResolvedCount = 0;
 
@@ -251,9 +261,7 @@ describe('Review Pipeline', () => {
     it('should calculate time to review in minutes', () => {
       const createdAt = new Date('2026-04-07T10:00:00Z');
       const approvedAt = new Date('2026-04-07T11:30:00Z');
-      const timeToReview = Math.round(
-        (approvedAt.getTime() - createdAt.getTime()) / (1000 * 60),
-      );
+      const timeToReview = Math.round((approvedAt.getTime() - createdAt.getTime()) / (1000 * 60));
       expect(timeToReview).toBe(90); // 90 minutes
     });
   });

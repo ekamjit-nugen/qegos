@@ -47,11 +47,17 @@ function getFirstStageType(model: MockModel, callIndex: number = 0): string {
   return Object.keys(pipeline[0])[0];
 }
 
-function getStageByType(pipeline: Array<Record<string, unknown>>, type: string): Record<string, unknown> | undefined {
+function getStageByType(
+  pipeline: Array<Record<string, unknown>>,
+  type: string,
+): Record<string, unknown> | undefined {
   return pipeline.find((stage) => type in stage);
 }
 
-function getAllStagesByType(pipeline: Array<Record<string, unknown>>, type: string): Array<Record<string, unknown>> {
+function getAllStagesByType(
+  pipeline: Array<Record<string, unknown>>,
+  type: string,
+): Array<Record<string, unknown>> {
   return pipeline.filter((stage) => type in stage);
 }
 
@@ -67,7 +73,6 @@ const dateRange = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Query Optimization', () => {
-
   // ─── $match First Rule ──────────────────────────────────────────────
 
   describe('$match is always the first pipeline stage', () => {
@@ -151,7 +156,10 @@ describe('Query Optimization', () => {
       const PaymentModel = createMockModel([]);
       const UserModel = createMockModel([]);
 
-      await getClv(PaymentModel as unknown as Model<Document>, UserModel as unknown as Model<Document>);
+      await getClv(
+        PaymentModel as unknown as Model<Document>,
+        UserModel as unknown as Model<Document>,
+      );
 
       const pipeline = getPipeline(PaymentModel);
       expect(Object.keys(pipeline[0])[0]).toBe('$match');
@@ -276,13 +284,16 @@ describe('Query Optimization', () => {
       };
       models.UserModel.find = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) });
 
-      await getStaffBenchmark(models as unknown as {
-        OrderModel: Model<Document>;
-        LeadActivityModel: Model<Document>;
-        ReviewAssignmentModel: Model<Document>;
-        SupportTicketModel: Model<Document>;
-        UserModel: Model<Document>;
-      }, dateRange);
+      await getStaffBenchmark(
+        models as unknown as {
+          OrderModel: Model<Document>;
+          LeadActivityModel: Model<Document>;
+          ReviewAssignmentModel: Model<Document>;
+          SupportTicketModel: Model<Document>;
+          UserModel: Model<Document>;
+        },
+        dateRange,
+      );
 
       // Check each model's pipeline has $project before $group
       const checkProjectBeforeGroup = (model: MockModel, name: string): void => {
@@ -310,17 +321,23 @@ describe('Query Optimization', () => {
       };
       models.UserModel.find = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) });
 
-      await getStaffBenchmark(models as unknown as {
-        OrderModel: Model<Document>;
-        LeadActivityModel: Model<Document>;
-        ReviewAssignmentModel: Model<Document>;
-        SupportTicketModel: Model<Document>;
-        UserModel: Model<Document>;
-      }, dateRange);
+      await getStaffBenchmark(
+        models as unknown as {
+          OrderModel: Model<Document>;
+          LeadActivityModel: Model<Document>;
+          ReviewAssignmentModel: Model<Document>;
+          SupportTicketModel: Model<Document>;
+          UserModel: Model<Document>;
+        },
+        dateRange,
+      );
 
       const pipeline = getPipeline(models.OrderModel, 0);
       const projectStage = pipeline.find((s: Record<string, unknown>) => '$project' in s);
-      const projected = (projectStage as Record<string, unknown>).$project as Record<string, unknown>;
+      const projected = (projectStage as Record<string, unknown>).$project as Record<
+        string,
+        unknown
+      >;
 
       expect(projected).toHaveProperty('processingBy');
     });
@@ -335,17 +352,23 @@ describe('Query Optimization', () => {
       };
       models.UserModel.find = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) });
 
-      await getStaffBenchmark(models as unknown as {
-        OrderModel: Model<Document>;
-        LeadActivityModel: Model<Document>;
-        ReviewAssignmentModel: Model<Document>;
-        SupportTicketModel: Model<Document>;
-        UserModel: Model<Document>;
-      }, dateRange);
+      await getStaffBenchmark(
+        models as unknown as {
+          OrderModel: Model<Document>;
+          LeadActivityModel: Model<Document>;
+          ReviewAssignmentModel: Model<Document>;
+          SupportTicketModel: Model<Document>;
+          UserModel: Model<Document>;
+        },
+        dateRange,
+      );
 
       const pipeline = getPipeline(models.ReviewAssignmentModel, 0);
       const projectStage = pipeline.find((s: Record<string, unknown>) => '$project' in s);
-      const projected = (projectStage as Record<string, unknown>).$project as Record<string, unknown>;
+      const projected = (projectStage as Record<string, unknown>).$project as Record<
+        string,
+        unknown
+      >;
 
       expect(projected).toHaveProperty('reviewerId');
       expect(projected).toHaveProperty('timeToReview');
@@ -391,7 +414,10 @@ describe('Query Optimization', () => {
       const PaymentModel = createMockModel([]);
       const UserModel = createMockModel([]);
 
-      await getClv(PaymentModel as unknown as Model<Document>, UserModel as unknown as Model<Document>);
+      await getClv(
+        PaymentModel as unknown as Model<Document>,
+        UserModel as unknown as Model<Document>,
+      );
 
       const pipeline = getPipeline(PaymentModel);
       const lookups = getAllStagesByType(pipeline, '$lookup');

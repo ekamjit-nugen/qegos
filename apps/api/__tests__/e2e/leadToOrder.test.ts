@@ -77,17 +77,26 @@ function createLeadOrderApp(): express.Express {
   // POST /leads — create
   app.post('/api/v1/leads', auth, (req: Request, res: Response): void => {
     const { clientName, email, mobile, source } = req.body as {
-      clientName?: string; email?: string; mobile?: string; source?: string;
+      clientName?: string;
+      email?: string;
+      mobile?: string;
+      source?: string;
     };
 
     if (!clientName || !email) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'clientName and email required' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'clientName and email required' });
       return;
     }
 
     // Validate E.164 phone if provided
     if (mobile && !/^\+61\d{9}$/.test(mobile)) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'Mobile must be E.164 format (+61XXXXXXXXX)' });
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'Mobile must be E.164 format (+61XXXXXXXXX)',
+      });
       return;
     }
 
@@ -132,7 +141,9 @@ function createLeadOrderApp(): express.Express {
 
     const { status } = req.body as { status?: number };
     if (!status || status < 1 || status > 8) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'Status must be 1-8' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'Status must be 1-8' });
       return;
     }
 
@@ -206,12 +217,20 @@ function createLeadOrderApp(): express.Express {
     }
 
     if (lead.convertedOrderId) {
-      res.status(409).json({ status: 409, code: 'ALREADY_CONVERTED', message: 'Lead already converted to order' });
+      res.status(409).json({
+        status: 409,
+        code: 'ALREADY_CONVERTED',
+        message: 'Lead already converted to order',
+      });
       return;
     }
 
     if (lead.status === LEAD_STATUS.LOST || lead.status === LEAD_STATUS.DORMANT) {
-      res.status(422).json({ status: 422, code: 'INVALID_STATE', message: 'Cannot convert a lost or dormant lead' });
+      res.status(422).json({
+        status: 422,
+        code: 'INVALID_STATE',
+        message: 'Cannot convert a lost or dormant lead',
+      });
       return;
     }
 
@@ -262,14 +281,12 @@ describe('E2E: Lead → Order Conversion', () => {
     let leadId: string;
 
     test('1. Create lead from inbound inquiry', async () => {
-      const res = await request(app)
-        .post('/api/v1/leads')
-        .send({
-          clientName: 'Sarah Wilson',
-          email: 'sarah@example.com',
-          mobile: '+61412345678',
-          source: 'website',
-        });
+      const res = await request(app).post('/api/v1/leads').send({
+        clientName: 'Sarah Wilson',
+        email: 'sarah@example.com',
+        mobile: '+61412345678',
+        source: 'website',
+      });
 
       expect(res.status).toBe(201);
       expect(res.body.data.leadNumber).toBe('QGS-L-0001');
@@ -346,8 +363,7 @@ describe('E2E: Lead → Order Conversion', () => {
     });
 
     test('9. Activity trail is preserved', async () => {
-      const res = await request(app)
-        .get(`/api/v1/leads/${leadId}/activities`);
+      const res = await request(app).get(`/api/v1/leads/${leadId}/activities`);
 
       expect(res.body.data.length).toBe(2);
       expect(res.body.data[0].type).toBe('call');

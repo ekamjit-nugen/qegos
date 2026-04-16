@@ -68,7 +68,7 @@ export const CAMPAIGN_STATUS_TRANSITIONS: Record<CampaignStatus, CampaignStatus[
   sending: ['paused', 'sent', 'failed'],
   paused: ['sending', 'cancelled'],
   sent: [],
-  failed: ['draft'],    // can retry from draft
+  failed: ['draft'], // can retry from draft
   cancelled: ['draft'], // can re-draft
 };
 
@@ -111,8 +111,8 @@ export interface ABTestConfig {
 // ─── Cost Estimation ─────────────────────────────────────────────────────────
 
 export interface CostPerMessage {
-  sms: number;     // cents — default 750 ($0.075)
-  email: number;   // cents — default 10 ($0.001)
+  sms: number; // cents — default 750 ($0.075)
+  email: number; // cents — default 10 ($0.001)
   whatsapp: number; // cents — default 500 ($0.05)
 }
 
@@ -247,8 +247,8 @@ export interface IConsentRecordDocument extends IConsentRecord, Document {
 export interface ChannelContent {
   to: string;
   body: string;
-  subject?: string;   // email only
-  htmlBody?: string;   // email only
+  subject?: string; // email only
+  htmlBody?: string; // email only
   templateName?: string; // whatsapp only
   templateParams?: string[]; // whatsapp only
   from?: string;
@@ -290,12 +290,12 @@ export const MERGE_TAG_FALLBACKS: Record<string, string> = {
 // ─── Rate Limits ─────────────────────────────────────────────────────────────
 
 export interface RateLimitConfig {
-  smsPerSecond: number;       // default 10
-  emailPerSecond: number;     // default 100
-  whatsappPerSecond: number;  // default 80
-  smsBatchSize: number;       // default 2500
-  emailBatchSize: number;     // default 500
-  whatsappBatchSize: number;  // default 500
+  smsPerSecond: number; // default 10
+  emailPerSecond: number; // default 100
+  whatsappPerSecond: number; // default 80
+  smsBatchSize: number; // default 2500
+  emailBatchSize: number; // default 500
+  whatsappBatchSize: number; // default 500
 }
 
 export const DEFAULT_RATE_LIMITS: RateLimitConfig = {
@@ -389,8 +389,8 @@ export interface CampaignStats {
   openCount: number;
   clickCount: number;
   optOutCount: number;
-  deliveryRate: number;  // percentage
-  openRate: number;      // percentage (email only)
-  clickRate: number;     // percentage (email only)
-  optOutRate: number;    // percentage
+  deliveryRate: number; // percentage
+  openRate: number; // percentage (email only)
+  clickRate: number; // percentage (email only)
+  optOutRate: number; // percentage
 }

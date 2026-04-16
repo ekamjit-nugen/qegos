@@ -64,7 +64,7 @@ export async function exchangeCodeForTokens(code: string): Promise<{
     throw new Error(`Xero token exchange failed: ${response.status} ${errBody}`);
   }
 
-  const data = await response.json() as {
+  const data = (await response.json()) as {
     access_token: string;
     refresh_token: string;
     expires_in: number;
@@ -74,7 +74,7 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   const connectionsRes = await fetch('https://api.xero.com/connections', {
     headers: { Authorization: `Bearer ${data.access_token}` },
   });
-  const connections = await connectionsRes.json() as Array<{ tenantId: string }>;
+  const connections = (await connectionsRes.json()) as Array<{ tenantId: string }>;
   const tenantId = connections[0]?.tenantId ?? '';
 
   return {
@@ -112,7 +112,7 @@ async function doRefresh(refreshToken: string): Promise<{
     throw new Error(`Xero token refresh failed: ${response.status}`);
   }
 
-  const data = await response.json() as {
+  const data = (await response.json()) as {
     access_token: string;
     refresh_token: string;
     expires_in: number;
@@ -226,7 +226,7 @@ export async function getChartOfAccounts(): Promise<unknown[]> {
         Accept: 'application/json',
       },
     });
-    const data = await res.json() as { Accounts: unknown[] };
+    const data = (await res.json()) as { Accounts: unknown[] };
     return data.Accounts ?? [];
   });
 }
@@ -240,7 +240,7 @@ export async function getTaxRates(): Promise<unknown[]> {
         Accept: 'application/json',
       },
     });
-    const data = await res.json() as { TaxRates: unknown[] };
+    const data = (await res.json()) as { TaxRates: unknown[] };
     return data.TaxRates ?? [];
   });
 }

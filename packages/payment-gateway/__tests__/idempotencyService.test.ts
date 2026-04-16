@@ -13,7 +13,9 @@ const store: Map<string, { value: string; expiresAt: number }> = new Map();
 const mockRedis = {
   get: jest.fn(async (key: string): Promise<string | null> => {
     const entry = store.get(key);
-    if (!entry) return null;
+    if (!entry) {
+      return null;
+    }
     if (entry.expiresAt < Date.now()) {
       store.delete(key);
       return null;

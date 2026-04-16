@@ -34,7 +34,9 @@ export function createCreditRoutes(deps: CreditRouteDeps): Router {
         res.status(200).json({ status: 200, data: { balance } });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );
@@ -71,7 +73,9 @@ export function createCreditRoutes(deps: CreditRouteDeps): Router {
         });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );
@@ -93,7 +97,9 @@ export function createCreditRoutes(deps: CreditRouteDeps): Router {
         res.status(200).json({ status: 200, data: { userId: req.params.userId, balance } });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );
@@ -130,7 +136,9 @@ export function createCreditRoutes(deps: CreditRouteDeps): Router {
         });
       } catch (err) {
         const error = err as Error & { statusCode?: number };
-        res.status(error.statusCode ?? 500).json({ status: error.statusCode ?? 500, message: error.message });
+        res
+          .status(error.statusCode ?? 500)
+          .json({ status: error.statusCode ?? 500, message: error.message });
       }
     },
   );

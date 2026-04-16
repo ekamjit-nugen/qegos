@@ -32,7 +32,6 @@ import type {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Client Portal & Vault (Phase 6)', () => {
-
   // ── Document Categories (CPV-INV-04) ──────────────────────────────────
 
   describe('Vault document categories', () => {
@@ -42,13 +41,26 @@ describe('Client Portal & Vault (Phase 6)', () => {
 
     it('includes all expected tax document types', () => {
       const expected: VaultDocumentCategory[] = [
-        'payg_summary', 'interest_statement', 'dividend_statement',
-        'managed_fund_statement', 'rental_income', 'self_employment',
-        'private_health_insurance', 'donation_receipt', 'work_expense_receipt',
-        'self_education', 'vehicle_logbook', 'home_office',
-        'notice_of_assessment', 'tax_return_copy', 'bas_statement',
-        'id_document', 'superannuation_statement', 'foreign_income',
-        'capital_gains_record', 'other',
+        'payg_summary',
+        'interest_statement',
+        'dividend_statement',
+        'managed_fund_statement',
+        'rental_income',
+        'self_employment',
+        'private_health_insurance',
+        'donation_receipt',
+        'work_expense_receipt',
+        'self_education',
+        'vehicle_logbook',
+        'home_office',
+        'notice_of_assessment',
+        'tax_return_copy',
+        'bas_statement',
+        'id_document',
+        'superannuation_statement',
+        'foreign_income',
+        'capital_gains_record',
+        'other',
       ];
       for (const cat of expected) {
         expect(VAULT_DOCUMENT_CATEGORIES).toContain(cat);
@@ -189,7 +201,12 @@ describe('Client Portal & Vault (Phase 6)', () => {
 
     it('includes the full lifecycle', () => {
       const expected: AtoRefundStatus[] = [
-        'not_filed', 'filed', 'processing', 'assessed', 'refund_issued', 'payment_due',
+        'not_filed',
+        'filed',
+        'processing',
+        'assessed',
+        'refund_issued',
+        'payment_due',
       ];
       for (const status of expected) {
         expect(ATO_REFUND_STATUSES).toContain(status);
@@ -251,18 +268,18 @@ describe('Client Portal & Vault (Phase 6)', () => {
       const summary: ITaxYearSummary = {
         userId: null as never,
         financialYear: '2024-25',
-        totalIncome: 8500000,     // $85,000
-        totalDeductions: 1200000,  // $12,000
-        taxableIncome: 7300000,    // $73,000
+        totalIncome: 8500000, // $85,000
+        totalDeductions: 1200000, // $12,000
+        taxableIncome: 7300000, // $73,000
         medicareLevyAmount: 146000, // $1,460
         hecsRepayment: 0,
-        totalTaxPayable: 1587800,  // $15,878
-        taxWithheld: 2000000,      // $20,000
-        refundOrOwing: 412200,     // $4,122 refund
+        totalTaxPayable: 1587800, // $15,878
+        taxWithheld: 2000000, // $20,000
+        refundOrOwing: 412200, // $4,122 refund
         superannuationReported: 935000,
         noaReceived: false,
         atoRefundStatus: 'not_filed',
-        totalPaidToQegos: 39900,   // $399
+        totalPaidToQegos: 39900, // $399
         createdAt: new Date(),
         updatedAt: new Date(),
       };

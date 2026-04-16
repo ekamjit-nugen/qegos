@@ -72,8 +72,8 @@ export default function ProfileScreen(): React.ReactNode {
               Change Password
             </Text>
             <Text variant="bodySmall" style={styles.dimText}>
-              Update your account password securely. After changing, all other
-              sessions will be signed out.
+              Update your account password securely. After changing, all other sessions will be
+              signed out.
             </Text>
             <Button
               mode="contained"

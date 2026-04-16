@@ -62,14 +62,15 @@ function getFinancialYearOptions(): { value: string; label: string }[] {
   return years;
 }
 
-const FY_FILTER_OPTIONS = [
-  { label: 'All Years', value: '' },
-  ...getFinancialYearOptions(),
-];
+const FY_FILTER_OPTIONS = [{ label: 'All Years', value: '' }, ...getFinancialYearOptions()];
 
 function formatFileSize(bytes: number): string {
-  if (bytes < 1024) { return `${bytes} B`; }
-  if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB`; }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -115,7 +116,11 @@ export function VaultManagementPage(): React.ReactNode {
   }, []);
 
   const handleUpload: UploadProps['customRequest'] = useCallback(
-    (options: { file: unknown; onSuccess?: (body: unknown) => void; onError?: (err: Error) => void }) => {
+    (options: {
+      file: unknown;
+      onSuccess?: (body: unknown) => void;
+      onError?: (err: Error) => void;
+    }) => {
       if (!selectedUser || !uploadYear || !uploadCategory) {
         void message.warning('Please select financial year and category');
         return;
@@ -146,7 +151,9 @@ export function VaultManagementPage(): React.ReactNode {
 
   const handleDownload = useCallback(
     (docId: string) => {
-      if (!selectedUser) { return; }
+      if (!selectedUser) {
+        return;
+      }
       downloadMutation.mutate(
         { userId: selectedUser._id, docId },
         {
@@ -222,7 +229,9 @@ export function VaultManagementPage(): React.ReactNode {
           icon={<DownloadOutlined />}
           size="small"
           loading={downloadMutation.isPending}
-          onClick={() => { handleDownload(record._id); }}
+          onClick={() => {
+            handleDownload(record._id);
+          }}
         >
           Download
         </Button>
@@ -247,7 +256,9 @@ export function VaultManagementPage(): React.ReactNode {
               placeholder="Search client by name or email…"
               prefix={<SearchOutlined />}
               value={clientSearch}
-              onChange={(e) => { setClientSearch(e.target.value); }}
+              onChange={(e) => {
+                setClientSearch(e.target.value);
+              }}
               allowClear
             />
           </Col>
@@ -255,14 +266,14 @@ export function VaultManagementPage(): React.ReactNode {
             {selectedUser && (
               <Space>
                 <UserOutlined />
-                <Text strong>
-                  {fullName(selectedUser.firstName, selectedUser.lastName)}
-                </Text>
+                <Text strong>{fullName(selectedUser.firstName, selectedUser.lastName)}</Text>
                 <Text type="secondary">{selectedUser.email}</Text>
                 <Button
                   type="link"
                   size="small"
-                  onClick={() => { setSelectedUser(null); }}
+                  onClick={() => {
+                    setSelectedUser(null);
+                  }}
                 >
                   Change
                 </Button>
@@ -288,13 +299,21 @@ export function VaultManagementPage(): React.ReactNode {
                       cursor: 'pointer',
                       borderBottom: '1px solid #f0f0f0',
                     }}
-                    onClick={() => { handleSelectClient(user); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { handleSelectClient(user); } }}
+                    onClick={() => {
+                      handleSelectClient(user);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSelectClient(user);
+                      }
+                    }}
                     role="button"
                     tabIndex={0}
                   >
                     <Text strong>{fullName(user.firstName, user.lastName)}</Text>
-                    <Text type="secondary" style={{ marginLeft: 12 }}>{user.email}</Text>
+                    <Text type="secondary" style={{ marginLeft: 12 }}>
+                      {user.email}
+                    </Text>
                   </div>
                 ))}
               </div>
@@ -316,9 +335,7 @@ export function VaultManagementPage(): React.ReactNode {
               </Text>
               <Progress
                 percent={Math.round((storage.used / storage.quota) * 100)}
-                format={() =>
-                  `${formatFileSize(storage.used)} / ${formatFileSize(storage.quota)}`
-                }
+                format={() => `${formatFileSize(storage.used)} / ${formatFileSize(storage.quota)}`}
                 style={{ marginTop: 4 }}
               />
               {storage.breakdown && storage.breakdown.length > 0 && (
@@ -341,14 +358,18 @@ export function VaultManagementPage(): React.ReactNode {
           <Space wrap style={{ marginBottom: 16 }}>
             <Select
               value={filters.financialYear ?? ''}
-              onChange={(v) => { setFilters((f) => ({ ...f, financialYear: v || undefined, page: 1 })); }}
+              onChange={(v) => {
+                setFilters((f) => ({ ...f, financialYear: v || undefined, page: 1 }));
+              }}
               options={FY_FILTER_OPTIONS}
               style={{ width: 160 }}
               placeholder="Financial Year"
             />
             <Select
               value={filters.category ?? ''}
-              onChange={(v) => { setFilters((f) => ({ ...f, category: v || undefined, page: 1 })); }}
+              onChange={(v) => {
+                setFilters((f) => ({ ...f, category: v || undefined, page: 1 }));
+              }}
               options={CATEGORY_FILTER_OPTIONS}
               style={{ width: 220 }}
               placeholder="Category"
@@ -356,7 +377,9 @@ export function VaultManagementPage(): React.ReactNode {
             <Button
               type="primary"
               icon={<CloudUploadOutlined />}
-              onClick={() => { setUploadOpen(true); }}
+              onClick={() => {
+                setUploadOpen(true);
+              }}
             >
               Upload on Behalf
             </Button>

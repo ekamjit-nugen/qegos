@@ -57,7 +57,8 @@ export function CreditsPage(): React.ReactNode {
       align: 'right',
       render: (v: number) => (
         <span style={{ color: v >= 0 ? '#52c41a' : '#ff4d4f', fontWeight: 600 }}>
-          {v >= 0 ? '+' : ''}{`$${(v / 100).toFixed(2)}`}
+          {v >= 0 ? '+' : ''}
+          {`$${(v / 100).toFixed(2)}`}
         </span>
       ),
     },
@@ -72,7 +73,7 @@ export function CreditsPage(): React.ReactNode {
       title: 'Expires',
       dataIndex: 'expiresAt',
       key: 'expiresAt',
-      render: (v: string | undefined) => v ? dayjs(v).format('DD/MM/YYYY') : '-',
+      render: (v: string | undefined) => (v ? dayjs(v).format('DD/MM/YYYY') : '-'),
     },
   ];
 

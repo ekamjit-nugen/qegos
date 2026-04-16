@@ -5,9 +5,7 @@
  * Unit/structural tests — no database required.
  */
 
-import {
-  VALID_DISPUTE_TRANSITIONS,
-} from '../src/modules/billing/billingDispute.types';
+import { VALID_DISPUTE_TRANSITIONS } from '../src/modules/billing/billingDispute.types';
 
 import type {
   DisputeType,
@@ -26,7 +24,6 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Billing Disputes', () => {
-
   // ─── Dispute Types ─────────────────────────────────────────────────────────
 
   describe('Dispute Types', () => {
@@ -67,8 +64,12 @@ describe('Billing Disputes', () => {
       expect(statuses).toHaveLength(6);
       expect(statuses).toEqual(
         expect.arrayContaining([
-          'raised', 'investigating', 'pending_approval',
-          'approved', 'rejected', 'completed',
+          'raised',
+          'investigating',
+          'pending_approval',
+          'approved',
+          'rejected',
+          'completed',
         ]),
       );
     });

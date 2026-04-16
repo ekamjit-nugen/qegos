@@ -42,7 +42,12 @@ export function createLimiter(config: RateLimiterConfig): RequestHandler {
     // Dynamic import to avoid requiring rate-limit-redis when Redis is not available
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { RedisStore } = require('rate-limit-redis') as { RedisStore: new (config: { sendCommand: (...args: string[]) => Promise<unknown>; prefix?: string }) => unknown };
+      const { RedisStore } = require('rate-limit-redis') as {
+        RedisStore: new (config: {
+          sendCommand: (...args: string[]) => Promise<unknown>;
+          prefix?: string;
+        }) => unknown;
+      };
       options.store = new RedisStore({
         sendCommand: (...args: string[]) =>
           (_redisClient as Redis).call(args[0], ...args.slice(1)) as Promise<unknown>,

@@ -21,9 +21,7 @@ const whatsappConfigSchema = new Schema<IWhatsAppConfigDocument>(
   },
 );
 
-export function createWhatsAppConfigModel(
-  connection: Connection,
-): Model<IWhatsAppConfigDocument> {
+export function createWhatsAppConfigModel(connection: Connection): Model<IWhatsAppConfigDocument> {
   if (connection.models.WhatsAppConfig) {
     return connection.models.WhatsAppConfig as Model<IWhatsAppConfigDocument>;
   }

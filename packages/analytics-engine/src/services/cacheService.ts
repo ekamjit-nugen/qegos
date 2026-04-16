@@ -2,8 +2,8 @@
  * Cache Service — Redis-backed caching with stale-while-revalidate (ANA-INV-06)
  */
 
-import type { Redis } from 'ioredis';
 import { createHash } from 'crypto';
+import type { Redis } from 'ioredis';
 import { DEFAULT_CACHE_TTL } from '../constants';
 
 /**
@@ -20,7 +20,9 @@ export function buildCacheKey(view: string, params: Record<string, unknown> = {}
  */
 export async function getCached<T>(redis: Redis, key: string): Promise<T | null> {
   const raw = await redis.get(key);
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   try {
     return JSON.parse(raw) as T;
   } catch {
@@ -64,7 +66,9 @@ export async function withCache<T>(
       // Fire-and-forget revalidation
       computeFn()
         .then((fresh) => setCache(redis, key, ttl, fresh))
-        .catch(() => { /* swallow — stale data is still valid */ });
+        .catch(() => {
+          /* swallow — stale data is still valid */
+        });
     }
     return cached;
   }

@@ -11,9 +11,13 @@ export function useTaxDeadlineList(filters: TaxDeadlineListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
-      const res = await api.get<PaginatedResponse<TaxDeadline>>(`/tax-calendar/deadlines?${params.toString()}`);
+      const res = await api.get<PaginatedResponse<TaxDeadline>>(
+        `/tax-calendar/deadlines?${params.toString()}`,
+      );
       return res.data;
     },
     placeholderData: (prev) => prev,

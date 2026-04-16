@@ -41,7 +41,13 @@ import {
   bulkUpdateAtoStatus,
   getPrefillData,
 } from './portal.service';
-import type { AuthRequest, UploadDocumentBody, AtoStatusUpdateBody, BulkAtoStatusUpdate, CreateTaxSummaryBody } from './portal.types';
+import type {
+  AuthRequest,
+  UploadDocumentBody,
+  AtoStatusUpdateBody,
+  BulkAtoStatusUpdate,
+  CreateTaxSummaryBody,
+} from './portal.types';
 
 // ─── ObjectId cast helper ──────────────────────────────────────────────────
 const toOid = (s: string): Types.ObjectId => s as unknown as Types.ObjectId;
@@ -71,9 +77,10 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
   // All routes require authentication
   // deps.authenticate may be a factory (() => RequestHandler) or a direct RequestHandler
-  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
-    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
-    : deps.authenticate;
+  const authMiddleware =
+    typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+      ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+      : deps.authenticate;
   router.use(authMiddleware);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -87,7 +94,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     uploadMiddleware.single('file'),
     ...uploadDocumentValidation,
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const authReq = req as AuthRequest;
       const user = authReq.user!;
 
@@ -147,7 +156,11 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
         res.status(201).json(response);
       } catch (err) {
-        const error = err as Error & { statusCode?: number; code?: string; details?: Record<string, unknown> };
+        const error = err as Error & {
+          statusCode?: number;
+          code?: string;
+          details?: Record<string, unknown>;
+        };
         res.status(error.statusCode ?? 500).json({
           status: error.statusCode ?? 500,
           code: error.code ?? 'UPLOAD_ERROR',
@@ -174,12 +187,21 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       }
 
       const body = req.body as UploadDocumentBody;
-      const results: Array<{ fileName: string; success: boolean; error?: string; warning?: string }> = [];
+      const results: Array<{
+        fileName: string;
+        success: boolean;
+        error?: string;
+        warning?: string;
+      }> = [];
 
       for (const file of files) {
         try {
           if (!ALLOWED_MIME_TYPES[file.mimetype]) {
-            results.push({ fileName: file.originalname, success: false, error: 'Invalid file type' });
+            results.push({
+              fileName: file.originalname,
+              success: false,
+              error: 'Invalid file type',
+            });
             continue;
           }
           if (file.size > MAX_FILE_SIZE) {
@@ -224,10 +246,17 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/documents',
     ...listDocumentsValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
-      const query = req.query as { financialYear?: string; category?: string; page?: string; limit?: string };
+      const query = req.query as {
+        financialYear?: string;
+        category?: string;
+        page?: string;
+        limit?: string;
+      };
 
       const result = await listDocuments({
         userId: toOid(user.userId),
@@ -247,7 +276,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/documents/:id',
     ...getDocumentValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const result = await getDocument(
@@ -282,13 +313,19 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/documents/:id',
     ...updateDocumentValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const doc = await updateDocument(
         req.params.id as unknown as Types.ObjectId,
         toOid(user.userId),
-        req.body as { category?: import('@nugen/file-storage').VaultDocumentCategory; description?: string; tags?: string[] },
+        req.body as {
+          category?: import('@nugen/file-storage').VaultDocumentCategory;
+          description?: string;
+          tags?: string[];
+        },
       );
 
       if (!doc) {
@@ -306,7 +343,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/documents/:id',
     ...deleteDocumentValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const doc = await archiveDocument(
@@ -319,7 +358,10 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
         return;
       }
 
-      res.status(200).json({ status: 200, message: 'Document archived. Will be permanently deleted after 30 days.' });
+      res.status(200).json({
+        status: 200,
+        message: 'Document archived. Will be permanently deleted after 30 days.',
+      });
     },
   );
 
@@ -329,7 +371,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/documents/:id/restore',
     ...getDocumentValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const doc = await restoreDocument(
@@ -338,7 +382,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
       );
 
       if (!doc) {
-        res.status(404).json({ status: 404, code: 'NOT_FOUND', message: 'Archived document not found' });
+        res
+          .status(404)
+          .json({ status: 404, code: 'NOT_FOUND', message: 'Archived document not found' });
         return;
       }
 
@@ -348,25 +394,19 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
   // ── GET /vault/years ──────────────────────────────────────────────────
 
-  router.get(
-    '/vault/years',
-    async (req: Request, res: Response): Promise<void> => {
-      const user = (req as AuthRequest).user!;
-      const years = await listFinancialYears(toOid(user.userId));
-      res.status(200).json({ status: 200, data: { years } });
-    },
-  );
+  router.get('/vault/years', async (req: Request, res: Response): Promise<void> => {
+    const user = (req as AuthRequest).user!;
+    const years = await listFinancialYears(toOid(user.userId));
+    res.status(200).json({ status: 200, data: { years } });
+  });
 
   // ── GET /vault/storage ────────────────────────────────────────────────
 
-  router.get(
-    '/vault/storage',
-    async (req: Request, res: Response): Promise<void> => {
-      const user = (req as AuthRequest).user!;
-      const usage = await getStorageUsage(toOid(user.userId));
-      res.status(200).json({ status: 200, data: usage });
-    },
-  );
+  router.get('/vault/storage', async (req: Request, res: Response): Promise<void> => {
+    const user = (req as AuthRequest).user!;
+    const usage = await getStorageUsage(toOid(user.userId));
+    res.status(200).json({ status: 200, data: usage });
+  });
 
   // ── GET /vault/prefill/:financialYear (CPV-INV-10) ────────────────────
 
@@ -374,7 +414,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/vault/prefill/:financialYear',
     ...prefillValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const prefill = await getPrefillData(toOid(user.userId), req.params.financialYear);
@@ -402,7 +444,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     deps.checkPermission('portal', 'manage') as import('express').RequestHandler,
     ...createTaxSummaryValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const body = req.body as CreateTaxSummaryBody;
       const summary = await upsertTaxSummary(body as unknown as Record<string, unknown>);
@@ -413,14 +457,11 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
 
   // ── GET /tax-summaries ────────────────────────────────────────────────
 
-  router.get(
-    '/tax-summaries',
-    async (req: Request, res: Response): Promise<void> => {
-      const user = (req as AuthRequest).user!;
-      const summaries = await listTaxSummaries(toOid(user.userId));
-      res.status(200).json({ status: 200, data: { summaries } });
-    },
-  );
+  router.get('/tax-summaries', async (req: Request, res: Response): Promise<void> => {
+    const user = (req as AuthRequest).user!;
+    const summaries = await listTaxSummaries(toOid(user.userId));
+    res.status(200).json({ status: 200, data: { summaries } });
+  });
 
   // ── GET /tax-summaries/:year/compare ──────────────────────────────────
 
@@ -428,7 +469,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/tax-summaries/:year/compare',
     ...yoyComparisonValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const comparison = await getYoYComparison(toOid(user.userId), req.params.year);
@@ -456,7 +499,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     '/ato-status/:year',
     ...getAtoStatusValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const status = await getAtoStatus(toOid(user.userId), req.params.year);
@@ -481,7 +526,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     deps.checkPermission('portal', 'manage') as import('express').RequestHandler,
     ...updateAtoStatusValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const body = req.body as AtoStatusUpdateBody;
       const updated = await updateAtoStatus(
@@ -491,7 +538,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
           atoRefundStatus: body.atoRefundStatus,
           ...(body.assessmentDate && { assessmentDate: new Date(body.assessmentDate) }),
           ...(body.noaReceived !== undefined && { noaReceived: body.noaReceived }),
-          ...(body.atoRefundIssuedDate && { atoRefundIssuedDate: new Date(body.atoRefundIssuedDate) }),
+          ...(body.atoRefundIssuedDate && {
+            atoRefundIssuedDate: new Date(body.atoRefundIssuedDate),
+          }),
         },
       );
 
@@ -515,7 +564,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     deps.checkPermission('portal', 'admin') as import('express').RequestHandler,
     ...bulkUpdateAtoStatusValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const { updates } = req.body as { updates: BulkAtoStatusUpdate[] };
 
@@ -550,9 +601,14 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     adminGuard,
     ...listDocumentsValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const { userId } = req.params;
-      const { financialYear, category, page, limit } = req.query as Record<string, string | undefined>;
+      const { financialYear, category, page, limit } = req.query as Record<
+        string,
+        string | undefined
+      >;
 
       const result = await listDocuments({
         userId: toOid(userId),
@@ -585,10 +641,7 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     adminGuard,
     async (req: Request, res: Response): Promise<void> => {
       const { userId, docId } = req.params;
-      const result = await getDocument(
-        docId as unknown as Types.ObjectId,
-        toOid(userId),
-      );
+      const result = await getDocument(docId as unknown as Types.ObjectId, toOid(userId));
 
       if (!result) {
         res.status(404).json({ status: 404, code: 'NOT_FOUND', message: 'Document not found' });
@@ -619,7 +672,9 @@ export function createPortalRoutes(deps: FileStorageRouteDeps): Router {
     uploadMiddleware.single('file'),
     ...uploadDocumentValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const authReq = req as AuthRequest;
       const { userId } = req.params;
 

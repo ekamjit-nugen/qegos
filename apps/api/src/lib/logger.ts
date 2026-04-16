@@ -47,9 +47,15 @@ function formatEntry(level: LogLevel, message: string, meta?: Record<string, unk
   // Enrich with request context if available
   if (ctx) {
     entry.requestId = ctx.requestId;
-    if (ctx.userId) entry.userId = ctx.userId;
-    if (ctx.method) entry.method = ctx.method;
-    if (ctx.path) entry.path = ctx.path;
+    if (ctx.userId) {
+      entry.userId = ctx.userId;
+    }
+    if (ctx.method) {
+      entry.method = ctx.method;
+    }
+    if (ctx.path) {
+      entry.path = ctx.path;
+    }
   }
 
   // Merge additional metadata
@@ -65,7 +71,9 @@ function formatEntry(level: LogLevel, message: string, meta?: Record<string, unk
 }
 
 function writeLog(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
-  if (!shouldLog(level)) return;
+  if (!shouldLog(level)) {
+    return;
+  }
 
   const entry = formatEntry(level, message, meta);
   const json = JSON.stringify(entry);

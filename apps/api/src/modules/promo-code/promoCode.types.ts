@@ -11,12 +11,12 @@ export interface IPromoCode {
   code: string;
   description: string;
   discountType: DiscountType;
-  discountValue: number;        // percent (0-100) or cents
-  minOrderAmount: number;       // minimum order total in cents (default 0)
-  maxDiscountAmount?: number;   // cap for percent discounts in cents
-  maxUsageTotal?: number;       // max global uses (null = unlimited)
-  maxUsagePerUser: number;      // max per user (default 1)
-  usageCount: number;           // current total uses
+  discountValue: number; // percent (0-100) or cents
+  minOrderAmount: number; // minimum order total in cents (default 0)
+  maxDiscountAmount?: number; // cap for percent discounts in cents
+  maxUsageTotal?: number; // max global uses (null = unlimited)
+  maxUsagePerUser: number; // max per user (default 1)
+  usageCount: number; // current total uses
   validFrom: Date;
   validUntil: Date;
   isActive: boolean;

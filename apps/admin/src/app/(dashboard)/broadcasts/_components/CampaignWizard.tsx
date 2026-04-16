@@ -118,9 +118,15 @@ export function CampaignWizard(): React.ReactNode {
   const channels = useMemo(() => channelsForCampaign(state.channel), [state.channel]);
 
   // Templates per channel
-  const smsTemplates = useTemplateList(channels.includes('sms') ? { channel: 'sms', isActive: true, limit: 100 } : {});
-  const emailTemplates = useTemplateList(channels.includes('email') ? { channel: 'email', isActive: true, limit: 100 } : {});
-  const whatsappTemplates = useTemplateList(channels.includes('whatsapp') ? { channel: 'whatsapp', isActive: true, limit: 100 } : {});
+  const smsTemplates = useTemplateList(
+    channels.includes('sms') ? { channel: 'sms', isActive: true, limit: 100 } : {},
+  );
+  const emailTemplates = useTemplateList(
+    channels.includes('email') ? { channel: 'email', isActive: true, limit: 100 } : {},
+  );
+  const whatsappTemplates = useTemplateList(
+    channels.includes('whatsapp') ? { channel: 'whatsapp', isActive: true, limit: 100 } : {},
+  );
 
   const update = (patch: Partial<WizardState>): void => {
     setState((s) => ({ ...s, ...patch }));
@@ -144,8 +150,7 @@ export function CampaignWizard(): React.ReactNode {
   };
 
   const runPreview = (channel: SingleChannel): void => {
-    const body =
-      channel === 'sms' ? state.smsBody : channel === 'email' ? state.emailBody : '';
+    const body = channel === 'sms' ? state.smsBody : channel === 'email' ? state.emailBody : '';
     if (!body) {
       void message.warning(`No ${channel} body to preview`);
       return;
@@ -467,8 +472,16 @@ export function CampaignWizard(): React.ReactNode {
               />
             )}
             {channels.includes('whatsapp') && (
-              <Card size="small" title={<Tag color={CHANNEL_COLORS.whatsapp}>WhatsApp</Tag>} style={{ marginBottom: 16 }}>
-                <Form.Item label="WhatsApp template" required tooltip="WhatsApp requires a Meta-approved template">
+              <Card
+                size="small"
+                title={<Tag color={CHANNEL_COLORS.whatsapp}>WhatsApp</Tag>}
+                style={{ marginBottom: 16 }}
+              >
+                <Form.Item
+                  label="WhatsApp template"
+                  required
+                  tooltip="WhatsApp requires a Meta-approved template"
+                >
                   <Select
                     placeholder="Pick approved template"
                     loading={whatsappTemplates.isLoading}
@@ -511,7 +524,14 @@ export function CampaignWizard(): React.ReactNode {
                     dangerouslySetInnerHTML={{ __html: preview.htmlBody }}
                   />
                 ) : (
-                  <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit', fontSize: 13 }}>
+                  <pre
+                    style={{
+                      whiteSpace: 'pre-wrap',
+                      margin: 0,
+                      fontFamily: 'inherit',
+                      fontSize: 13,
+                    }}
+                  >
                     {preview.body}
                   </pre>
                 )}
@@ -571,7 +591,14 @@ export function CampaignWizard(): React.ReactNode {
               </Descriptions.Item>
               {channels.includes('sms') && (
                 <Descriptions.Item label="SMS body">
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 13 }}>
+                  <pre
+                    style={{
+                      margin: 0,
+                      whiteSpace: 'pre-wrap',
+                      fontFamily: 'inherit',
+                      fontSize: 13,
+                    }}
+                  >
                     {state.smsBody}
                   </pre>
                 </Descriptions.Item>
@@ -580,7 +607,14 @@ export function CampaignWizard(): React.ReactNode {
                 <>
                   <Descriptions.Item label="Email subject">{state.emailSubject}</Descriptions.Item>
                   <Descriptions.Item label="Email body">
-                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 13 }}>
+                    <pre
+                      style={{
+                        margin: 0,
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                      }}
+                    >
                       {state.emailBody}
                     </pre>
                   </Descriptions.Item>
@@ -588,13 +622,14 @@ export function CampaignWizard(): React.ReactNode {
               )}
               {channels.includes('whatsapp') && (
                 <Descriptions.Item label="WhatsApp template">
-                  {whatsappTemplates.data?.data.find((t) => t._id === state.whatsappTemplateId)?.name ?? '—'}
+                  {whatsappTemplates.data?.data.find((t) => t._id === state.whatsappTemplateId)
+                    ?.name ?? '—'}
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="Schedule">
                 {state.sendMode === 'now'
                   ? 'Send immediately on submit'
-                  : state.scheduledAt?.format('DD/MM/YYYY HH:mm') ?? '—'}
+                  : (state.scheduledAt?.format('DD/MM/YYYY HH:mm') ?? '—')}
               </Descriptions.Item>
             </Descriptions>
             <Alert
@@ -629,11 +664,21 @@ export function CampaignWizard(): React.ReactNode {
                 Next
               </Button>
             ) : state.sendMode === 'now' ? (
-              <Button type="primary" icon={<SendOutlined />} loading={submitting} onClick={handleSendNow}>
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                loading={submitting}
+                onClick={handleSendNow}
+              >
                 Create &amp; send now
               </Button>
             ) : (
-              <Button type="primary" icon={<ClockCircleOutlined />} loading={submitting} onClick={handleSchedule}>
+              <Button
+                type="primary"
+                icon={<ClockCircleOutlined />}
+                loading={submitting}
+                onClick={handleSchedule}
+              >
                 Create &amp; schedule
               </Button>
             )}

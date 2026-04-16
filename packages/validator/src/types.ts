@@ -14,5 +14,12 @@ export interface SanitizeOptions {
 export type AustralianState = 'NSW' | 'VIC' | 'QLD' | 'SA' | 'WA' | 'TAS' | 'NT' | 'ACT';
 
 export const AUSTRALIAN_STATES: AustralianState[] = [
-  'NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT',
+  'NSW',
+  'VIC',
+  'QLD',
+  'SA',
+  'WA',
+  'TAS',
+  'NT',
+  'ACT',
 ];

@@ -18,13 +18,13 @@ import type { Document, Types } from 'mongoose';
 // ─── Wire / DTO shapes ────────────────────────────────────────────────────
 
 export const AU_STATES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'] as const;
-export type AuState = typeof AU_STATES[number];
+export type AuState = (typeof AU_STATES)[number];
 
 export const WORK_TYPES = ['TFN', 'ABN', 'ACN'] as const;
-export type WorkType = typeof WORK_TYPES[number];
+export type WorkType = (typeof WORK_TYPES)[number];
 
 export const GENDERS = ['male', 'female'] as const;
-export type Gender = typeof GENDERS[number];
+export type Gender = (typeof GENDERS)[number];
 
 export const PRIMARY_ID_TYPES = [
   'australian_full_birth_certificate',
@@ -34,7 +34,7 @@ export const PRIMARY_ID_TYPES = [
   'foreign_passport',
   'drivers_license',
 ] as const;
-export type PrimaryIdType = typeof PRIMARY_ID_TYPES[number];
+export type PrimaryIdType = (typeof PRIMARY_ID_TYPES)[number];
 
 export const SECONDARY_ID_TYPES = [
   'national_photo_id_card',
@@ -43,7 +43,7 @@ export const SECONDARY_ID_TYPES = [
   'drivers_license',
   'bank_statement_or_card',
 ] as const;
-export type SecondaryIdType = typeof SECONDARY_ID_TYPES[number];
+export type SecondaryIdType = (typeof SECONDARY_ID_TYPES)[number];
 
 /**
  * The plaintext submission body the client portal POSTs.
@@ -69,7 +69,7 @@ export interface CreateConsentFormInput {
   // Tax & Banking — ALL sensitive
   workType: WorkType;
   tfnAbnAcn: string; // 9 or 11 digits — sensitive
-  bsb: string;       // 6 digits — sensitive
+  bsb: string; // 6 digits — sensitive
   accountNumber: string; // 4-10 digits — sensitive
   accountName: string;
 

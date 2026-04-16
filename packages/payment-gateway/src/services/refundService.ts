@@ -102,7 +102,7 @@ export async function processRefund(params: ProcessRefundParams): Promise<Proces
   }
 
   // Determine refund amount
-  const refundAmount = params.amount ?? (payment.capturedAmount - payment.refundedAmount);
+  const refundAmount = params.amount ?? payment.capturedAmount - payment.refundedAmount;
 
   if (!Number.isInteger(refundAmount) || refundAmount <= 0) {
     throw AppError.badRequest('Refund amount must be a positive integer (cents)');
@@ -120,9 +120,7 @@ export async function processRefund(params: ProcessRefundParams): Promise<Proces
   const requiredApproval = getRequiredApprovalLevel(refundAmount);
   if (!hasApprovalAuthority(params.actorType, requiredApproval)) {
     const levelLabel = requiredApproval === 'super_admin' ? 'Super Admin' : 'Admin';
-    throw AppError.forbidden(
-      `Refund of ${refundAmount} cents requires ${levelLabel} approval`,
-    );
+    throw AppError.forbidden(`Refund of ${refundAmount} cents requires ${levelLabel} approval`);
   }
 
   // Get the gateway provider
@@ -132,12 +130,15 @@ export async function processRefund(params: ProcessRefundParams): Promise<Proces
   }
 
   // Validate status transition
-  const targetStatus = totalAfterRefund >= payment.capturedAmount
-    ? 'refunded' as const
-    : 'partially_refunded' as const;
+  const targetStatus =
+    totalAfterRefund >= payment.capturedAmount
+      ? ('refunded' as const)
+      : ('partially_refunded' as const);
 
   if (!isValidTransition(payment.status, 'refund_pending')) {
-    throw AppError.badRequest(`Cannot transition payment from "${payment.status}" to "refund_pending"`);
+    throw AppError.badRequest(
+      `Cannot transition payment from "${payment.status}" to "refund_pending"`,
+    );
   }
 
   // Set to refund_pending

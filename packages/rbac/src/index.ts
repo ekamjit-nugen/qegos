@@ -35,7 +35,10 @@ export async function seedRoles(RoleModel: Model<IRoleDocument>): Promise<void> 
   for (const role of defaultRoles) {
     await RoleModel.updateOne(
       { name: role.name },
-      { $set: { permissions: role.permissions }, $setOnInsert: { displayName: role.displayName, isSystem: role.isSystem } },
+      {
+        $set: { permissions: role.permissions },
+        $setOnInsert: { displayName: role.displayName, isSystem: role.isSystem },
+      },
       { upsert: true },
     );
   }

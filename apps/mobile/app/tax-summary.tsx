@@ -1,14 +1,6 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import {
-  Text,
-  Card,
-  Chip,
-  Divider,
-  ActivityIndicator,
-  Appbar,
-  useTheme,
-} from 'react-native-paper';
+import { Text, Card, Chip, Divider, ActivityIndicator, Appbar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useTaxSummaries } from '@/hooks/useTaxSummary';
 import type { TaxSummary } from '@/types/taxSummary';
@@ -39,18 +31,16 @@ export default function TaxSummaryScreen(): React.ReactNode {
   }
 
   function deltaChip(curr: number, prev: number | undefined): string {
-    if (prev === undefined || prev === 0) return '';
+    if (prev === undefined || prev === 0) {
+      return '';
+    }
     const delta = curr - prev;
     const pct = (delta / Math.abs(prev)) * 100;
     const sign = delta >= 0 ? '+' : '';
     return `${sign}${pct.toFixed(1)}%`;
   }
 
-  function renderSummary({
-    item,
-  }: {
-    item: TaxSummary;
-  }): React.ReactElement {
+  function renderSummary({ item }: { item: TaxSummary }): React.ReactElement {
     return (
       <Card style={styles.card}>
         <Card.Content>
@@ -66,16 +56,12 @@ export default function TaxSummaryScreen(): React.ReactNode {
           </View>
           <View style={styles.row}>
             <Text variant="bodyMedium">Deductions</Text>
-            <Text variant="bodyMedium">
-              {formatCurrency(item.totalDeductions)}
-            </Text>
+            <Text variant="bodyMedium">{formatCurrency(item.totalDeductions)}</Text>
           </View>
           <Divider style={styles.divider} />
           <View style={styles.row}>
             <Text variant="bodyMedium">Taxable Income</Text>
-            <Text variant="bodyMedium">
-              {formatCurrency(item.taxableIncome)}
-            </Text>
+            <Text variant="bodyMedium">{formatCurrency(item.taxableIncome)}</Text>
           </View>
           <Divider style={styles.divider} />
 
@@ -85,9 +71,7 @@ export default function TaxSummaryScreen(): React.ReactNode {
               style={[
                 styles.bold,
                 {
-                  color: item.isRefund
-                    ? '#4CAF50'
-                    : theme.colors.error,
+                  color: item.isRefund ? '#4CAF50' : theme.colors.error,
                 },
               ]}
             >
@@ -98,9 +82,7 @@ export default function TaxSummaryScreen(): React.ReactNode {
               style={[
                 styles.bold,
                 {
-                  color: item.isRefund
-                    ? '#4CAF50'
-                    : theme.colors.error,
+                  color: item.isRefund ? '#4CAF50' : theme.colors.error,
                 },
               ]}
             >
@@ -110,8 +92,7 @@ export default function TaxSummaryScreen(): React.ReactNode {
 
           {item.lodgementDate && (
             <Text variant="bodySmall" style={styles.dimText}>
-              Lodged:{' '}
-              {new Date(item.lodgementDate).toLocaleDateString('en-AU')}
+              Lodged: {new Date(item.lodgementDate).toLocaleDateString('en-AU')}
             </Text>
           )}
         </Card.Content>
@@ -154,7 +135,14 @@ export default function TaxSummaryScreen(): React.ReactNode {
                   <Text variant="bodyMedium">Income</Text>
                   <Text variant="bodyMedium">
                     {formatCurrency(current.totalIncome)}{' '}
-                    <Chip compact textStyle={styles.chipText} style={{ backgroundColor: current.totalIncome >= previous.totalIncome ? '#4CAF50' : '#F44336' }}>
+                    <Chip
+                      compact
+                      textStyle={styles.chipText}
+                      style={{
+                        backgroundColor:
+                          current.totalIncome >= previous.totalIncome ? '#4CAF50' : '#F44336',
+                      }}
+                    >
                       {deltaChip(current.totalIncome, previous.totalIncome)}
                     </Chip>
                   </Text>
@@ -163,7 +151,11 @@ export default function TaxSummaryScreen(): React.ReactNode {
                   <Text variant="bodyMedium">Deductions</Text>
                   <Text variant="bodyMedium">
                     {formatCurrency(current.totalDeductions)}{' '}
-                    <Chip compact textStyle={styles.chipText} style={{ backgroundColor: '#2196F3' }}>
+                    <Chip
+                      compact
+                      textStyle={styles.chipText}
+                      style={{ backgroundColor: '#2196F3' }}
+                    >
                       {deltaChip(current.totalDeductions, previous.totalDeductions)}
                     </Chip>
                   </Text>
@@ -172,7 +164,14 @@ export default function TaxSummaryScreen(): React.ReactNode {
                   <Text variant="bodyMedium">Refund/Owing</Text>
                   <Text variant="bodyMedium">
                     {formatCurrency(current.refundOrOwing)}{' '}
-                    <Chip compact textStyle={styles.chipText} style={{ backgroundColor: current.refundOrOwing >= previous.refundOrOwing ? '#4CAF50' : '#F44336' }}>
+                    <Chip
+                      compact
+                      textStyle={styles.chipText}
+                      style={{
+                        backgroundColor:
+                          current.refundOrOwing >= previous.refundOrOwing ? '#4CAF50' : '#F44336',
+                      }}
+                    >
                       {deltaChip(current.refundOrOwing, previous.refundOrOwing)}
                     </Chip>
                   </Text>

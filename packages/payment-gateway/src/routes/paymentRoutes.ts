@@ -5,6 +5,7 @@ import { validate } from '@nugen/validator';
 import type { CheckPermissionFn } from '@nugen/rbac';
 import type { AuditLogDI } from '@nugen/audit-log';
 // Fix for S-3.19: Removed @nugen/audit-log import — audit logging injected via deps
+import type Stripe from 'stripe';
 import type {
   IPaymentDocument,
   IWebhookEventDocument,
@@ -17,10 +18,7 @@ import type {
 import { routePayment } from '../services/paymentRouter';
 import { processStripeWebhook, processPayzooWebhook } from '../services/webhookProcessor';
 import { processRefund } from '../services/refundService';
-import {
-  checkIdempotencyKey,
-  storeIdempotencyResponse,
-} from '../services/idempotencyService';
+import { checkIdempotencyKey, storeIdempotencyResponse } from '../services/idempotencyService';
 import { generatePaymentNumber, isValidTransition } from '../models/paymentModel';
 import { stripeWebhookVerify } from '../middleware/stripeWebhookVerify';
 import { payzooWebhookVerify } from '../middleware/payzooWebhookVerify';
@@ -36,8 +34,6 @@ import {
   writeOffValidation,
   adjustInvoiceValidation,
 } from '../validators/paymentValidators';
-
-import type Stripe from 'stripe';
 
 /** Fix for S-3.19: Audit log interface injected from consuming app.
  * @deprecated Use `AuditLogDI` from `@nugen/audit-log`. Kept as alias for back-compat. */
@@ -60,13 +56,7 @@ export interface PaymentRouteDeps {
  */
 export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
   const router = Router();
-  const {
-    PaymentModel,
-    GatewayConfigModel,
-    providers,
-    authenticate,
-    checkPermission,
-  } = deps;
+  const { PaymentModel, GatewayConfigModel, providers, authenticate, checkPermission } = deps;
 
   // Fix for S-3.19: Use injected audit log
   const auditLog = deps.auditLog;
@@ -134,10 +124,12 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       }
 
       // Get gateway config
-      const config = (await GatewayConfigModel.findOne()) ?? await GatewayConfigModel.create({
-        primaryGateway: 'stripe',
-        routingRule: 'primary_only',
-      });
+      const config =
+        (await GatewayConfigModel.findOne()) ??
+        (await GatewayConfigModel.create({
+          primaryGateway: 'stripe',
+          routingRule: 'primary_only',
+        }));
 
       // Generate payment number
       const paymentNumber = await generatePaymentNumber(PaymentModel);
@@ -498,9 +490,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
         Object.assign(query, authReq.scopeFilter);
       }
 
-      const payments = await PaymentModel.find(query)
-        .sort({ createdAt: -1 })
-        .lean();
+      const payments = await PaymentModel.find(query).sort({ createdAt: -1 }).lean();
 
       // PAY-INV-09: Strip gateway internals
       res.status(200).json({
@@ -574,10 +564,12 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
     authenticate() as RequestHandler,
     checkPermission('payments', 'read') as RequestHandler,
     asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-      const config = (await GatewayConfigModel.findOne()) ?? await GatewayConfigModel.create({
-        primaryGateway: 'stripe',
-        routingRule: 'primary_only',
-      });
+      const config =
+        (await GatewayConfigModel.findOne()) ??
+        (await GatewayConfigModel.create({
+          primaryGateway: 'stripe',
+          routingRule: 'primary_only',
+        }));
 
       res.status(200).json({
         status: 200,
@@ -620,9 +612,14 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
 
       // Apply updates
       const allowedFields = [
-        'primaryGateway', 'routingRule', 'amountThreshold',
-        'stripeEnabled', 'payzooEnabled', 'fallbackTimeoutMs',
-        'maintenanceMode', 'maintenanceMessage',
+        'primaryGateway',
+        'routingRule',
+        'amountThreshold',
+        'stripeEnabled',
+        'payzooEnabled',
+        'fallbackTimeoutMs',
+        'maintenanceMode',
+        'maintenanceMessage',
       ];
 
       const changes: Record<string, { from: unknown; to: unknown }> = {};
@@ -720,20 +717,32 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
 
       const filter: Record<string, unknown> = {};
 
-      if (gateway) filter.gateway = gateway;
-      if (status) filter.status = status;
+      if (gateway) {
+        filter.gateway = gateway;
+      }
+      if (status) {
+        filter.status = status;
+      }
 
       if (dateFrom || dateTo) {
         const dateFilter: Record<string, Date> = {};
-        if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-        if (dateTo) dateFilter.$lte = new Date(dateTo);
+        if (dateFrom) {
+          dateFilter.$gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          dateFilter.$lte = new Date(dateTo);
+        }
         filter.createdAt = dateFilter;
       }
 
       if (amountMin !== undefined || amountMax !== undefined) {
         const amountFilter: Record<string, number> = {};
-        if (amountMin !== undefined) amountFilter.$gte = amountMin;
-        if (amountMax !== undefined) amountFilter.$lte = amountMax;
+        if (amountMin !== undefined) {
+          amountFilter.$gte = amountMin;
+        }
+        if (amountMax !== undefined) {
+          amountFilter.$lte = amountMax;
+        }
         filter.amount = amountFilter;
       }
 
@@ -743,11 +752,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
       const sort: Record<string, 1 | -1> = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
       const [payments, total] = await Promise.all([
-        PaymentModel.find(filter)
-          .sort(sort)
-          .skip(skip)
-          .limit(limitNum)
-          .lean(),
+        PaymentModel.find(filter).sort(sort).skip(skip).limit(limitNum).lean(),
         PaymentModel.countDocuments(filter),
       ]);
 
@@ -807,27 +812,28 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
 
       const stats = await PaymentModel.aggregate(pipeline);
 
-      const formattedStats = stats.map((s: {
-        _id: string;
-        totalCount: number;
-        successCount: number;
-        failedCount: number;
-        totalAmount: number;
-        totalCaptured: number;
-        totalRefunded: number;
-      }) => ({
-        gateway: s._id,
-        totalTransactions: s.totalCount,
-        successCount: s.successCount,
-        failedCount: s.failedCount,
-        successRate: s.totalCount > 0
-          ? Math.round((s.successCount / s.totalCount) * 10000) / 100
-          : 0,
-        totalAmount: s.totalAmount,
-        totalCaptured: s.totalCaptured,
-        totalRefunded: s.totalRefunded,
-        netRevenue: s.totalCaptured - s.totalRefunded,
-      }));
+      const formattedStats = stats.map(
+        (s: {
+          _id: string;
+          totalCount: number;
+          successCount: number;
+          failedCount: number;
+          totalAmount: number;
+          totalCaptured: number;
+          totalRefunded: number;
+        }) => ({
+          gateway: s._id,
+          totalTransactions: s.totalCount,
+          successCount: s.successCount,
+          failedCount: s.failedCount,
+          successRate:
+            s.totalCount > 0 ? Math.round((s.successCount / s.totalCount) * 10000) / 100 : 0,
+          totalAmount: s.totalAmount,
+          totalCaptured: s.totalCaptured,
+          totalRefunded: s.totalRefunded,
+          netRevenue: s.totalCaptured - s.totalRefunded,
+        }),
+      );
 
       res.status(200).json({
         status: 200,
@@ -879,9 +885,7 @@ export function createPaymentRoutes(deps: PaymentRouteDeps): Router {
 
       // Mark as cancelled (written off)
       if (!isValidTransition(payment.status, 'cancelled')) {
-        throw AppError.badRequest(
-          `Payment in status "${payment.status}" cannot be written off`,
-        );
+        throw AppError.badRequest(`Payment in status "${payment.status}" cannot be written off`);
       }
 
       const previousStatus = payment.status;

@@ -59,7 +59,12 @@ describe('Appointment Scheduling — Status Transitions', () => {
   });
 
   test('confirmed can transition to completed, no_show, cancelled, rescheduled', () => {
-    expect(STATUS_TRANSITIONS.confirmed).toEqual(['completed', 'no_show', 'cancelled', 'rescheduled']);
+    expect(STATUS_TRANSITIONS.confirmed).toEqual([
+      'completed',
+      'no_show',
+      'cancelled',
+      'rescheduled',
+    ]);
   });
 
   test('rescheduled can transition to confirmed or cancelled', () => {

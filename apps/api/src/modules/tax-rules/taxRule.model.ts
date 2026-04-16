@@ -79,9 +79,17 @@ taxRuleConfigSchema.index({ status: 1 });
 
 // Financial fields that are immutable once frozen
 const IMMUTABLE_FINANCIAL_FIELDS = [
-  'brackets', 'medicareLevy', 'hecsHelp', 'lito', 'lmito',
-  'seniorOffset', 'superannuationRate', 'gstRate',
-  'financialYear', 'effectiveFrom', 'effectiveTo',
+  'brackets',
+  'medicareLevy',
+  'hecsHelp',
+  'lito',
+  'lmito',
+  'seniorOffset',
+  'superannuationRate',
+  'gstRate',
+  'financialYear',
+  'effectiveFrom',
+  'effectiveTo',
 ];
 
 /**
@@ -97,9 +105,11 @@ taxRuleConfigSchema.pre('save', function (next) {
   if (this.isFrozen || this.usageCount > 0) {
     for (const field of IMMUTABLE_FINANCIAL_FIELDS) {
       if (this.isModified(field)) {
-        return next(new Error(
-          `Cannot modify "${field}" on a frozen/used tax rule configuration. Create a new version instead.`,
-        ));
+        return next(
+          new Error(
+            `Cannot modify "${field}" on a frozen/used tax rule configuration. Create a new version instead.`,
+          ),
+        );
       }
     }
   }

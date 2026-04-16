@@ -126,7 +126,7 @@ const taxRuleConfigSchema = new Schema<ITaxRuleConfigDocument>(
     },
 
     // CGT / asset write-off
-    cgtDiscount: { type: Number, required: true, default: 0.50 },
+    cgtDiscount: { type: Number, required: true, default: 0.5 },
     instantAssetWriteOff: { type: Number, default: 0 },
 
     // Rates
@@ -163,13 +163,25 @@ taxRuleConfigSchema.index({ status: 1 });
 // ─── Immutability ──────────────────────────────────────────────────────────
 
 const IMMUTABLE_FINANCIAL_FIELDS = [
-  'brackets', 'nonResidentBrackets', 'workingHolidayBrackets',
-  'medicareLevy', 'medicareLevySurchargeTiers',
-  'medicareLevySeniorSingleThreshold', 'medicareLevyFamilyPerChild',
-  'hecsHelp', 'lito', 'lmito', 'seniorOffset', 'sapto',
-  'cgtDiscount', 'instantAssetWriteOff',
-  'superannuationRate', 'gstRate',
-  'financialYear', 'effectiveFrom', 'effectiveTo',
+  'brackets',
+  'nonResidentBrackets',
+  'workingHolidayBrackets',
+  'medicareLevy',
+  'medicareLevySurchargeTiers',
+  'medicareLevySeniorSingleThreshold',
+  'medicareLevyFamilyPerChild',
+  'hecsHelp',
+  'lito',
+  'lmito',
+  'seniorOffset',
+  'sapto',
+  'cgtDiscount',
+  'instantAssetWriteOff',
+  'superannuationRate',
+  'gstRate',
+  'financialYear',
+  'effectiveFrom',
+  'effectiveTo',
 ];
 
 /**

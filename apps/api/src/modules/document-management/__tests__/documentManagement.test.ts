@@ -19,10 +19,7 @@ import {
   listOrderDocumentsValidation,
 } from '../document.validators';
 
-import {
-  initZohoSignService,
-  verifyWebhookSignature,
-} from '../zohoSign.service';
+import { initZohoSignService, verifyWebhookSignature } from '../zohoSign.service';
 
 import { createDocumentRoutes, createZohoWebhookRoute } from '../document.routes';
 
@@ -43,7 +40,9 @@ describe('Document Management — Types & Constants', () => {
   });
 
   test('ALLOWED_EXTENSIONS derived from ALLOWED_MIME_TYPES', () => {
-    expect(ALLOWED_EXTENSIONS).toEqual(expect.arrayContaining(['pdf', 'jpg', 'png', 'heic', 'tiff']));
+    expect(ALLOWED_EXTENSIONS).toEqual(
+      expect.arrayContaining(['pdf', 'jpg', 'png', 'heic', 'tiff']),
+    );
   });
 
   test('MAX_FILE_SIZE is 20MB (DOC-INV-03)', () => {
@@ -208,22 +207,22 @@ describe('Document Management — Magic Bytes Detection', () => {
   });
 
   test('JPEG magic bytes: FF D8 FF', () => {
-    const jpegHeader = Buffer.from([0xFF, 0xD8, 0xFF]);
-    expect(jpegHeader[0]).toBe(0xFF);
-    expect(jpegHeader[1]).toBe(0xD8);
-    expect(jpegHeader[2]).toBe(0xFF);
+    const jpegHeader = Buffer.from([0xff, 0xd8, 0xff]);
+    expect(jpegHeader[0]).toBe(0xff);
+    expect(jpegHeader[1]).toBe(0xd8);
+    expect(jpegHeader[2]).toBe(0xff);
   });
 
   test('PNG magic bytes: 89 50 4E 47', () => {
-    const pngHeader = Buffer.from([0x89, 0x50, 0x4E, 0x47]);
+    const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
     expect(pngHeader[1]).toBe(0x50); // P
-    expect(pngHeader[2]).toBe(0x4E); // N
+    expect(pngHeader[2]).toBe(0x4e); // N
     expect(pngHeader[3]).toBe(0x47); // G
   });
 
   test('TIFF magic bytes: little-endian (49 49 2A 00) or big-endian (4D 4D 00 2A)', () => {
-    const littleEndian = Buffer.from([0x49, 0x49, 0x2A, 0x00]);
-    const bigEndian = Buffer.from([0x4D, 0x4D, 0x00, 0x2A]);
+    const littleEndian = Buffer.from([0x49, 0x49, 0x2a, 0x00]);
+    const bigEndian = Buffer.from([0x4d, 0x4d, 0x00, 0x2a]);
     expect(littleEndian.toString('ascii', 0, 2)).toBe('II');
     expect(bigEndian.toString('ascii', 0, 2)).toBe('MM');
   });

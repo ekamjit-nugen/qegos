@@ -26,9 +26,7 @@ export function BroadcastListPage(): React.ReactNode {
       title: 'Name',
       dataIndex: 'name',
       ellipsis: true,
-      render: (name: string, row) => (
-        <Link href={`/broadcasts/${row._id}`}>{name}</Link>
-      ),
+      render: (name: string, row) => <Link href={`/broadcasts/${row._id}`}>{name}</Link>,
     },
     {
       title: 'Channel',

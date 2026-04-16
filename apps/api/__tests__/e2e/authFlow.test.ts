@@ -36,9 +36,22 @@ function createAuthApp(): express.Express {
   let tokenCounter = 0;
 
   // Simulated users
-  const users: Record<string, { password: string; userId: string; userType: number; roleId: string }> = {
-    'admin@qegos.com.au': { password: 'Password1!', userId: 'user-001', userType: 1, roleId: 'role-admin' },
-    'client@example.com': { password: 'Password1!', userId: 'user-010', userType: 2, roleId: 'role-client' },
+  const users: Record<
+    string,
+    { password: string; userId: string; userType: number; roleId: string }
+  > = {
+    'admin@qegos.com.au': {
+      password: 'Password1!',
+      userId: 'user-001',
+      userType: 1,
+      roleId: 'role-admin',
+    },
+    'client@example.com': {
+      password: 'Password1!',
+      userId: 'user-010',
+      userType: 2,
+      roleId: 'role-client',
+    },
   };
 
   function generateToken(prefix: string): string {
@@ -50,19 +63,25 @@ function createAuthApp(): express.Express {
   const authenticate: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      res.status(401).json({ status: 401, code: 'UNAUTHORIZED', message: 'Missing or invalid token' });
+      res
+        .status(401)
+        .json({ status: 401, code: 'UNAUTHORIZED', message: 'Missing or invalid token' });
       return;
     }
 
     const token = authHeader.slice(7);
     if (revokedTokens.has(token)) {
-      res.status(401).json({ status: 401, code: 'TOKEN_REVOKED', message: 'Token has been revoked' });
+      res
+        .status(401)
+        .json({ status: 401, code: 'TOKEN_REVOKED', message: 'Token has been revoked' });
       return;
     }
 
     const session = [...tokenStore.values()].find((s) => s.accessToken === token);
     if (!session) {
-      res.status(401).json({ status: 401, code: 'INVALID_TOKEN', message: 'Invalid or expired token' });
+      res
+        .status(401)
+        .json({ status: 401, code: 'INVALID_TOKEN', message: 'Invalid or expired token' });
       return;
     }
 
@@ -89,7 +108,9 @@ function createAuthApp(): express.Express {
 
     const user = users[email];
     if (!user || user.password !== password) {
-      res.status(401).json({ status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' });
+      res
+        .status(401)
+        .json({ status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' });
       return;
     }
 
@@ -114,13 +135,19 @@ function createAuthApp(): express.Express {
     const { refreshToken } = req.body as { refreshToken?: string };
 
     if (!refreshToken) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'Refresh token is required' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'Refresh token is required' });
       return;
     }
 
     const session = tokenStore.get(refreshToken);
     if (!session) {
-      res.status(401).json({ status: 401, code: 'INVALID_REFRESH_TOKEN', message: 'Invalid or expired refresh token' });
+      res.status(401).json({
+        status: 401,
+        code: 'INVALID_REFRESH_TOKEN',
+        message: 'Invalid or expired refresh token',
+      });
       return;
     }
 
@@ -130,7 +157,11 @@ function createAuthApp(): express.Express {
 
     const newAccessToken = generateToken('access');
     const newRefreshToken = generateToken('refresh');
-    tokenStore.set(newRefreshToken, { accessToken: newAccessToken, refreshToken: newRefreshToken, userId: session.userId });
+    tokenStore.set(newRefreshToken, {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      userId: session.userId,
+    });
 
     res.status(200).json({
       status: 200,
@@ -208,9 +239,7 @@ describe('E2E: Auth Flow', () => {
     });
 
     test('missing fields return 400 with validation errors', async () => {
-      const res = await request(app)
-        .post('/api/v1/auth/login')
-        .send({});
+      const res = await request(app).post('/api/v1/auth/login').send({});
 
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('VALIDATION_ERROR');
@@ -269,9 +298,7 @@ describe('E2E: Auth Flow', () => {
     });
 
     test('access with malformed Authorization header returns 401', async () => {
-      const res = await request(app)
-        .get('/api/v1/auth/me')
-        .set('Authorization', 'Basic abc123');
+      const res = await request(app).get('/api/v1/auth/me').set('Authorization', 'Basic abc123');
 
       expect(res.status).toBe(401);
     });
@@ -324,15 +351,11 @@ describe('E2E: Auth Flow', () => {
       const refreshToken = loginRes.body.data.refreshToken as string;
 
       // First use — success
-      const first = await request(app)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken });
+      const first = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
       expect(first.status).toBe(200);
 
       // Second use — fail (rotation)
-      const second = await request(app)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken });
+      const second = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
       expect(second.status).toBe(401);
     });
 
@@ -345,9 +368,7 @@ describe('E2E: Auth Flow', () => {
     });
 
     test('missing refresh token returns 400', async () => {
-      const res = await request(app)
-        .post('/api/v1/auth/refresh')
-        .send({});
+      const res = await request(app).post('/api/v1/auth/refresh').send({});
 
       expect(res.status).toBe(400);
     });
@@ -371,9 +392,7 @@ describe('E2E: Auth Flow', () => {
       expect(logoutRes.body.data.loggedOut).toBe(true);
 
       // Try using the token again
-      const res = await request(app)
-        .get('/api/v1/auth/me')
-        .set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(401);
     });

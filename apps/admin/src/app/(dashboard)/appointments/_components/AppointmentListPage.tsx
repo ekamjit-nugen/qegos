@@ -6,7 +6,12 @@ import { Table, Tag, Button, Input, Select, Card, Row, Col } from 'antd';
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAppointmentList } from '@/hooks/useAppointments';
-import type { Appointment, AppointmentListQuery, AppointmentStatus, AppointmentType } from '@/types/appointment';
+import type {
+  Appointment,
+  AppointmentListQuery,
+  AppointmentStatus,
+  AppointmentType,
+} from '@/types/appointment';
 import {
   APPOINTMENT_STATUSES,
   APPOINTMENT_STATUS_LABELS,
@@ -38,9 +43,7 @@ export function AppointmentListPage(): React.ReactNode {
       title: 'Type',
       dataIndex: 'type',
       width: 110,
-      render: (val: AppointmentType) => (
-        <Tag>{APPOINTMENT_TYPE_LABELS[val]}</Tag>
-      ),
+      render: (val: AppointmentType) => <Tag>{APPOINTMENT_TYPE_LABELS[val]}</Tag>,
     },
     {
       title: 'Client',

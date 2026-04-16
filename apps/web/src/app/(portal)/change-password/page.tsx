@@ -36,8 +36,8 @@ export default function ChangePasswordPage(): ReactNode {
       router.push('/login');
     } catch (err) {
       const msg =
-        (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message ?? 'Failed to change password';
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+        'Failed to change password';
       message.error(msg);
     } finally {
       setLoading(false);
@@ -47,17 +47,10 @@ export default function ChangePasswordPage(): ReactNode {
   return (
     <div style={{ maxWidth: 500 }}>
       <Title level={3}>Change Password</Title>
-      <Text type="secondary">
-        After changing, all other sessions will be signed out.
-      </Text>
+      <Text type="secondary">After changing, all other sessions will be signed out.</Text>
 
       <Card style={{ marginTop: 16 }}>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          autoComplete="off"
-        >
+        <Form form={form} layout="vertical" onFinish={handleSubmit} autoComplete="off">
           <Form.Item
             name="currentPassword"
             label="Current password"

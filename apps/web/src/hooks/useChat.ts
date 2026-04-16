@@ -8,9 +8,7 @@ export function useConversations() {
   return useQuery<Conversation[]>({
     queryKey: ['chat', 'conversations'],
     queryFn: async (): Promise<Conversation[]> => {
-      const response = await api.get<{ data: Conversation[] }>(
-        '/chat/conversations'
-      );
+      const response = await api.get<{ data: Conversation[] }>('/chat/conversations');
       return response.data.data;
     },
   });
@@ -20,9 +18,7 @@ export function useConversationMessages(id: string | undefined) {
   return useQuery<ChatMessage[]>({
     queryKey: ['chat', 'messages', id],
     queryFn: async (): Promise<ChatMessage[]> => {
-      const response = await api.get<{ data: ChatMessage[] }>(
-        `/chat/conversations/${id}/messages`
-      );
+      const response = await api.get<{ data: ChatMessage[] }>(`/chat/conversations/${id}/messages`);
       return response.data.data;
     },
     enabled: !!id,
@@ -42,10 +38,7 @@ export function useSendMessage() {
 
   return useMutation<ChatMessage, Error, SendMessagePayload>({
     mutationFn: async (payload: SendMessagePayload): Promise<ChatMessage> => {
-      const response = await api.post<{ data: ChatMessage }>(
-        '/chat/messages',
-        payload
-      );
+      const response = await api.post<{ data: ChatMessage }>('/chat/messages', payload);
       return response.data.data;
     },
     onSuccess: (_data, variables): void => {
@@ -79,9 +72,7 @@ export function useUnreadCount() {
   return useQuery<{ count: number }>({
     queryKey: ['chat', 'unreadCount'],
     queryFn: async (): Promise<{ count: number }> => {
-      const response = await api.get<{ data: { count: number } }>(
-        '/chat/unread-count'
-      );
+      const response = await api.get<{ data: { count: number } }>('/chat/unread-count');
       return response.data.data;
     },
   });

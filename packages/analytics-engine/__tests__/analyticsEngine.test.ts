@@ -55,7 +55,6 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('@nugen/analytics-engine', () => {
-
   // ─── Constants ────────────────────────────────────────────────────────────
 
   describe('Constants', () => {
@@ -128,11 +127,11 @@ describe('@nugen/analytics-engine', () => {
     it('overrides defaults with provided values', () => {
       const config = init({
         cacheTtlSeconds: 60,
-        year1ConversionRate: 0.50,
+        year1ConversionRate: 0.5,
         analyticsReplicaUri: 'mongodb://replica:27017/analytics',
       });
       expect(config.cacheTtlSeconds).toBe(60);
-      expect(config.year1ConversionRate).toBe(0.50);
+      expect(config.year1ConversionRate).toBe(0.5);
       expect(config.analyticsReplicaUri).toBe('mongodb://replica:27017/analytics');
       // Defaults still applied for omitted values
       expect(config.averageOrderValueCents).toBe(DEFAULT_AVG_ORDER_VALUE_CENTS);
@@ -143,7 +142,10 @@ describe('@nugen/analytics-engine', () => {
 
   describe('buildCacheKey()', () => {
     it('produces key in format analytics:{view}:{hash}', () => {
-      const key = buildCacheKey('revenue-forecast', { dateFrom: '2025-01-01', dateTo: '2025-12-31' });
+      const key = buildCacheKey('revenue-forecast', {
+        dateFrom: '2025-01-01',
+        dateTo: '2025-12-31',
+      });
       expect(key).toMatch(/^analytics:revenue-forecast:[a-f0-9]{12}$/);
     });
 

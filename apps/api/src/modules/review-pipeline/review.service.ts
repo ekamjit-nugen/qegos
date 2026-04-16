@@ -21,10 +21,29 @@ export interface ReviewServiceResult {
   getReviewDetail: (orderId: string) => Promise<IReviewAssignmentDocument>;
   startReview: (orderId: string, reviewerId: string) => Promise<IReviewAssignmentDocument>;
   approveReview: (orderId: string, reviewerId: string) => Promise<IReviewAssignmentDocument>;
-  requestChanges: (orderId: string, reviewerId: string, changes: IChangeRequest[], notes?: string) => Promise<IReviewAssignmentDocument>;
-  rejectReview: (orderId: string, reviewerId: string, reason: string) => Promise<IReviewAssignmentDocument>;
-  resolveChange: (orderId: string, changeIndex: number, preparerId: string) => Promise<IReviewAssignmentDocument>;
-  updateChecklist: (orderId: string, index: number, checked: boolean, reviewerId: string, note?: string) => Promise<IReviewAssignmentDocument>;
+  requestChanges: (
+    orderId: string,
+    reviewerId: string,
+    changes: IChangeRequest[],
+    notes?: string,
+  ) => Promise<IReviewAssignmentDocument>;
+  rejectReview: (
+    orderId: string,
+    reviewerId: string,
+    reason: string,
+  ) => Promise<IReviewAssignmentDocument>;
+  resolveChange: (
+    orderId: string,
+    changeIndex: number,
+    preparerId: string,
+  ) => Promise<IReviewAssignmentDocument>;
+  updateChecklist: (
+    orderId: string,
+    index: number,
+    checked: boolean,
+    reviewerId: string,
+    note?: string,
+  ) => Promise<IReviewAssignmentDocument>;
   getStats: () => Promise<Record<string, unknown>>;
 }
 
@@ -54,12 +73,11 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
    * 4. Manager review: >$500 or VIP
    * 5. Round-robin among eligible
    */
-  async function assignReviewer(
-    orderId: string,
-    preparerId: string,
-  ): Promise<string> {
-    const order = await OrderModel.findById(orderId).lean() as Record<string, unknown> | null;
-    if (!order) throw AppError.notFound('Order');
+  async function assignReviewer(orderId: string, preparerId: string): Promise<string> {
+    const order = (await OrderModel.findById(orderId).lean()) as Record<string, unknown> | null;
+    if (!order) {
+      throw AppError.notFound('Order');
+    }
 
     const lineItems = (order.lineItems ?? []) as Array<Record<string, unknown>>;
     const incomeDetails = (order.incomeDetails ?? {}) as Record<string, boolean>;
@@ -85,21 +103,21 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     }
 
     // Find eligible reviewers (RVW-INV-02: exclude preparer)
-    const eligibleReviewers = await UserModel.find({
+    const eligibleReviewers = (await UserModel.find({
       _id: { $ne: preparerId },
       userType: { $in: requiredUserTypes },
       status: true,
       isDeleted: { $ne: true },
     })
       .select('_id')
-      .lean() as Array<{ _id: string }>;
+      .lean()) as Array<{ _id: string }>;
 
     if (eligibleReviewers.length === 0) {
       throw AppError.badRequest('No eligible reviewers available. Ensure senior staff are active.');
     }
 
     // Round-robin: pick reviewer with fewest pending reviews
-    const reviewCounts = await ReviewAssignmentModel.aggregate([
+    const reviewCounts = (await ReviewAssignmentModel.aggregate([
       {
         $match: {
           reviewerId: { $in: eligibleReviewers.map((r) => r._id) },
@@ -107,7 +125,7 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
         },
       },
       { $group: { _id: '$reviewerId', count: { $sum: 1 } } },
-    ]) as Array<{ _id: string; count: number }>;
+    ])) as Array<{ _id: string; count: number }>;
 
     const countMap = new Map(reviewCounts.map((r) => [r._id.toString(), r.count]));
 
@@ -126,8 +144,10 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     preparerId: string,
   ): Promise<IReviewAssignmentDocument> {
     // Fix for B-3.22: Verify order is in InProgress status (4) before submitting for review
-    const order = await OrderModel.findById(orderId).lean() as Record<string, unknown> | null;
-    if (!order) throw AppError.notFound('Order');
+    const order = (await OrderModel.findById(orderId).lean()) as Record<string, unknown> | null;
+    if (!order) {
+      throw AppError.notFound('Order');
+    }
     if (order.status !== 4) {
       throw AppError.badRequest(
         `Order must be in InProgress status (4) to submit for review. Current status: ${String(order.status)}`,
@@ -151,12 +171,12 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
       // RVW-INV-05: Auto-escalate if round > 3
       if (existing.reviewRound > 3) {
         // Find an admin
-        const admin = await UserModel.findOne({
+        const admin = (await UserModel.findOne({
           userType: { $in: ADMIN_USER_TYPES },
           status: true,
           isDeleted: { $ne: true },
           _id: { $ne: preparerId },
-        }).lean() as { _id: string } | null;
+        }).lean()) as { _id: string } | null;
 
         if (admin) {
           existing.reviewerId = admin._id as unknown as IReviewAssignmentDocument['reviewerId'];
@@ -196,7 +216,10 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
       reviewerId,
       status: { $in: ['pending_review', 'in_review'] },
     })
-      .populate('orderId', 'orderNumber financialYear personalDetails.firstName personalDetails.lastName finalAmount')
+      .populate(
+        'orderId',
+        'orderNumber financialYear personalDetails.firstName personalDetails.lastName finalAmount',
+      )
       .populate('preparerId', 'firstName lastName')
       .sort({ createdAt: 1 })
       .lean<IReviewAssignmentDocument[]>();
@@ -210,7 +233,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
       .populate('preparerId', 'firstName lastName email')
       .populate('reviewerId', 'firstName lastName email')
       .lean<IReviewAssignmentDocument>();
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
     return review;
   }
 
@@ -221,7 +246,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     reviewerId: string,
   ): Promise<IReviewAssignmentDocument> {
     const review = await ReviewAssignmentModel.findOne({ orderId });
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
 
     if (review.reviewerId.toString() !== reviewerId) {
       throw AppError.forbidden('Only the assigned reviewer can start this review');
@@ -243,7 +270,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     reviewerId: string,
   ): Promise<IReviewAssignmentDocument> {
     const review = await ReviewAssignmentModel.findOne({ orderId });
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
 
     if (review.reviewerId.toString() !== reviewerId) {
       throw AppError.forbidden('Only the assigned reviewer can approve');
@@ -267,9 +296,7 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     // the status check above and both write `approved` — the second one's
     // approvedBy/approvedAt silently overwrites the first.
     const createdAt = review.createdAt ?? new Date();
-    const timeToReview = Math.round(
-      (Date.now() - new Date(createdAt).getTime()) / (1000 * 60),
-    );
+    const timeToReview = Math.round((Date.now() - new Date(createdAt).getTime()) / (1000 * 60));
 
     const claimed = await ReviewAssignmentModel.findOneAndUpdate(
       { _id: review._id, status: 'in_review' },
@@ -302,7 +329,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     notes?: string,
   ): Promise<IReviewAssignmentDocument> {
     const review = await ReviewAssignmentModel.findOne({ orderId });
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
 
     if (review.reviewerId.toString() !== reviewerId) {
       throw AppError.forbidden('Only the assigned reviewer can request changes');
@@ -314,7 +343,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
 
     review.status = 'changes_requested';
     review.changesRequested.push(...(changes as IReviewAssignmentDocument['changesRequested']));
-    if (notes) review.reviewNotes = notes;
+    if (notes) {
+      review.reviewNotes = notes;
+    }
 
     await review.save();
 
@@ -332,7 +363,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     reason: string,
   ): Promise<IReviewAssignmentDocument> {
     const review = await ReviewAssignmentModel.findOne({ orderId });
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
 
     if (review.reviewerId.toString() !== reviewerId) {
       throw AppError.forbidden('Only the assigned reviewer can reject');
@@ -365,7 +398,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     preparerId: string,
   ): Promise<IReviewAssignmentDocument> {
     const review = await ReviewAssignmentModel.findOne({ orderId });
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
 
     if (review.preparerId.toString() !== preparerId) {
       throw AppError.forbidden('Only the preparer can resolve changes');
@@ -403,7 +438,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
     note?: string,
   ): Promise<IReviewAssignmentDocument> {
     const review = await ReviewAssignmentModel.findOne({ orderId });
-    if (!review) throw AppError.notFound('Review assignment');
+    if (!review) {
+      throw AppError.notFound('Review assignment');
+    }
 
     // Only the assigned reviewer can update checklist
     if (review.reviewerId.toString() !== reviewerId) {
@@ -416,7 +453,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
 
     // Validate index is within bounds
     if (index < 0 || index >= review.checklist.length) {
-      throw AppError.badRequest(`Invalid checklist index: ${index}. Must be 0-${review.checklist.length - 1}`);
+      throw AppError.badRequest(
+        `Invalid checklist index: ${index}. Must be 0-${review.checklist.length - 1}`,
+      );
     }
 
     review.checklist[index].checked = checked;
@@ -467,7 +506,9 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
           $group: {
             _id: '$preparerId',
             total: { $sum: 1 },
-            changesRequested: { $sum: { $cond: [{ $eq: ['$status', 'changes_requested'] }, 1, 0] } },
+            changesRequested: {
+              $sum: { $cond: [{ $eq: ['$status', 'changes_requested'] }, 1, 0] },
+            },
             avgRounds: { $avg: '$reviewRound' },
           },
         },
@@ -480,9 +521,10 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewServiceResul
         ? {
             total: approvalRate[0].total,
             approved: approvalRate[0].approved,
-            rate: approvalRate[0].total > 0
-              ? Math.round((approvalRate[0].approved / approvalRate[0].total) * 100)
-              : 0,
+            rate:
+              approvalRate[0].total > 0
+                ? Math.round((approvalRate[0].approved / approvalRate[0].total) * 100)
+                : 0,
           }
         : { total: 0, approved: 0, rate: 0 },
       byReviewer,

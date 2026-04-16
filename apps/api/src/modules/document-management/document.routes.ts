@@ -59,7 +59,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     upload.single('file'),
     ...uploadDocumentValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const authReq = req as AuthRequest;
         if (!req.file) {
@@ -92,7 +94,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     upload.single('file'),
     ...uploadProofValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const authReq = req as AuthRequest;
         if (!req.file) {
@@ -122,7 +126,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     ...auth,
     ...listOrderDocumentsValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const authReq = req as AuthRequest;
         const documents = await service.listOrderDocuments({
@@ -148,7 +154,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     ...authStaff,
     ...createSigningValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const result = await service.createSigningRequest({
           orderId: req.body.orderId as string,
@@ -176,7 +184,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     ...authStaff,
     ...sendForSignValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         await service.sendForSignature(
           req.body.orderId as string,
@@ -200,7 +210,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     ...auth,
     ...generateUriValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const result = await service.generateEmbeddedUri({
           orderId: req.body.orderId as string,
@@ -225,7 +237,9 @@ export function createDocumentRoutes(deps: DocumentRouteDeps): Router {
     ...auth,
     ...signingStatusValidation,
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const result = await service.getSigningStatus({
           orderId: req.params.orderId,
@@ -263,27 +277,33 @@ export function createZohoWebhookRoute(deps: DocumentRouteDeps): Router {
   // POST /zoho — Zoho Sign webhook (public, signature verified)
   router.post('/zoho', async (req: Request, res: Response) => {
     try {
-      const rawBody = typeof req.body === 'string'
-        ? req.body
-        : Buffer.isBuffer(req.body)
-          ? req.body.toString('utf8')
-          : JSON.stringify(req.body);
+      const rawBody =
+        typeof req.body === 'string'
+          ? req.body
+          : Buffer.isBuffer(req.body)
+            ? req.body.toString('utf8')
+            : JSON.stringify(req.body);
 
       const signature = req.headers['x-zoho-sign-webhook-token'] as string | undefined;
 
       if (!signature || !verifyWebhookSignature(rawBody, signature)) {
-        res.status(401).json({ status: 401, code: 'WEBHOOK_INVALID', message: 'Invalid webhook signature' });
+        res
+          .status(401)
+          .json({ status: 401, code: 'WEBHOOK_INVALID', message: 'Invalid webhook signature' });
         return;
       }
 
-      const payload = (typeof req.body === 'string' || Buffer.isBuffer(req.body))
-        ? JSON.parse(rawBody) as ZohoWebhookPayload
-        : req.body as ZohoWebhookPayload;
+      const payload =
+        typeof req.body === 'string' || Buffer.isBuffer(req.body)
+          ? (JSON.parse(rawBody) as ZohoWebhookPayload)
+          : (req.body as ZohoWebhookPayload);
 
       await service.processZohoWebhook(payload);
       res.status(200).json({ status: 200, message: 'Webhook processed' });
     } catch (err) {
-      res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+      res
+        .status(500)
+        .json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
     }
   });
 

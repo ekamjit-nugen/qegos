@@ -24,9 +24,7 @@ function getRedis(): Redis {
  * PAY-INV-01: Check if an idempotency key has already been processed.
  * Returns the cached response if the key exists, null if it's a new key.
  */
-export async function checkIdempotencyKey(
-  key: string,
-): Promise<IdempotencyCachedResponse | null> {
+export async function checkIdempotencyKey(key: string): Promise<IdempotencyCachedResponse | null> {
   const redis = getRedis();
   const cacheKey = `${KEY_PREFIX}${key}`;
 
@@ -54,12 +52,7 @@ export async function storeIdempotencyResponse(
   const cacheKey = `${KEY_PREFIX}${key}`;
 
   try {
-    await redis.set(
-      cacheKey,
-      JSON.stringify(response),
-      'EX',
-      DEFAULT_TTL_SECONDS,
-    );
+    await redis.set(cacheKey, JSON.stringify(response), 'EX', DEFAULT_TTL_SECONDS);
   } catch {
     // Redis failure is non-fatal — the unique index on Payment.idempotencyKey
     // provides the hard guarantee. Redis is the fast path.

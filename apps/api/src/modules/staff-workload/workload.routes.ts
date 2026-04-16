@@ -42,20 +42,18 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
   const authAdmin = [deps.authenticate(), deps.checkPermission('users', 'update')];
 
   // 1. GET /workload — All staff workloads (admin dashboard)
-  router.get(
-    '/workload',
-    ...auth,
-    async (_req: Request, res: Response) => {
-      try {
-        const workloads = await service.getStaffWorkloads();
-        // Sort by workload score descending (busiest first for dashboard)
-        workloads.sort((a, b) => b.workloadScore - a.workloadScore);
-        res.json({ status: 200, data: workloads });
-      } catch (err) {
-        res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
-      }
-    },
-  );
+  router.get('/workload', ...auth, async (_req: Request, res: Response) => {
+    try {
+      const workloads = await service.getStaffWorkloads();
+      // Sort by workload score descending (busiest first for dashboard)
+      workloads.sort((a, b) => b.workloadScore - a.workloadScore);
+      res.json({ status: 200, data: workloads });
+    } catch (err) {
+      res
+        .status(500)
+        .json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    }
+  });
 
   // 2. GET /workload/:staffId — Single staff workload
   router.get(
@@ -63,16 +61,24 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
     ...auth,
     param('staffId').isMongoId().withMessage('Invalid staff ID'),
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const workload = await service.getStaffWorkload(req.params.staffId);
         if (!workload) {
-          res.status(404).json({ status: 404, code: 'NOT_FOUND', message: 'Staff member not found or not eligible' });
+          res.status(404).json({
+            status: 404,
+            code: 'NOT_FOUND',
+            message: 'Staff member not found or not eligible',
+          });
           return;
         }
         res.json({ status: 200, data: workload });
       } catch (err) {
-        res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+        res
+          .status(500)
+          .json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
       }
     },
   );
@@ -84,23 +90,24 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
     body('context')
       .isIn(['lead', 'order', 'review', 'ticket', 'appointment'])
       .withMessage('context must be one of: lead, order, review, ticket, appointment'),
-    body('excludeStaffIds')
-      .optional()
-      .isArray().withMessage('excludeStaffIds must be an array'),
+    body('excludeStaffIds').optional().isArray().withMessage('excludeStaffIds must be an array'),
     body('excludeStaffIds.*')
       .optional()
-      .isMongoId().withMessage('Each excludeStaffId must be a valid ObjectId'),
+      .isMongoId()
+      .withMessage('Each excludeStaffId must be a valid ObjectId'),
     body('requiredUserTypes')
       .optional()
-      .isArray().withMessage('requiredUserTypes must be an array'),
+      .isArray()
+      .withMessage('requiredUserTypes must be an array'),
     body('requiredUserTypes.*')
       .optional()
-      .isInt({ min: 0, max: 7 }).withMessage('Each userType must be 0-7'),
-    body('count')
-      .optional()
-      .isInt({ min: 1, max: 100 }).withMessage('count must be 1-100'),
+      .isInt({ min: 0, max: 7 })
+      .withMessage('Each userType must be 0-7'),
+    body('count').optional().isInt({ min: 1, max: 100 }).withMessage('count must be 1-100'),
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const count = req.body.count ? Number(req.body.count) : 1;
         const request = {
@@ -112,7 +119,11 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
         if (count === 1) {
           const result = await service.smartAssign(request);
           if (!result) {
-            res.status(404).json({ status: 404, code: 'NO_ELIGIBLE_STAFF', message: 'No eligible staff available for assignment' });
+            res.status(404).json({
+              status: 404,
+              code: 'NO_ELIGIBLE_STAFF',
+              message: 'No eligible staff available for assignment',
+            });
             return;
           }
           res.json({ status: 200, data: result });
@@ -121,7 +132,9 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
           res.json({ status: 200, data: { assignments: results, count: results.length } });
         }
       } catch (err) {
-        res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+        res
+          .status(500)
+          .json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
       }
     },
   );
@@ -130,9 +143,14 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
   router.get(
     '/workload/leaderboard',
     ...auth,
-    query('period').optional().isIn(['week', 'month', 'quarter']).withMessage('period must be week, month, or quarter'),
+    query('period')
+      .optional()
+      .isIn(['week', 'month', 'quarter'])
+      .withMessage('period must be week, month, or quarter'),
     async (req: Request, res: Response) => {
-      if (handleValidation(req, res)) return;
+      if (handleValidation(req, res)) {
+        return;
+      }
       try {
         const workloads = await service.getStaffWorkloads();
         // Sort by workload score ascending (most available first)
@@ -144,7 +162,9 @@ export function createWorkloadRoutes(deps: WorkloadRouteDeps): Router {
         }));
         res.json({ status: 200, data: leaderboard });
       } catch (err) {
-        res.status(500).json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+        res
+          .status(500)
+          .json({ status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
       }
     },
   );

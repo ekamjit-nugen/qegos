@@ -44,10 +44,7 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
     authenticate() as RequestHandler,
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const deadlines = await getUpcomingDeadlines(
-        authReq.user.userId,
-        authReq.user.clientType,
-      );
+      const deadlines = await getUpcomingDeadlines(authReq.user.userId, authReq.user.clientType);
       res.status(200).json({ status: 200, data: deadlines });
     }),
   );
@@ -59,24 +56,41 @@ export function createCalendarRoutes(deps: TaxCalendarRouteDeps): Router {
     checkPermission('calendar', 'read') as RequestHandler,
     ...validate(validateListParams()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const { page = 1, limit = 20, financialYear, type, applicableTo, isActive } = req.query as {
-        page?: number; limit?: number; financialYear?: string;
-        type?: string; applicableTo?: string; isActive?: boolean;
+      const {
+        page = 1,
+        limit = 20,
+        financialYear,
+        type,
+        applicableTo,
+        isActive,
+      } = req.query as {
+        page?: number;
+        limit?: number;
+        financialYear?: string;
+        type?: string;
+        applicableTo?: string;
+        isActive?: boolean;
       };
 
       const pageNum = Number(page);
       const limitNum = Number(limit);
 
       const { deadlines, total } = await listDeadlines({
-        financialYear, type, applicableTo, isActive,
-        page: pageNum, limit: limitNum,
+        financialYear,
+        type,
+        applicableTo,
+        isActive,
+        page: pageNum,
+        limit: limitNum,
       });
 
       res.status(200).json({
         status: 200,
         data: deadlines,
         pagination: {
-          page: pageNum, limit: limitNum, total,
+          page: pageNum,
+          limit: limitNum,
+          total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,

@@ -37,10 +37,7 @@ import {
   useRescheduleAppointment,
   useCancelAppointment,
 } from '@/hooks/usePortal';
-import {
-  APPOINTMENT_STATUS_LABELS,
-  APPOINTMENT_STATUS_COLORS,
-} from '@/types/appointment';
+import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '@/types/appointment';
 import type { Appointment } from '@/types/appointment';
 import { formatDate } from '@/lib/utils/format';
 
@@ -101,10 +98,7 @@ export function AppointmentsPage(): React.ReactNode {
   const rescheduleDateFrom = rescheduleDate?.format('YYYY-MM-DD');
   const rescheduleDateTo = rescheduleDate?.format('YYYY-MM-DD');
 
-  const { data: availableSlots, isLoading: slotsLoading } = useAvailableSlots(
-    dateFrom,
-    dateTo,
-  );
+  const { data: availableSlots, isLoading: slotsLoading } = useAvailableSlots(dateFrom, dateTo);
 
   const { data: rescheduleSlots, isLoading: rescheduleSlotsLoading } = useAvailableSlots(
     rescheduleDateFrom,
@@ -147,8 +141,9 @@ export function AppointmentsPage(): React.ReactNode {
           setBookingOpen(false);
         },
         onError: (err) => {
-          const errMsg = (err as Error & { response?: { data?: { message?: string } } })
-            .response?.data?.message ?? 'Failed to book appointment';
+          const errMsg =
+            (err as Error & { response?: { data?: { message?: string } } }).response?.data
+              ?.message ?? 'Failed to book appointment';
           void message.error(errMsg);
         },
       },
@@ -185,8 +180,9 @@ export function AppointmentsPage(): React.ReactNode {
           setRescheduleAppointment(null);
         },
         onError: (err) => {
-          const errMsg = (err as Error & { response?: { data?: { message?: string } } })
-            .response?.data?.message ?? 'Failed to reschedule appointment';
+          const errMsg =
+            (err as Error & { response?: { data?: { message?: string } } }).response?.data
+              ?.message ?? 'Failed to reschedule appointment';
           void message.error(errMsg);
         },
       },
@@ -195,18 +191,22 @@ export function AppointmentsPage(): React.ReactNode {
 
   // ── Cancel handler ───────────────────────────────────────────────────
 
-  const handleCancel = useCallback((aptId: string) => {
-    cancelMutation.mutate(aptId, {
-      onSuccess: () => {
-        void message.success('Appointment cancelled');
-      },
-      onError: (err) => {
-        const errMsg = (err as Error & { response?: { data?: { message?: string } } })
-          .response?.data?.message ?? 'Failed to cancel appointment';
-        void message.error(errMsg);
-      },
-    });
-  }, [cancelMutation]);
+  const handleCancel = useCallback(
+    (aptId: string) => {
+      cancelMutation.mutate(aptId, {
+        onSuccess: () => {
+          void message.success('Appointment cancelled');
+        },
+        onError: (err) => {
+          const errMsg =
+            (err as Error & { response?: { data?: { message?: string } } }).response?.data
+              ?.message ?? 'Failed to cancel appointment';
+          void message.error(errMsg);
+        },
+      });
+    },
+    [cancelMutation],
+  );
 
   if (isLoading) {
     return (
@@ -240,7 +240,7 @@ export function AppointmentsPage(): React.ReactNode {
       </div>
 
       {/* Upcoming Appointments */}
-      {(!appointments || appointments.length === 0) ? (
+      {!appointments || appointments.length === 0 ? (
         <Empty
           image={<CalendarOutlined style={{ fontSize: 48, color: '#ccc' }} />}
           description="No upcoming appointments"
@@ -251,10 +251,7 @@ export function AppointmentsPage(): React.ReactNode {
             <Col xs={24} sm={12} lg={8} key={apt._id}>
               <Card>
                 <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                  <Text
-                    strong
-                    style={{ fontSize: 24, display: 'block', lineHeight: 1.2 }}
-                  >
+                  <Text strong style={{ fontSize: 24, display: 'block', lineHeight: 1.2 }}>
                     {formatDate(apt.date, 'DD MMM')}
                   </Text>
                   <Text type="secondary" style={{ fontSize: 14 }}>
@@ -276,10 +273,7 @@ export function AppointmentsPage(): React.ReactNode {
                     marginBottom: 12,
                   }}
                 >
-                  <Tag
-                    icon={TYPE_ICONS[apt.type]}
-                    color={TYPE_COLORS[apt.type] ?? 'default'}
-                  >
+                  <Tag icon={TYPE_ICONS[apt.type]} color={TYPE_COLORS[apt.type] ?? 'default'}>
                     {TYPE_LABELS[apt.type] ?? apt.type}
                   </Tag>
                   <Tag color={APPOINTMENT_STATUS_COLORS[apt.status] ?? 'default'}>
@@ -307,14 +301,18 @@ export function AppointmentsPage(): React.ReactNode {
                     <Space>
                       <Button
                         icon={<SwapOutlined />}
-                        onClick={() => { handleOpenReschedule(apt); }}
+                        onClick={() => {
+                          handleOpenReschedule(apt);
+                        }}
                       >
                         Reschedule
                       </Button>
                       <Popconfirm
                         title="Cancel this appointment?"
                         description="This action cannot be undone."
-                        onConfirm={() => { handleCancel(apt._id); }}
+                        onConfirm={() => {
+                          handleCancel(apt._id);
+                        }}
                         okText="Yes, Cancel"
                         cancelText="No"
                         okButtonProps={{ danger: true }}
@@ -340,7 +338,9 @@ export function AppointmentsPage(): React.ReactNode {
       <Modal
         title="Book an Appointment"
         open={bookingOpen}
-        onCancel={() => { setBookingOpen(false); }}
+        onCancel={() => {
+          setBookingOpen(false);
+        }}
         onOk={handleBook}
         okText="Book Appointment"
         okButtonProps={{
@@ -379,9 +379,7 @@ export function AppointmentsPage(): React.ReactNode {
                 setSelectedDate(date);
                 setSelectedSlot(null);
               }}
-              disabledDate={(current) =>
-                current && current < dayjs().startOf('day')
-              }
+              disabledDate={(current) => current && current < dayjs().startOf('day')}
               style={{ width: '100%' }}
             />
           </div>
@@ -393,7 +391,9 @@ export function AppointmentsPage(): React.ReactNode {
             </Text>
             <Radio.Group
               value={selectedType}
-              onChange={(e) => { setSelectedType(e.target.value as 'in_person' | 'phone' | 'video'); }}
+              onChange={(e) => {
+                setSelectedType(e.target.value as 'in_person' | 'phone' | 'video');
+              }}
             >
               <Radio.Button value="phone">
                 <PhoneOutlined /> Phone
@@ -450,7 +450,10 @@ export function AppointmentsPage(): React.ReactNode {
       <Modal
         title="Reschedule Appointment"
         open={rescheduleOpen}
-        onCancel={() => { setRescheduleOpen(false); setRescheduleAppointment(null); }}
+        onCancel={() => {
+          setRescheduleOpen(false);
+          setRescheduleAppointment(null);
+        }}
         onOk={handleReschedule}
         okText="Reschedule"
         okButtonProps={{
@@ -492,9 +495,7 @@ export function AppointmentsPage(): React.ReactNode {
                   setRescheduleDate(date);
                   setRescheduleSlot(null);
                 }}
-                disabledDate={(current) =>
-                  current && current < dayjs().startOf('day')
-                }
+                disabledDate={(current) => current && current < dayjs().startOf('day')}
                 style={{ width: '100%' }}
               />
             </div>
@@ -506,7 +507,9 @@ export function AppointmentsPage(): React.ReactNode {
               </Text>
               <Radio.Group
                 value={rescheduleType}
-                onChange={(e) => { setRescheduleType(e.target.value as 'in_person' | 'phone' | 'video'); }}
+                onChange={(e) => {
+                  setRescheduleType(e.target.value as 'in_person' | 'phone' | 'video');
+                }}
               >
                 <Radio.Button value="phone">
                   <PhoneOutlined /> Phone

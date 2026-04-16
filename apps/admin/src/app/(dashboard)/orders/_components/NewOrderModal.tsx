@@ -210,7 +210,12 @@ export function NewOrderModal({ open, onClose }: NewOrderModalProps): React.Reac
             />
           </Form.Item>
 
-          <Form.Item name="orderType" label="Order Type" initialValue="standard" style={{ minWidth: 180 }}>
+          <Form.Item
+            name="orderType"
+            label="Order Type"
+            initialValue="standard"
+            style={{ minWidth: 180 }}
+          >
             <Select options={ORDER_TYPES} />
           </Form.Item>
         </Space>

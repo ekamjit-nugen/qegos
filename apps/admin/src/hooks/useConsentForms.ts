@@ -11,10 +11,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { ApiResponse } from '@/types/api';
-import type {
-  ConsentFormAdminListFilters,
-  ConsentFormSubmission,
-} from '@/types/consentForm';
+import type { ConsentFormAdminListFilters, ConsentFormSubmission } from '@/types/consentForm';
 
 interface AdminListApiResponse {
   status: number;
@@ -23,14 +20,11 @@ interface AdminListApiResponse {
 }
 
 const qk = {
-  list: (filters: ConsentFormAdminListFilters) =>
-    ['consent-forms', 'admin', filters] as const,
+  list: (filters: ConsentFormAdminListFilters) => ['consent-forms', 'admin', filters] as const,
   detail: (id: string) => ['consent-forms', 'admin', id] as const,
 };
 
-export function useAdminConsentFormList(
-  filters: ConsentFormAdminListFilters = {},
-) {
+export function useAdminConsentFormList(filters: ConsentFormAdminListFilters = {}) {
   return useQuery({
     queryKey: qk.list(filters),
     queryFn: async (): Promise<{ rows: ConsentFormSubmission[]; total: number }> => {
@@ -41,9 +35,7 @@ export function useAdminConsentFormList(
       if (filters.limit != null) params.set('limit', String(filters.limit));
       if (filters.skip != null) params.set('skip', String(filters.skip));
       const qs = params.toString();
-      const res = await api.get<AdminListApiResponse>(
-        `/consent-forms/admin${qs ? `?${qs}` : ''}`,
-      );
+      const res = await api.get<AdminListApiResponse>(`/consent-forms/admin${qs ? `?${qs}` : ''}`);
       return { rows: res.data.data, total: res.data.meta.total };
     },
     placeholderData: (prev) => prev,
@@ -55,9 +47,7 @@ export function useAdminConsentFormDetail(id: string | null) {
     queryKey: qk.detail(id ?? ''),
     enabled: !!id,
     queryFn: async (): Promise<ConsentFormSubmission> => {
-      const res = await api.get<ApiResponse<ConsentFormSubmission>>(
-        `/consent-forms/admin/${id}`,
-      );
+      const res = await api.get<ApiResponse<ConsentFormSubmission>>(`/consent-forms/admin/${id}`);
       return res.data.data;
     },
   });

@@ -32,13 +32,11 @@ export function xeroWebhookVerify(webhookKey: string): RequestHandler {
     // If express.json() is used, req.body is parsed — we need rawBody.
     const rawBody: Buffer | string = (req as unknown as { rawBody?: Buffer }).rawBody ?? req.body;
 
-    const bodyStr = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(
-      typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody),
-    );
+    const bodyStr = Buffer.isBuffer(rawBody)
+      ? rawBody
+      : Buffer.from(typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody));
 
-    const computedHash = createHmac('sha256', webhookKey)
-      .update(bodyStr)
-      .digest('base64');
+    const computedHash = createHmac('sha256', webhookKey).update(bodyStr).digest('base64');
 
     // Timing-safe comparison to prevent timing attacks
     const sigBuffer = Buffer.from(signature, 'utf8');

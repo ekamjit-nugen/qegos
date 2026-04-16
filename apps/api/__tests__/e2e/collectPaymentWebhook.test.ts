@@ -23,16 +23,9 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const express = require('express') as typeof import('express').default;
 
+import { initWebhookProcessor, processStripeWebhook, paymentEvents } from '@nugen/payment-gateway';
+import type { IPaymentProvider, PaymentIntentResult } from '@nugen/payment-gateway';
 import { createCollectPaymentRoutes } from '../../src/modules/order-management/collectPayment.routes';
-import {
-  initWebhookProcessor,
-  processStripeWebhook,
-  paymentEvents,
-} from '@nugen/payment-gateway';
-import type {
-  IPaymentProvider,
-  PaymentIntentResult,
-} from '@nugen/payment-gateway';
 
 // ─── In-memory stores ──────────────────────────────────────────────────────
 
@@ -82,8 +75,12 @@ function buildOrderModel(orders: Map<string, StoredOrder>): unknown {
   return {
     findOne: async (filter: Record<string, unknown>): Promise<StoredOrder | null> => {
       for (const o of orders.values()) {
-        if (filter._id && o._id !== filter._id) continue;
-        if (o.isDeleted) continue;
+        if (filter._id && o._id !== filter._id) {
+          continue;
+        }
+        if (o.isDeleted) {
+          continue;
+        }
         return o;
       }
       return null;
@@ -93,15 +90,18 @@ function buildOrderModel(orders: Map<string, StoredOrder>): unknown {
 
 function buildPaymentModel(payments: Map<string, StoredPayment>): unknown {
   let idCounter = 1;
-  const makeId = (): string =>
-    `508f1f77bcf86cd79943${String(idCounter++).padStart(4, '0')}`;
+  const makeId = (): string => `508f1f77bcf86cd79943${String(idCounter++).padStart(4, '0')}`;
 
   return {
     findOne: (filter?: Record<string, unknown>) => {
       const run = (): StoredPayment | null => {
         for (const p of payments.values()) {
-          if (filter?.idempotencyKey && p.idempotencyKey !== filter.idempotencyKey) continue;
-          if (filter?.gatewayTxnId && p.gatewayTxnId !== filter.gatewayTxnId) continue;
+          if (filter?.idempotencyKey && p.idempotencyKey !== filter.idempotencyKey) {
+            continue;
+          }
+          if (filter?.gatewayTxnId && p.gatewayTxnId !== filter.gatewayTxnId) {
+            continue;
+          }
           return p;
         }
         return null;
@@ -162,9 +162,7 @@ function buildGatewayConfigModel(): unknown {
   };
 }
 
-function buildWebhookEventModel(
-  webhookEvents: Map<string, StoredWebhookEvent>,
-): unknown {
+function buildWebhookEventModel(webhookEvents: Map<string, StoredWebhookEvent>): unknown {
   return {
     findOne: (filter: { eventId: string }) => ({
       lean: async (): Promise<StoredWebhookEvent | null> =>
@@ -213,10 +211,7 @@ const STAFF_ID = '670000000000000000000003';
 const CLIENT_ID = '670000000000000000000010';
 const ORDER_ID = '670000000000000000000020';
 
-function createApp(opts?: {
-  denyPermission?: boolean;
-  staffUserId?: string;
-}): {
+function createApp(opts?: { denyPermission?: boolean; staffUserId?: string }): {
   app: express.Express;
   orders: Map<string, StoredOrder>;
   payments: Map<string, StoredPayment>;
@@ -252,7 +247,9 @@ function createApp(opts?: {
   const checkPermission = (_resource: string, _action: string): RequestHandler => {
     return (_req: Request, res: Response, next: NextFunction): void => {
       if (opts?.denyPermission) {
-        res.status(403).json({ status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' });
+        res
+          .status(403)
+          .json({ status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' });
         return;
       }
       next();
@@ -357,7 +354,9 @@ describe('E2E: Collect Payment (staff) → webhook reconciliation', () => {
   it('rejects collect-payment for an already-paid order (409)', async () => {
     const { app, orders, payments } = createApp();
     const order = orders.get(ORDER_ID);
-    if (order) order.paymentStatus = 'succeeded';
+    if (order) {
+      order.paymentStatus = 'succeeded';
+    }
 
     const res = await request(app)
       .post(`/orders/${ORDER_ID}/collect-payment`)

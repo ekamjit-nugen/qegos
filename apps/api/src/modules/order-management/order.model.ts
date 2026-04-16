@@ -1,6 +1,8 @@
-import { Schema, type Model, type Connection } from 'mongoose';
 import crypto from 'crypto';
+import { Schema, type Model, type Connection } from 'mongoose';
 import { getConfig } from '../../config/env';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 import type { IOrderDocument2 } from './order.types';
 import {
   MARITAL_STATUSES,
@@ -11,8 +13,6 @@ import {
   LINE_ITEM_COMPLETION_STATUSES,
   SIGNING_STATUSES,
 } from './order.types';
-import type { ICounterDocument } from '../../database/counter.model';
-import { getNextSequence } from '../../database/counter.model';
 
 // ─── TFN Encryption (SEC-INV-09) ───────────────────────────────────────────
 
@@ -223,14 +223,17 @@ const orderSchema = new Schema<IOrderDocument2>(
     processingBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     completionPercent: { type: Number, default: 0, min: 0, max: 100 },
     scheduledAppointment: {
-      type: new Schema({
-        date: { type: Date, required: true },
-        timeSlot: { type: String, required: true },
-        staffId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-        type: { type: String, enum: APPOINTMENT_TYPES, required: true },
-        meetingLink: String,
-        status: { type: String, enum: APPOINTMENT_STATUSES, default: 'scheduled' },
-      }, { _id: false }),
+      type: new Schema(
+        {
+          date: { type: Date, required: true },
+          timeSlot: { type: String, required: true },
+          staffId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+          type: { type: String, enum: APPOINTMENT_TYPES, required: true },
+          meetingLink: String,
+          status: { type: String, enum: APPOINTMENT_STATUSES, default: 'scheduled' },
+        },
+        { _id: false },
+      ),
       required: false,
     },
     eFileStatus: { type: String, enum: E_FILE_STATUSES },
@@ -266,11 +269,12 @@ orderSchema.index({ processingBy: 1, status: 1, updatedAt: -1 });
 // ─── ORD-INV-03: Server-side total recalculation pre-save ───────────────────
 
 orderSchema.pre('save', function (next) {
-  if (this.isModified('lineItems') || this.isModified('discountPercent') || this.isModified('creditApplied')) {
-    const total = this.lineItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
+  if (
+    this.isModified('lineItems') ||
+    this.isModified('discountPercent') ||
+    this.isModified('creditApplied')
+  ) {
+    const total = this.lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     this.totalAmount = total;
     this.discountAmount = Math.round(total * (this.discountPercent / 100));
     const afterDiscount = total - this.discountAmount;

@@ -66,10 +66,7 @@ const VAULT_CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 
-const CATEGORY_FILTER_OPTIONS = [
-  { label: 'All Categories', value: '' },
-  ...VAULT_CATEGORIES,
-];
+const CATEGORY_FILTER_OPTIONS = [{ label: 'All Categories', value: '' }, ...VAULT_CATEGORIES];
 
 const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
   VAULT_CATEGORIES.map((c) => [c.value, c.label]),
@@ -91,8 +88,12 @@ function getFinancialYearOptions(): { value: string; label: string }[] {
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes < 1024) { return `${bytes} B`; }
-  if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB`; }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -116,7 +117,11 @@ export function VaultPage(): React.ReactNode {
   const documents = docsResponse?.data ?? [];
 
   const handleUpload: UploadProps['customRequest'] = useCallback(
-    (options: { file: unknown; onSuccess?: (body: unknown) => void; onError?: (err: Error) => void }) => {
+    (options: {
+      file: unknown;
+      onSuccess?: (body: unknown) => void;
+      onError?: (err: Error) => void;
+    }) => {
       if (!uploadYear || !uploadCategory) {
         void message.warning('Please select a financial year and category first');
         return;
@@ -196,9 +201,7 @@ export function VaultPage(): React.ReactNode {
           <Text type="secondary">Storage Usage</Text>
           <Progress
             percent={storage.percentage}
-            format={() =>
-              `${formatFileSize(storage.used)} / ${formatFileSize(storage.limit)}`
-            }
+            format={() => `${formatFileSize(storage.used)} / ${formatFileSize(storage.limit)}`}
             style={{ marginTop: 4 }}
           />
         </Card>
@@ -222,7 +225,9 @@ export function VaultPage(): React.ReactNode {
         <Button
           type="primary"
           icon={<CloudUploadOutlined />}
-          onClick={() => { setUploadOpen(true); }}
+          onClick={() => {
+            setUploadOpen(true);
+          }}
         >
           Upload Document
         </Button>
@@ -231,13 +236,19 @@ export function VaultPage(): React.ReactNode {
       <Modal
         title="Upload Document"
         open={uploadOpen}
-        onCancel={() => { setUploadOpen(false); setUploadYear(undefined); setUploadCategory(undefined); }}
+        onCancel={() => {
+          setUploadOpen(false);
+          setUploadYear(undefined);
+          setUploadCategory(undefined);
+        }}
         footer={null}
         destroyOnClose
       >
         <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }} size="middle">
           <div>
-            <Text strong style={{ display: 'block', marginBottom: 4 }}>Financial Year *</Text>
+            <Text strong style={{ display: 'block', marginBottom: 4 }}>
+              Financial Year *
+            </Text>
             <Select
               value={uploadYear}
               onChange={setUploadYear}
@@ -247,7 +258,9 @@ export function VaultPage(): React.ReactNode {
             />
           </div>
           <div>
-            <Text strong style={{ display: 'block', marginBottom: 4 }}>Category *</Text>
+            <Text strong style={{ display: 'block', marginBottom: 4 }}>
+              Category *
+            </Text>
             <Select
               value={uploadCategory}
               onChange={setUploadCategory}
@@ -269,9 +282,7 @@ export function VaultPage(): React.ReactNode {
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">Click or drag a file to upload</p>
-          <p className="ant-upload-hint">
-            PDF or image files up to 20 MB
-          </p>
+          <p className="ant-upload-hint">PDF or image files up to 20 MB</p>
         </Dragger>
       </Modal>
 
@@ -293,7 +304,9 @@ export function VaultPage(): React.ReactNode {
                     type="link"
                     icon={<DownloadOutlined />}
                     size="small"
-                    onClick={() => { void handleDownload(doc._id); }}
+                    onClick={() => {
+                      void handleDownload(doc._id);
+                    }}
                   >
                     Download
                   </Button>,
@@ -303,7 +316,9 @@ export function VaultPage(): React.ReactNode {
                       type="link"
                       icon={<UndoOutlined />}
                       size="small"
-                      onClick={() => { handleRestore(doc._id); }}
+                      onClick={() => {
+                        handleRestore(doc._id);
+                      }}
                     >
                       Restore
                     </Button>
@@ -312,15 +327,13 @@ export function VaultPage(): React.ReactNode {
                       key="archive"
                       title="Archive this document?"
                       description="Archived documents are permanently deleted after 30 days."
-                      onConfirm={() => { handleArchive(doc._id); }}
+                      onConfirm={() => {
+                        handleArchive(doc._id);
+                      }}
                       okText="Archive"
                       cancelText="Cancel"
                     >
-                      <Button
-                        type="link"
-                        icon={<FolderOutlined />}
-                        size="small"
-                      >
+                      <Button type="link" icon={<FolderOutlined />} size="small">
                         Archive
                       </Button>
                     </Popconfirm>

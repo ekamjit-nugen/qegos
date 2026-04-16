@@ -11,9 +11,13 @@ export function useWhatsAppMessages(filters: WhatsAppMessageListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
-      const res = await api.get<PaginatedResponse<WhatsAppMessage>>(`/whatsapp/messages?${params.toString()}`);
+      const res = await api.get<PaginatedResponse<WhatsAppMessage>>(
+        `/whatsapp/messages?${params.toString()}`,
+      );
       return res.data;
     },
     placeholderData: (prev) => prev,
@@ -33,7 +37,11 @@ export function useWhatsAppConfig() {
 export function useSendWhatsApp() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { contactMobile: string; templateName: string; parameters?: Record<string, string> }) => {
+    mutationFn: async (data: {
+      contactMobile: string;
+      templateName: string;
+      parameters?: Record<string, string>;
+    }) => {
       const res = await api.post<ApiResponse<WhatsAppMessage>>('/whatsapp/send', data);
       return res.data.data;
     },

@@ -21,7 +21,10 @@ const auditLog = {
   },
 };
 import type { Model } from 'mongoose';
-import type { IAppointmentDocument, IStaffAvailabilityDocument } from '../appointment-scheduling/appointment.types';
+import type {
+  IAppointmentDocument,
+  IStaffAvailabilityDocument,
+} from '../appointment-scheduling/appointment.types';
 import { createAppointmentService } from '../appointment-scheduling/appointment.service';
 import type { IOrderDocument2 } from '../order-management/order.types';
 
@@ -72,21 +75,13 @@ const rescheduleValidation = [
     .withMessage('Type must be in_person, phone, or video'),
 ];
 
-const cancelValidation = [
-  param('id').isMongoId().withMessage('Valid appointment ID is required'),
-];
+const cancelValidation = [param('id').isMongoId().withMessage('Valid appointment ID is required')];
 
 // ─── Route Factory ─────────────────────────────────────────────────────────
 
 export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps): Router {
   const router = Router();
-  const {
-    AppointmentModel,
-    StaffAvailabilityModel,
-    OrderModel,
-    UserModel,
-    getSetting,
-  } = deps;
+  const { AppointmentModel, StaffAvailabilityModel, OrderModel, UserModel, getSetting } = deps;
 
   const appointmentService = createAppointmentService({
     AppointmentModel,
@@ -97,9 +92,10 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
   });
 
   // All routes require authentication
-  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
-    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
-    : deps.authenticate;
+  const authMiddleware =
+    typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+      ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+      : deps.authenticate;
   router.use(authMiddleware);
 
   // ── GET /appointments/available-slots ─────────────────────────────────
@@ -138,7 +134,12 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
           isDeleted: { $ne: true },
         });
 
-        const allSlots: Array<{ date: string; startTime: string; endTime: string; staffId: string }> = [];
+        const allSlots: Array<{
+          date: string;
+          startTime: string;
+          endTime: string;
+          staffId: string;
+        }> = [];
 
         for (const sid of allStaff) {
           const staffSlots = await appointmentService.getStaffAvailability(
@@ -157,7 +158,9 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
         // Sort by date then startTime
         allSlots.sort((a, b) => {
           const dateCompare = a.date.localeCompare(b.date);
-          if (dateCompare !== 0) return dateCompare;
+          if (dateCompare !== 0) {
+            return dateCompare;
+          }
           return a.startTime.localeCompare(b.startTime);
         });
 
@@ -360,7 +363,9 @@ export function createAppointmentBookingRoutes(deps: AppointmentBookingRouteDeps
           startTime,
           endTime,
         };
-        if (type) updateData.type = type;
+        if (type) {
+          updateData.type = type;
+        }
 
         const updated = await appointmentService.updateAppointment(id, updateData);
         if (!updated) {

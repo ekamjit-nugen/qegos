@@ -1,4 +1,6 @@
 import { Schema, type Model, type Connection } from 'mongoose';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 import type { ILeadDocument } from './lead.types';
 import {
   LEAD_SOURCES,
@@ -10,8 +12,6 @@ import {
   EMPLOYMENT_TYPES,
   LOST_REASONS,
 } from './lead.types';
-import type { ICounterDocument } from '../../database/counter.model';
-import { getNextSequence } from '../../database/counter.model';
 
 const leadSchema = new Schema<ILeadDocument>(
   {

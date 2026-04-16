@@ -22,7 +22,7 @@ export function useMyOrders(page: number = 1, limit: number = 10) {
       params.set('page', String(page));
       params.set('limit', String(limit));
       const response = await api.get<{ data: PaginatedResponse<Order> }>(
-        `/orders?${params.toString()}`
+        `/orders?${params.toString()}`,
       );
       return response.data.data;
     },

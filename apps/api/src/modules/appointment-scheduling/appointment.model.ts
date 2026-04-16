@@ -15,7 +15,10 @@ const appointmentSchema = new Schema<IAppointmentDocument>(
     startTime: {
       type: String,
       required: true,
-      validate: { validator: (v: string) => TIME_REGEX.test(v), message: 'startTime must be HH:mm' },
+      validate: {
+        validator: (v: string) => TIME_REGEX.test(v),
+        message: 'startTime must be HH:mm',
+      },
     },
     endTime: {
       type: String,
@@ -44,7 +47,13 @@ appointmentSchema.index(
 appointmentSchema.index({ status: 1, date: 1 });
 
 // Soft-delete query middleware
-function addSoftDeleteFilter(this: { getFilter: () => Record<string, unknown>; setQuery: (f: Record<string, unknown>) => void }, next: () => void): void {
+function addSoftDeleteFilter(
+  this: {
+    getFilter: () => Record<string, unknown>;
+    setQuery: (f: Record<string, unknown>) => void;
+  },
+  next: () => void,
+): void {
   const filter = this.getFilter();
   if (filter.isDeleted === undefined) {
     (filter as Record<string, unknown>).isDeleted = { $ne: true };
@@ -66,7 +75,10 @@ const staffAvailabilitySchema = new Schema<IStaffAvailabilityDocument>(
     startTime: {
       type: String,
       required: true,
-      validate: { validator: (v: string) => TIME_REGEX.test(v), message: 'startTime must be HH:mm' },
+      validate: {
+        validator: (v: string) => TIME_REGEX.test(v),
+        message: 'startTime must be HH:mm',
+      },
     },
     endTime: {
       type: String,
@@ -96,6 +108,8 @@ export function createAppointmentModel(connection: Connection): Model<IAppointme
   return connection.model<IAppointmentDocument>('Appointment', appointmentSchema);
 }
 
-export function createStaffAvailabilityModel(connection: Connection): Model<IStaffAvailabilityDocument> {
+export function createStaffAvailabilityModel(
+  connection: Connection,
+): Model<IStaffAvailabilityDocument> {
   return connection.model<IStaffAvailabilityDocument>('StaffAvailability', staffAvailabilitySchema);
 }

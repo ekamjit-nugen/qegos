@@ -1,16 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Card,
-  Col,
-  Descriptions,
-  Empty,
-  Row,
-  Spin,
-  Tag,
-  Typography,
-} from 'antd';
+import { Card, Col, Descriptions, Empty, Row, Spin, Tag, Typography } from 'antd';
 import { useTaxSummaries, useYearComparison } from '@/hooks/usePortal';
 import type { TaxYearSummary } from '@/types/taxSummary';
 import { formatCurrency } from '@/lib/utils/format';
@@ -24,26 +15,36 @@ const ATO_STATUS_COLORS: Record<string, string> = {
   paid: 'blue',
 };
 
-function DeltaText({ value, invertColor }: { value: number; invertColor?: boolean }): React.ReactNode {
-  if (value === 0) { return <Text type="secondary">-</Text>; }
+function DeltaText({
+  value,
+  invertColor,
+}: {
+  value: number;
+  invertColor?: boolean;
+}): React.ReactNode {
+  if (value === 0) {
+    return <Text type="secondary">-</Text>;
+  }
   const isPositive = value > 0;
-  const color = invertColor
-    ? (isPositive ? 'red' : 'green')
-    : (isPositive ? 'green' : 'red');
+  const color = invertColor ? (isPositive ? 'red' : 'green') : isPositive ? 'green' : 'red';
   const prefix = isPositive ? '+' : '';
   return (
     <Text style={{ color }}>
-      {prefix}{formatCurrency(value)}
+      {prefix}
+      {formatCurrency(value)}
     </Text>
   );
 }
 
 function PercentChange({ value }: { value: number }): React.ReactNode {
-  if (!isFinite(value) || value === 0) { return null; }
+  if (!isFinite(value) || value === 0) {
+    return null;
+  }
   const prefix = value > 0 ? '+' : '';
   return (
     <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
-      ({prefix}{value.toFixed(1)}%)
+      ({prefix}
+      {value.toFixed(1)}%)
     </Text>
   );
 }
@@ -64,7 +65,9 @@ export function TaxSummaryPage(): React.ReactNode {
   if (!summaries || summaries.length === 0) {
     return (
       <div>
-        <Title level={3} style={{ marginBottom: 24 }}>Tax Summaries</Title>
+        <Title level={3} style={{ marginBottom: 24 }}>
+          Tax Summaries
+        </Title>
         <Empty description="No tax summaries available yet" />
       </div>
     );
@@ -83,14 +86,11 @@ export function TaxSummaryPage(): React.ReactNode {
               hoverable
               onClick={() => {
                 setSelectedYear(
-                  selectedYear === summary.financialYear
-                    ? undefined
-                    : summary.financialYear,
+                  selectedYear === summary.financialYear ? undefined : summary.financialYear,
                 );
               }}
               style={{
-                borderColor:
-                  selectedYear === summary.financialYear ? '#1677ff' : undefined,
+                borderColor: selectedYear === summary.financialYear ? '#1677ff' : undefined,
               }}
             >
               <Title level={4} style={{ marginBottom: 12 }}>
@@ -141,9 +141,7 @@ export function TaxSummaryPage(): React.ReactNode {
                 {formatCurrency(comparison.current.totalIncome)}
               </Descriptions.Item>
               <Descriptions.Item label="Total Income (Previous)">
-                {comparison.previous
-                  ? formatCurrency(comparison.previous.totalIncome)
-                  : '-'}
+                {comparison.previous ? formatCurrency(comparison.previous.totalIncome) : '-'}
                 {comparison.changes.totalIncome && (
                   <>
                     {' '}
@@ -157,9 +155,7 @@ export function TaxSummaryPage(): React.ReactNode {
                 {formatCurrency(comparison.current.totalDeductions)}
               </Descriptions.Item>
               <Descriptions.Item label="Total Deductions (Previous)">
-                {comparison.previous
-                  ? formatCurrency(comparison.previous.totalDeductions)
-                  : '-'}
+                {comparison.previous ? formatCurrency(comparison.previous.totalDeductions) : '-'}
                 {comparison.changes.totalDeductions && (
                   <>
                     {' '}
@@ -173,16 +169,11 @@ export function TaxSummaryPage(): React.ReactNode {
                 {formatCurrency(comparison.current.totalTaxPayable)}
               </Descriptions.Item>
               <Descriptions.Item label="Tax Payable (Previous)">
-                {comparison.previous
-                  ? formatCurrency(comparison.previous.totalTaxPayable)
-                  : '-'}
+                {comparison.previous ? formatCurrency(comparison.previous.totalTaxPayable) : '-'}
                 {comparison.changes.totalTaxPayable && (
                   <>
                     {' '}
-                    <DeltaText
-                      value={comparison.changes.totalTaxPayable.delta}
-                      invertColor
-                    />
+                    <DeltaText value={comparison.changes.totalTaxPayable.delta} invertColor />
                     <PercentChange value={comparison.changes.totalTaxPayable.percentChange} />
                   </>
                 )}

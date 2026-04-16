@@ -23,17 +23,34 @@ type ViewMode = 'chart' | 'table';
 
 const tableColumns: ColumnsType<StaffBenchmarkEntry> = [
   { title: 'Staff', dataIndex: 'displayName', key: 'name', ellipsis: true },
-  { title: 'Orders', dataIndex: 'ordersCompleted', key: 'orders', width: 80, sorter: (a, b) => a.ordersCompleted - b.ordersCompleted, defaultSortOrder: 'descend' },
-  { title: 'Leads', dataIndex: 'leadsContacted', key: 'leads', width: 75, sorter: (a, b) => a.leadsContacted - b.leadsContacted },
-  { title: 'Tickets', dataIndex: 'ticketsResolved', key: 'tickets', width: 80, sorter: (a, b) => a.ticketsResolved - b.ticketsResolved },
+  {
+    title: 'Orders',
+    dataIndex: 'ordersCompleted',
+    key: 'orders',
+    width: 80,
+    sorter: (a, b) => a.ordersCompleted - b.ordersCompleted,
+    defaultSortOrder: 'descend',
+  },
+  {
+    title: 'Leads',
+    dataIndex: 'leadsContacted',
+    key: 'leads',
+    width: 75,
+    sorter: (a, b) => a.leadsContacted - b.leadsContacted,
+  },
+  {
+    title: 'Tickets',
+    dataIndex: 'ticketsResolved',
+    key: 'tickets',
+    width: 80,
+    sorter: (a, b) => a.ticketsResolved - b.ticketsResolved,
+  },
   {
     title: 'Avg Review',
     dataIndex: 'avgReviewMinutes',
     key: 'review',
     width: 100,
-    render: (v: number) => (
-      <Tag color={v > 60 ? 'red' : v > 30 ? 'orange' : 'green'}>{v}m</Tag>
-    ),
+    render: (v: number) => <Tag color={v > 60 ? 'red' : v > 30 ? 'orange' : 'green'}>{v}m</Tag>,
     sorter: (a, b) => a.avgReviewMinutes - b.avgReviewMinutes,
   },
 ];
@@ -52,7 +69,12 @@ export function StaffBenchmarkWidget(): React.ReactNode {
 
   return (
     <WidgetCard
-      title={<span><BarChartOutlined /><span style={{ marginLeft: 8 }}>Staff Benchmark</span></span>}
+      title={
+        <span>
+          <BarChartOutlined />
+          <span style={{ marginLeft: 8 }}>Staff Benchmark</span>
+        </span>
+      }
       loading={isLoading}
       error={error as Error | null}
       onRetry={() => void refetch()}

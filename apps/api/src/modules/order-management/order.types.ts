@@ -31,8 +31,16 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
  */
 export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.Pending]: [OrderStatus.DocumentsReceived, OrderStatus.Cancelled],
-  [OrderStatus.DocumentsReceived]: [OrderStatus.Assigned, OrderStatus.Pending, OrderStatus.Cancelled],
-  [OrderStatus.Assigned]: [OrderStatus.InProgress, OrderStatus.DocumentsReceived, OrderStatus.Cancelled],
+  [OrderStatus.DocumentsReceived]: [
+    OrderStatus.Assigned,
+    OrderStatus.Pending,
+    OrderStatus.Cancelled,
+  ],
+  [OrderStatus.Assigned]: [
+    OrderStatus.InProgress,
+    OrderStatus.DocumentsReceived,
+    OrderStatus.Cancelled,
+  ],
   [OrderStatus.InProgress]: [OrderStatus.Review, OrderStatus.Assigned, OrderStatus.Cancelled],
   [OrderStatus.Review]: [OrderStatus.Completed, OrderStatus.InProgress, OrderStatus.Cancelled],
   [OrderStatus.Completed]: [OrderStatus.Lodged, OrderStatus.Cancelled],
@@ -43,9 +51,23 @@ export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
-export const MARITAL_STATUSES = ['single', 'married', 'de_facto', 'separated', 'divorced', 'widowed'] as const;
+export const MARITAL_STATUSES = [
+  'single',
+  'married',
+  'de_facto',
+  'separated',
+  'divorced',
+  'widowed',
+] as const;
 
-export const E_FILE_STATUSES = ['not_filed', 'pending', 'submitted', 'accepted', 'rejected', 'assessed'] as const;
+export const E_FILE_STATUSES = [
+  'not_filed',
+  'pending',
+  'submitted',
+  'accepted',
+  'rejected',
+  'assessed',
+] as const;
 export type EFileStatus = (typeof E_FILE_STATUSES)[number];
 
 export const APPOINTMENT_TYPES = ['in_person', 'phone', 'video'] as const;
@@ -57,7 +79,12 @@ export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 export const ORDER_TYPES = ['standard', 'amendment'] as const;
 export type OrderType = (typeof ORDER_TYPES)[number];
 
-export const LINE_ITEM_COMPLETION_STATUSES = ['not_started', 'in_progress', 'completed', 'cancelled'] as const;
+export const LINE_ITEM_COMPLETION_STATUSES = [
+  'not_started',
+  'in_progress',
+  'completed',
+  'cancelled',
+] as const;
 export type LineItemCompletionStatus = (typeof LINE_ITEM_COMPLETION_STATUSES)[number];
 
 export const SALES_CATEGORIES = ['individual', 'business', 'investment', 'other'] as const;

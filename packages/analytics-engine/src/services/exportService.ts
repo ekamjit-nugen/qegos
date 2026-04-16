@@ -2,8 +2,8 @@
  * Export Service — Async analytics export via BullMQ
  */
 
-import type { AnalyticsView, ExportJobResponse } from '../types';
 import { randomUUID } from 'crypto';
+import type { AnalyticsView, ExportJobResponse } from '../types';
 
 export interface ExportParams {
   format: 'pdf' | 'xlsx';

@@ -28,9 +28,7 @@ cannedResponseSchema.index({ createdBy: 1 });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 
-export function createCannedResponseModel(
-  connection: Connection,
-): Model<ICannedResponseDocument> {
+export function createCannedResponseModel(connection: Connection): Model<ICannedResponseDocument> {
   if (connection.models.CannedResponse) {
     return connection.models.CannedResponse as Model<ICannedResponseDocument>;
   }

@@ -1,11 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Tag, Card, Button, Tabs, Descriptions, Select, Row, Col, Badge, message } from 'antd';
+import {
+  Table,
+  Tag,
+  Card,
+  Button,
+  Tabs,
+  Descriptions,
+  Select,
+  Row,
+  Col,
+  Badge,
+  message,
+} from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useXeroStatus, useXeroConfig, useXeroSyncLogs, useReconciliation } from '@/hooks/useXero';
-import type { XeroSyncLog, SyncLogListQuery, XeroSyncStatus, XeroSyncEntityType } from '@/types/xero';
+import type {
+  XeroSyncLog,
+  SyncLogListQuery,
+  XeroSyncStatus,
+  XeroSyncEntityType,
+} from '@/types/xero';
 import { SYNC_STATUS_COLORS, SYNC_ENTITY_LABELS } from '@/types/xero';
 import { formatDateTime } from '@/lib/utils/format';
 
@@ -21,7 +38,9 @@ export function XeroPage(): React.ReactNode {
   const handleReconcile = (): void => {
     reconciliation.mutate(undefined, {
       onSuccess: (result) => {
-        void message.success(`Reconciliation complete: ${result.reconciled} reconciled, ${result.mismatches} mismatches`);
+        void message.success(
+          `Reconciliation complete: ${result.reconciled} reconciled, ${result.mismatches} mismatches`,
+        );
       },
     });
   };
@@ -48,9 +67,7 @@ export function XeroPage(): React.ReactNode {
       title: 'Status',
       dataIndex: 'status',
       width: 120,
-      render: (val: XeroSyncStatus) => (
-        <Tag color={SYNC_STATUS_COLORS[val]}>{val}</Tag>
-      ),
+      render: (val: XeroSyncStatus) => <Tag color={SYNC_STATUS_COLORS[val]}>{val}</Tag>,
     },
     {
       title: 'Error',

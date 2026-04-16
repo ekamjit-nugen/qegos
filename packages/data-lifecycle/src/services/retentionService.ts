@@ -31,7 +31,9 @@ export async function enforceRetentionPolicies(): Promise<RetentionResult[]> {
 
   for (const policy of retentionPolicies) {
     const config = modelConfigs.get(policy.modelName);
-    if (!config) continue;
+    if (!config) {
+      continue;
+    }
 
     const cutoffDate = new Date(Date.now() - policy.retentionDays * 24 * 60 * 60 * 1000);
 

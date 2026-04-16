@@ -1,22 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
-import type {
-  Conversation,
-  ChatMessage,
-  SendMessageRequest,
-  UnreadCount,
-} from '@/types/chat';
+import type { Conversation, ChatMessage, SendMessageRequest, UnreadCount } from '@/types/chat';
 
-export function useConversations(): ReturnType<
-  typeof useQuery<PaginatedResponse<Conversation>>
-> {
+export function useConversations(): ReturnType<typeof useQuery<PaginatedResponse<Conversation>>> {
   return useQuery<PaginatedResponse<Conversation>>({
     queryKey: ['conversations'],
     queryFn: async (): Promise<PaginatedResponse<Conversation>> => {
-      const res = await api.get<PaginatedResponse<Conversation>>(
-        '/chat/conversations',
-      );
+      const res = await api.get<PaginatedResponse<Conversation>>('/chat/conversations');
       return res.data;
     },
   });
@@ -45,13 +36,8 @@ export function useSendMessage(): ReturnType<
   const queryClient = useQueryClient();
 
   return useMutation<ApiResponse<ChatMessage>, Error, SendMessageRequest>({
-    mutationFn: async (
-      data: SendMessageRequest,
-    ): Promise<ApiResponse<ChatMessage>> => {
-      const res = await api.post<ApiResponse<ChatMessage>>(
-        '/chat/messages',
-        data,
-      );
+    mutationFn: async (data: SendMessageRequest): Promise<ApiResponse<ChatMessage>> => {
+      const res = await api.post<ApiResponse<ChatMessage>>('/chat/messages', data);
       return res.data;
     },
     onSuccess: async (
@@ -67,15 +53,11 @@ export function useSendMessage(): ReturnType<
   });
 }
 
-export function useUnreadCount(): ReturnType<
-  typeof useQuery<ApiResponse<UnreadCount>>
-> {
+export function useUnreadCount(): ReturnType<typeof useQuery<ApiResponse<UnreadCount>>> {
   return useQuery<ApiResponse<UnreadCount>>({
     queryKey: ['unread-count'],
     queryFn: async (): Promise<ApiResponse<UnreadCount>> => {
-      const res = await api.get<ApiResponse<UnreadCount>>(
-        '/chat/unread-count',
-      );
+      const res = await api.get<ApiResponse<UnreadCount>>('/chat/unread-count');
       return res.data;
     },
     refetchInterval: 30_000,

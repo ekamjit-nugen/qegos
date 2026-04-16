@@ -65,12 +65,19 @@ export interface LeadRouteDeps {
 export function createLeadRoutes(deps: LeadRouteDeps): Router {
   const router = Router();
   const {
-    LeadModel, LeadActivityModel, LeadReminderModel,
-    connection, authenticate: auth, checkPermission: check,
+    LeadModel,
+    LeadActivityModel,
+    LeadReminderModel,
+    connection,
+    authenticate: auth,
+    checkPermission: check,
   } = deps;
 
   const leadService = createLeadService({
-    LeadModel, LeadActivityModel, LeadReminderModel, connection,
+    LeadModel,
+    LeadActivityModel,
+    LeadReminderModel,
+    connection,
     CounterModel: deps.CounterModel,
     UserModel: deps.UserModel,
     OrderModel: deps.OrderModel,
@@ -188,7 +195,7 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const result = await leadService.listLeads({
-        ...req.query as Record<string, string>,
+        ...(req.query as Record<string, string>),
         scopeFilter: authReq.scopeFilter,
       });
       res.status(200).json({
@@ -212,7 +219,9 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
     ...validate(importLeadValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const { rows } = req.body as { rows: Array<{ firstName: string; mobile: string; [key: string]: string | undefined }> };
+      const { rows } = req.body as {
+        rows: Array<{ firstName: string; mobile: string; [key: string]: string | undefined }>;
+      };
       const result = await leadService.importLeads(rows, authReq.user.userId);
 
       if (result.validationErrors && result.validationErrors.length > 0) {
@@ -271,13 +280,13 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
       const csvLines = [
         headers.join(','),
         ...data.map((row) =>
-          headers.map((h) => {
-            const val = String(row[h] ?? '');
-            // Escape CSV values containing commas or quotes
-            return val.includes(',') || val.includes('"')
-              ? `"${val.replace(/"/g, '""')}"`
-              : val;
-          }).join(','),
+          headers
+            .map((h) => {
+              const val = String(row[h] ?? '');
+              // Escape CSV values containing commas or quotes
+              return val.includes(',') || val.includes('"') ? `"${val.replace(/"/g, '""')}"` : val;
+            })
+            .join(','),
         ),
       ];
 
@@ -658,7 +667,12 @@ export function createLeadRoutes(deps: LeadRouteDeps): Router {
       const authReq = req as AuthenticatedRequest;
       const { assignedTo } = req.body as { assignedTo: string };
       // Fix for S-3.4, B-3.10: Pass scopeFilter to prevent IDOR
-      const lead = await leadService.assignLead(req.params.id, assignedTo, authReq.user.userId, authReq.scopeFilter);
+      const lead = await leadService.assignLead(
+        req.params.id,
+        assignedTo,
+        authReq.user.userId,
+        authReq.scopeFilter,
+      );
 
       auditLog.log({
         actor: authReq.user.userId,

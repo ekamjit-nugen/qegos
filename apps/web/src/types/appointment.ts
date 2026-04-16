@@ -8,13 +8,7 @@ export interface Appointment {
   endTime: string;
   type: 'in_person' | 'phone' | 'video';
   meetingLink?: string;
-  status:
-    | 'scheduled'
-    | 'confirmed'
-    | 'completed'
-    | 'no_show'
-    | 'cancelled'
-    | 'rescheduled';
+  status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled';
   notes?: string;
   createdAt: string;
 }

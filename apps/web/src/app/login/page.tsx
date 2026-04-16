@@ -110,7 +110,9 @@ function MobileLoginTab(): ReactNode {
       try {
         const result = await verifyOtp(mobile, values.otp);
         if (!result.userExists) {
-          router.replace(`/register?mobile=${encodeURIComponent(mobile)}&otp=${encodeURIComponent(values.otp)}`);
+          router.replace(
+            `/register?mobile=${encodeURIComponent(mobile)}&otp=${encodeURIComponent(values.otp)}`,
+          );
           return;
         }
         await loginWithOtp(mobile, values.otp);
@@ -164,7 +166,13 @@ function MobileLoginTab(): ReactNode {
           Verify & Sign In
         </Button>
       </Form.Item>
-      <Button type="link" block onClick={() => { setStep('mobile'); }}>
+      <Button
+        type="link"
+        block
+        onClick={() => {
+          setStep('mobile');
+        }}
+      >
         Use a different number
       </Button>
     </Form>
@@ -186,11 +194,7 @@ const DEV_ACCOUNTS = [
   { email: 'student@example.com', role: 'Student', color: 'purple' },
 ];
 
-function DevCredentials({
-  onSelect,
-}: {
-  onSelect: (email: string) => void;
-}): ReactNode {
+function DevCredentials({ onSelect }: { onSelect: (email: string) => void }): ReactNode {
   const { message } = App.useApp();
 
   const columns = [
@@ -217,9 +221,7 @@ function DevCredentials({
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string, record: { color: string }) => (
-        <Tag color={record.color}>{role}</Tag>
-      ),
+      render: (role: string, record: { color: string }) => <Tag color={record.color}>{role}</Tag>,
     },
   ];
 
@@ -291,12 +293,7 @@ export default function LoginPage(): ReactNode {
             Client Portal
           </Title>
         </div>
-        <Tabs
-          items={tabItems}
-          centered
-          activeKey={activeTab}
-          onChange={setActiveTab}
-        />
+        <Tabs items={tabItems} centered activeKey={activeTab} onChange={setActiveTab} />
       </Card>
 
       {process.env.NODE_ENV !== 'production' && (

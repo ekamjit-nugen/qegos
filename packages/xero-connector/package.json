@@ -21,7 +21,15 @@
     "ioredis": "^5.4.0",
     "mongoose": "^8.0.0"
   },
-  "keywords": ["xero", "accounting", "oauth", "invoice", "payment", "gst", "australian"],
+  "keywords": [
+    "xero",
+    "accounting",
+    "oauth",
+    "invoice",
+    "payment",
+    "gst",
+    "australian"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

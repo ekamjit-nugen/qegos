@@ -1,5 +1,5 @@
-import { Router, type Request, type Response, type RequestHandler } from 'express';
 import * as crypto from 'crypto';
+import { Router, type Request, type Response, type RequestHandler } from 'express';
 import * as bcrypt from 'bcryptjs';
 import type { Model } from 'mongoose';
 import { AppError, asyncHandler } from '@nugen/error-handler';
@@ -80,8 +80,9 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
       }
 
       // Find or signal that user needs registration
-      const user = await UserModel.findOne({ mobile, isDeleted: { $ne: true } })
-        .select('+refreshTokens');
+      const user = await UserModel.findOne({ mobile, isDeleted: { $ne: true } }).select(
+        '+refreshTokens',
+      );
       if (!user) {
         res.status(200).json({
           status: 200,
@@ -116,7 +117,10 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
     ...validate(signupValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { firstName, lastName, mobile, otp } = req.body as {
-        firstName: string; lastName: string; mobile: string; otp: string;
+        firstName: string;
+        lastName: string;
+        mobile: string;
+        otp: string;
       };
 
       const isValid = await otpService.verifyOtp(mobile, otp);
@@ -129,17 +133,19 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.conflict('User with this mobile already exists');
       }
 
-      const user = await UserModel.create({
+      const user = (await UserModel.create({
         firstName,
         lastName,
         mobile,
         userType: 2, // Client
         status: true,
-      }) as IAuthDocument;
+      })) as IAuthDocument;
 
       // Fix for S-3.17: Read validated deviceId from body
       const { deviceId = 'default' } = req.body as { deviceId?: string };
-      const freshUser = await UserModel.findById(user._id).select('+refreshTokens') as IAuthDocument;
+      const freshUser = (await UserModel.findById(user._id).select(
+        '+refreshTokens',
+      )) as IAuthDocument;
       const tokens = await jwtService.issueTokenPair(
         freshUser,
         deviceId,
@@ -163,14 +169,17 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { email, password } = req.body as { email: string; password: string };
 
-      const user = await UserModel.findOne({ email, isDeleted: { $ne: true } })
-        .select('+password +refreshTokens +mfaEnabled +mfaSecret');
+      const user = await UserModel.findOne({ email, isDeleted: { $ne: true } }).select(
+        '+password +refreshTokens +mfaEnabled +mfaSecret',
+      );
       if (!user) {
         throw AppError.invalidCredentials('Invalid email or password');
       }
 
       if (user.isAccountLocked()) {
-        throw AppError.unauthorized('Account is temporarily locked due to too many failed attempts');
+        throw AppError.unauthorized(
+          'Account is temporarily locked due to too many failed attempts',
+        );
       }
 
       const isCorrect = await user.isCorrectPassword(password);
@@ -221,7 +230,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
     ...validate(mfaVerifyValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { challengeToken, token: mfaToken } = req.body as {
-        challengeToken: string; token: string;
+        challengeToken: string;
+        token: string;
       };
 
       // Verify the time-limited MFA challenge token
@@ -232,8 +242,7 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.unauthorized('Invalid or expired MFA challenge. Please sign in again.');
       }
 
-      const user = await UserModel.findById(challenge.userId)
-        .select('+mfaSecret +refreshTokens');
+      const user = await UserModel.findById(challenge.userId).select('+mfaSecret +refreshTokens');
       if (!user || !user.mfaSecret) {
         throw AppError.unauthorized('MFA not configured');
       }
@@ -267,7 +276,8 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
     ...validate(mfaBackupValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { challengeToken, backupCode } = req.body as {
-        challengeToken: string; backupCode: string;
+        challengeToken: string;
+        backupCode: string;
       };
 
       let challenge;
@@ -277,8 +287,9 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.unauthorized('Invalid or expired MFA challenge. Please sign in again.');
       }
 
-      const user = await UserModel.findById(challenge.userId)
-        .select('+mfaBackupCodes +refreshTokens');
+      const user = await UserModel.findById(challenge.userId).select(
+        '+mfaBackupCodes +refreshTokens',
+      );
       if (!user) {
         throw AppError.unauthorized('User not found');
       }
@@ -322,8 +333,7 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         throw AppError.tokenExpired('Refresh token is invalid or expired');
       }
 
-      const user = await UserModel.findById(decoded.userId)
-        .select('+refreshTokens');
+      const user = await UserModel.findById(decoded.userId).select('+refreshTokens');
       if (!user || user.isDeleted || !user.status) {
         throw AppError.unauthorized('User not found or inactive');
       }
@@ -340,7 +350,9 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
 
       if (!tokens) {
         // Replay attack detected — all tokens revoked
-        throw AppError.unauthorized('Refresh token reuse detected. All sessions have been terminated.');
+        throw AppError.unauthorized(
+          'Refresh token reuse detected. All sessions have been terminated.',
+        );
       }
 
       res.status(200).json({ status: 200, data: tokens });
@@ -397,8 +409,9 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
       const { email } = req.body as { email: string };
 
       // Always return success to prevent email enumeration
-      const user = await UserModel.findOne({ email, isDeleted: { $ne: true } })
-        .select('+passwordResetToken');
+      const user = await UserModel.findOne({ email, isDeleted: { $ne: true } }).select(
+        '+passwordResetToken',
+      );
 
       if (user) {
         const resetToken = crypto.randomBytes(32).toString('hex');
@@ -431,10 +444,13 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
       // Validate password policy
       const policyErrors = passwordService.validatePolicy(password);
       if (policyErrors.length > 0) {
-        throw AppError.badRequest('Password does not meet requirements', policyErrors.map((msg) => ({
-          field: 'password',
-          message: msg,
-        })));
+        throw AppError.badRequest(
+          'Password does not meet requirements',
+          policyErrors.map((msg) => ({
+            field: 'password',
+            message: msg,
+          })),
+        );
       }
 
       // Fix for S-3.16: Find users with unexpired reset tokens, then bcrypt compare
@@ -444,10 +460,10 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
         isDeleted: { $ne: true },
       }).select('+password +refreshTokens +passwordResetToken');
 
-      let user: typeof candidateUsers[0] | null = null;
+      let user: (typeof candidateUsers)[0] | null = null;
       for (const candidate of candidateUsers) {
         const storedToken = candidate.get('passwordResetToken') as string | null;
-        if (storedToken && await bcrypt.compare(token, storedToken)) {
+        if (storedToken && (await bcrypt.compare(token, storedToken))) {
           user = candidate;
           break;
         }
@@ -478,15 +494,19 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { userId } = (req as AuthenticatedRequest).user;
       const { currentPassword, newPassword } = req.body as {
-        currentPassword: string; newPassword: string;
+        currentPassword: string;
+        newPassword: string;
       };
 
       const policyErrors = passwordService.validatePolicy(newPassword);
       if (policyErrors.length > 0) {
-        throw AppError.badRequest('Password does not meet requirements', policyErrors.map((msg) => ({
-          field: 'newPassword',
-          message: msg,
-        })));
+        throw AppError.badRequest(
+          'Password does not meet requirements',
+          policyErrors.map((msg) => ({
+            field: 'newPassword',
+            message: msg,
+          })),
+        );
       }
 
       const user = await UserModel.findById(userId).select('+password +refreshTokens');
@@ -594,8 +614,7 @@ export function createAuthRoutes(deps: AuthRouteDeps): Router {
       const { userId } = (req as AuthenticatedRequest).user;
       const { password } = req.body as { password: string };
 
-      const user = await UserModel.findById(userId)
-        .select('+password +mfaSecret +mfaBackupCodes');
+      const user = await UserModel.findById(userId).select('+password +mfaSecret +mfaBackupCodes');
       if (!user) {
         throw AppError.notFound('User');
       }

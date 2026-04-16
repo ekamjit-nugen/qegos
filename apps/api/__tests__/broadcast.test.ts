@@ -12,9 +12,7 @@ import {
   appendEmailFooter,
   renderMessage,
 } from '../../../packages/broadcast-engine/src/services/templateService';
-import {
-  isValidTransition,
-} from '../../../packages/broadcast-engine/src/services/campaignService';
+import { isValidTransition } from '../../../packages/broadcast-engine/src/services/campaignService';
 import {
   CAMPAIGN_STATUS_TRANSITIONS,
   MERGE_TAG_FALLBACKS,
@@ -49,18 +47,12 @@ describe('Broadcast Engine', () => {
     });
 
     it('uses fallback values for missing merge data', () => {
-      const result = renderMergeTags(
-        'Hello {{firstName}}, welcome to {{companyName}}!',
-        {},
-      );
+      const result = renderMergeTags('Hello {{firstName}}, welcome to {{companyName}}!', {});
       expect(result).toBe('Hello Valued Client, welcome to QEGOS!');
     });
 
     it('never sends unresolved {{tags}}', () => {
-      const result = renderMergeTags(
-        'Hello {{firstName}} {{unknownTag}}!',
-        {},
-      );
+      const result = renderMergeTags('Hello {{firstName}} {{unknownTag}}!', {});
       // firstName gets fallback, unknownTag gets empty string
       expect(result).not.toContain('{{');
       expect(result).not.toContain('}}');
@@ -68,10 +60,7 @@ describe('Broadcast Engine', () => {
     });
 
     it('prefers merge data over fallbacks', () => {
-      const result = renderMergeTags(
-        'Hi {{firstName}}',
-        { firstName: 'Alice' },
-      );
+      const result = renderMergeTags('Hi {{firstName}}', { firstName: 'Alice' });
       expect(result).toBe('Hi Alice');
     });
 
@@ -171,7 +160,12 @@ describe('Broadcast Engine', () => {
     });
 
     it('WhatsApp: renders merge tags without footer modification', () => {
-      const result = renderMessage('whatsapp', 'Hi {{firstName}}!', { firstName: 'Eve' }, TEST_CONFIG);
+      const result = renderMessage(
+        'whatsapp',
+        'Hi {{firstName}}!',
+        { firstName: 'Eve' },
+        TEST_CONFIG,
+      );
       expect(result.body).toBe('Hi Eve!');
       expect(result.htmlBody).toBeUndefined();
       expect(result.body).not.toContain('STOP');
@@ -224,7 +218,13 @@ describe('Broadcast Engine', () => {
 
     it('all statuses have defined transitions', () => {
       const allStatuses: CampaignStatus[] = [
-        'draft', 'scheduled', 'sending', 'paused', 'sent', 'failed', 'cancelled',
+        'draft',
+        'scheduled',
+        'sending',
+        'paused',
+        'sent',
+        'failed',
+        'cancelled',
       ];
       for (const status of allStatuses) {
         expect(CAMPAIGN_STATUS_TRANSITIONS[status]).toBeDefined();
@@ -278,8 +278,8 @@ describe('Broadcast Engine', () => {
 
     it('multi-channel cost includes all channels', () => {
       const recipients = 500;
-      const smsEmailCost = recipients * DEFAULT_COST_PER_MESSAGE.sms
-        + recipients * DEFAULT_COST_PER_MESSAGE.email;
+      const smsEmailCost =
+        recipients * DEFAULT_COST_PER_MESSAGE.sms + recipients * DEFAULT_COST_PER_MESSAGE.email;
       expect(smsEmailCost).toBe(500 * 750 + 500 * 10);
       expect(smsEmailCost).toBe(380000); // $380
     });
@@ -309,8 +309,12 @@ describe('Broadcast Engine', () => {
   describe('DND / Opt-out invariants', () => {
     it('BRC-INV-01: opt-out reasons include all expected values', () => {
       const expectedReasons = [
-        'user_request', 'reply_stop', 'bounce_hard',
-        'bounce_soft_3x', 'admin_manual', 'spam_complaint',
+        'user_request',
+        'reply_stop',
+        'bounce_hard',
+        'bounce_soft_3x',
+        'admin_manual',
+        'spam_complaint',
       ];
       // These are the valid enum values per the model
       for (const reason of expectedReasons) {
@@ -351,8 +355,14 @@ describe('Broadcast Engine', () => {
   describe('Template categories', () => {
     it('supports all 8 categories', () => {
       const categories = [
-        'follow_up', 'promotion', 'reminder', 'announcement',
-        'welcome', 're_engagement', 'deadline', 'review_request',
+        'follow_up',
+        'promotion',
+        'reminder',
+        'announcement',
+        'welcome',
+        're_engagement',
+        'deadline',
+        'review_request',
       ];
       expect(categories).toHaveLength(8);
     });

@@ -1,28 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Table,
-  Tag,
-  Select,
-  Card,
-  Row,
-  Col,
-  Button,
-  Space,
-  App,
-  Popconfirm,
-  Tooltip,
-} from 'antd';
+import { Table, Tag, Select, Card, Row, Col, Button, Space, App, Popconfirm, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useTemplateList, useDeleteTemplate } from '@/hooks/useBroadcasts';
-import {
-  CHANNEL_LABELS,
-  CHANNEL_COLORS,
-  TEMPLATE_CATEGORY_LABELS,
-} from '@/types/broadcast';
+import { CHANNEL_LABELS, CHANNEL_COLORS, TEMPLATE_CATEGORY_LABELS } from '@/types/broadcast';
 import type {
   BroadcastTemplate,
   SingleChannel,
@@ -58,9 +42,7 @@ export function TemplateListPage(): React.ReactNode {
       title: 'Name',
       dataIndex: 'name',
       ellipsis: true,
-      render: (name: string, row) => (
-        <a onClick={() => setEditing(row)}>{name}</a>
-      ),
+      render: (name: string, row) => <a onClick={() => setEditing(row)}>{name}</a>,
     },
     {
       title: 'Channel',
@@ -98,8 +80,7 @@ export function TemplateListPage(): React.ReactNode {
       title: 'Status',
       dataIndex: 'isActive',
       width: 90,
-      render: (active: boolean) =>
-        active ? <Tag color="green">Active</Tag> : <Tag>Inactive</Tag>,
+      render: (active: boolean) => (active ? <Tag color="green">Active</Tag> : <Tag>Inactive</Tag>),
     },
     {
       title: 'Updated',
@@ -130,12 +111,7 @@ export function TemplateListPage(): React.ReactNode {
               cancelText="Cancel"
             >
               <Tooltip title="Deactivate">
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                />
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
               </Tooltip>
             </Popconfirm>
           )}

@@ -41,7 +41,9 @@ function buildMenuItems(
           key: child.path ?? child.name,
           icon: child.icon,
           label: child.name,
-          onClick: () => { if (child.path) onNavigate(child.path); },
+          onClick: () => {
+            if (child.path) onNavigate(child.path);
+          },
         })),
       };
     }
@@ -49,7 +51,9 @@ function buildMenuItems(
       key: item.path ?? item.name,
       icon: item.icon,
       label: item.name,
-      onClick: () => { if (item.path) onNavigate(item.path); },
+      onClick: () => {
+        if (item.path) onNavigate(item.path);
+      },
     };
   });
 }
@@ -67,7 +71,7 @@ function getSelectedKey(pathname: string, items: AdminMenuItem[]): string[] {
   }
   // Find best match (longest prefix)
   const match = allPaths
-    .filter((p) => p === '/' ? pathname === '/' : pathname.startsWith(p))
+    .filter((p) => (p === '/' ? pathname === '/' : pathname.startsWith(p)))
     .sort((a, b) => b.length - a.length)[0];
   return match ? [match] : ['/'];
 }
@@ -91,9 +95,12 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
     router.replace('/login');
   }, [logout, router]);
 
-  const handleNavigate = useCallback((path: string): void => {
-    router.push(path);
-  }, [router]);
+  const handleNavigate = useCallback(
+    (path: string): void => {
+      router.push(path);
+    },
+    [router],
+  );
 
   const visibleMenuItems = filterMenuByUserType(menuItems, user?.userType);
   const antMenuItems = buildMenuItems(visibleMenuItems, handleNavigate);
@@ -115,7 +122,9 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
       key: 'change-password',
       icon: <LockOutlined />,
       label: 'Change Password',
-      onClick: () => { router.push('/change-password'); },
+      onClick: () => {
+        router.push('/change-password');
+      },
     },
     { type: 'divider' },
     {
@@ -123,7 +132,9 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
       icon: <LogoutOutlined />,
       label: 'Logout',
       danger: true,
-      onClick: () => { void handleLogout(); },
+      onClick: () => {
+        void handleLogout();
+      },
     },
   ];
 
@@ -174,7 +185,9 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
             {collapsed ? 'Q' : 'QEGOS'}
           </Text>
           {!collapsed && (
-            <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>Admin</Text>
+            <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
+              Admin
+            </Text>
           )}
         </div>
 
@@ -184,7 +197,9 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
             mode="inline"
             selectedKeys={selectedKeys}
             openKeys={collapsed ? [] : openKeys}
-            onOpenChange={(keys) => { setOpenKeys(keys); }}
+            onOpenChange={(keys) => {
+              setOpenKeys(keys);
+            }}
             items={antMenuItems}
             style={{
               border: 'none',
@@ -248,7 +263,9 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => { setCollapsed(!collapsed); }}
+            onClick={() => {
+              setCollapsed(!collapsed);
+            }}
             style={{ fontSize: 16 }}
           />
           <Dropdown menu={{ items: userDropdownItems }} placement="bottomRight">
@@ -259,17 +276,13 @@ function AdminShell({ children }: { children: ReactNode }): ReactNode {
               >
                 {getInitials(user?.firstName, user?.lastName)}
               </Avatar>
-              <Text style={{ fontSize: 13 }}>
-                {fullName(user?.firstName, user?.lastName)}
-              </Text>
+              <Text style={{ fontSize: 13 }}>{fullName(user?.firstName, user?.lastName)}</Text>
             </div>
           </Dropdown>
         </Header>
 
         {/* Content */}
-        <Content style={{ margin: 20, minHeight: 'calc(100vh - 96px)' }}>
-          {children}
-        </Content>
+        <Content style={{ margin: 20, minHeight: 'calc(100vh - 96px)' }}>{children}</Content>
       </Layout>
     </Layout>
   );

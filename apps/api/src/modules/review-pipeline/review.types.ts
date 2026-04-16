@@ -62,7 +62,7 @@ export const DEFAULT_REVIEW_CHECKLIST: IChecklistItem[] = [
   { item: 'Private health insurance status verified', checked: false },
   { item: 'Capital gains discount correctly applied (holding period > 12 months)', checked: false },
   { item: 'Negative gearing calculations verified (if applicable)', checked: false },
-  { item: 'Prior-year figures consistent with last year\'s return', checked: false },
+  { item: "Prior-year figures consistent with last year's return", checked: false },
   { item: 'Client engagement letter signed', checked: false },
   { item: 'All required documents uploaded to vault', checked: false },
   { item: 'Estimated refund/owing figure reasonable (no obvious errors)', checked: false },

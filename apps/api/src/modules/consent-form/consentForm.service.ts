@@ -38,10 +38,7 @@ export interface ConsentFormService {
     userId: string | Types.ObjectId,
   ): Promise<ConsentFormResponse>;
   listByUser(userId: string | Types.ObjectId): Promise<ConsentFormResponse[]>;
-  getById(
-    id: string,
-    userId: string | Types.ObjectId,
-  ): Promise<ConsentFormResponse | null>;
+  getById(id: string, userId: string | Types.ObjectId): Promise<ConsentFormResponse | null>;
   /**
    * Admin-only: list across ALL users. Still returns the sanitized
    * `ConsentFormResponse` — no ciphertext or decrypted secrets.
@@ -87,9 +84,7 @@ function toResponse(doc: IConsentFormDocument): ConsentFormResponse {
   };
 }
 
-export function createConsentFormService(
-  deps: ConsentFormServiceDeps,
-): ConsentFormService {
+export function createConsentFormService(deps: ConsentFormServiceDeps): ConsentFormService {
   const { ConsentFormModel } = deps;
 
   return {
@@ -158,8 +153,12 @@ export function createConsentFormService(
 
     async listAll(filters = {}) {
       const query: Record<string, unknown> = {};
-      if (filters.userId) query.userId = filters.userId;
-      if (filters.workType) query.workType = filters.workType;
+      if (filters.userId) {
+        query.userId = filters.userId;
+      }
+      if (filters.workType) {
+        query.workType = filters.workType;
+      }
       if (filters.search) {
         const safe = filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const rx = new RegExp(safe, 'i');
@@ -176,10 +175,7 @@ export function createConsentFormService(
       const limit = Math.min(Math.max(filters.limit ?? 25, 1), 100);
       const skip = Math.max(filters.skip ?? 0, 0);
       const [docs, total] = await Promise.all([
-        ConsentFormModel.find(query)
-          .sort({ submittedAt: -1 })
-          .skip(skip)
-          .limit(limit),
+        ConsentFormModel.find(query).sort({ submittedAt: -1 }).skip(skip).limit(limit),
         ConsentFormModel.countDocuments(query),
       ]);
       return { rows: docs.map(toResponse), total };

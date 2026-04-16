@@ -66,7 +66,9 @@ const MockWebhookEventModel = {
 
 const MockPaymentModel = {
   findOne: jest.fn(async () => {
-    if (!shouldPaymentExist) return null;
+    if (!shouldPaymentExist) {
+      return null;
+    }
     // Return a proxy over shared paymentState so mutations persist across
     // multiple findOne calls within a single test (the webhook processor
     // reads status, assigns new status, calls save — a fresh object each
@@ -78,7 +80,9 @@ const MockPaymentModel = {
         return true;
       },
       get(target, key) {
-        if (key === 'save') return paymentSaveSpy;
+        if (key === 'save') {
+          return paymentSaveSpy;
+        }
         return (target as Record<string | symbol, unknown>)[key as string];
       },
     });
@@ -98,10 +102,7 @@ describe('WebhookProcessor', () => {
       status: currentPaymentStatus,
     };
     jest.clearAllMocks();
-    initWebhookProcessor(
-      MockWebhookEventModel as never,
-      MockPaymentModel as never,
-    );
+    initWebhookProcessor(MockWebhookEventModel as never, MockPaymentModel as never);
   });
 
   describe('processStripeWebhook', () => {
@@ -109,18 +110,14 @@ describe('WebhookProcessor', () => {
       const eventHandler = jest.fn();
       paymentEvents.on('payment.succeeded', eventHandler);
 
-      const result = await processStripeWebhook(
-        'evt_test_001',
-        'payment_intent.succeeded',
-        {
-          data: {
-            object: {
-              id: 'pi_test_123',
-              amount: 16500,
-            },
+      const result = await processStripeWebhook('evt_test_001', 'payment_intent.succeeded', {
+        data: {
+          object: {
+            id: 'pi_test_123',
+            amount: 16500,
           },
         },
-      );
+      });
 
       expect(result.processed).toBe(true);
       expect(result.duplicate).toBe(false);
@@ -145,11 +142,9 @@ describe('WebhookProcessor', () => {
     });
 
     it('should handle unknown event types gracefully', async () => {
-      const result = await processStripeWebhook(
-        'evt_unknown_001',
-        'unknown.event.type',
-        { data: { object: { id: 'pi_test_123' } } },
-      );
+      const result = await processStripeWebhook('evt_unknown_001', 'unknown.event.type', {
+        data: { object: { id: 'pi_test_123' } },
+      });
 
       expect(result.processed).toBe(false);
       expect(result.duplicate).toBe(false);
@@ -158,11 +153,9 @@ describe('WebhookProcessor', () => {
     it('should not reprocess when payment not found', async () => {
       shouldPaymentExist = false;
 
-      const result = await processStripeWebhook(
-        'evt_nopay_001',
-        'payment_intent.succeeded',
-        { data: { object: { id: 'pi_nonexistent' } } },
-      );
+      const result = await processStripeWebhook('evt_nopay_001', 'payment_intent.succeeded', {
+        data: { object: { id: 'pi_nonexistent' } },
+      });
 
       expect(result.processed).toBe(false);
     });
@@ -184,11 +177,9 @@ describe('WebhookProcessor', () => {
       paymentState.status = 'succeeded';
       paymentState.tampered = true;
 
-      const result = await processStripeWebhook(
-        'evt_replay_001',
-        'payment_intent.succeeded',
-        { data: { object: { id: 'pi_test_123', amount: 16500 } } },
-      );
+      const result = await processStripeWebhook('evt_replay_001', 'payment_intent.succeeded', {
+        data: { object: { id: 'pi_test_123', amount: 16500 } },
+      });
 
       expect(result.duplicate).toBe(true);
       expect(paymentSaveSpy.mock.calls.length).toBe(savesAfterFirst);
@@ -203,11 +194,9 @@ describe('WebhookProcessor', () => {
       const failedHandler = jest.fn();
       paymentEvents.on('payment.failed', failedHandler);
 
-      const result = await processStripeWebhook(
-        'evt_fail_001',
-        'payment_intent.payment_failed',
-        { data: { object: { id: 'pi_test_123' } } },
-      );
+      const result = await processStripeWebhook('evt_fail_001', 'payment_intent.payment_failed', {
+        data: { object: { id: 'pi_test_123' } },
+      });
 
       expect(result.processed).toBe(true);
       expect(paymentState.status).toBe('failed');
@@ -228,19 +217,15 @@ describe('WebhookProcessor', () => {
     // guards the refund/credit-memo pipeline from regressing.
     it('charge.refunded with partial amount sets status=partially_refunded and refundedAmount', async () => {
       paymentState.status = 'succeeded'; // refund only valid from succeeded
-      const result = await processStripeWebhook(
-        'evt_refund_partial',
-        'charge.refunded',
-        {
-          data: {
-            object: {
-              id: 'ch_test_123',
-              payment_intent: 'pi_test_123',
-              amount_refunded: 5000, // partial — capturedAmount is 16500
-            },
+      const result = await processStripeWebhook('evt_refund_partial', 'charge.refunded', {
+        data: {
+          object: {
+            id: 'ch_test_123',
+            payment_intent: 'pi_test_123',
+            amount_refunded: 5000, // partial — capturedAmount is 16500
           },
         },
-      );
+      });
 
       expect(result.processed).toBe(true);
       expect(paymentState.refundedAmount).toBe(5000);
@@ -249,19 +234,15 @@ describe('WebhookProcessor', () => {
 
     it('charge.refunded with full amount sets status=refunded', async () => {
       paymentState.status = 'succeeded';
-      const result = await processStripeWebhook(
-        'evt_refund_full',
-        'charge.refunded',
-        {
-          data: {
-            object: {
-              id: 'ch_test_456',
-              payment_intent: 'pi_test_123',
-              amount_refunded: 16500, // full
-            },
+      const result = await processStripeWebhook('evt_refund_full', 'charge.refunded', {
+        data: {
+          object: {
+            id: 'ch_test_456',
+            payment_intent: 'pi_test_123',
+            amount_refunded: 16500, // full
           },
         },
-      );
+      });
 
       expect(result.processed).toBe(true);
       expect(paymentState.refundedAmount).toBe(16500);
@@ -291,11 +272,10 @@ describe('WebhookProcessor', () => {
 
   describe('processPayzooWebhook', () => {
     it('should process a Payzoo payment.completed webhook', async () => {
-      const result = await processPayzooWebhook(
-        'pz_evt_001',
-        'payment.completed',
-        { transactionId: 'pi_test_123', amount: 16500 },
-      );
+      const result = await processPayzooWebhook('pz_evt_001', 'payment.completed', {
+        transactionId: 'pi_test_123',
+        amount: 16500,
+      });
 
       expect(result.processed).toBe(true);
       expect(result.duplicate).toBe(false);

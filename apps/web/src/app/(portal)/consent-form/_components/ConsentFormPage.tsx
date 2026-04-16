@@ -46,13 +46,7 @@ import {
 
 const { Title, Text, Paragraph } = Typography;
 
-type Step =
-  | 'personal'
-  | 'address'
-  | 'banking'
-  | 'primary_id'
-  | 'secondary_id'
-  | 'consent';
+type Step = 'personal' | 'address' | 'banking' | 'primary_id' | 'secondary_id' | 'consent';
 
 const STEPS: Array<{ key: Step; title: string }> = [
   { key: 'personal', title: 'Personal Details' },
@@ -182,22 +176,18 @@ export function ConsentFormPage(): React.ReactNode {
             <Space direction="vertical" size={2}>
               <Text>Reference: {submitted._id}</Text>
               <Text type="secondary">
-                Account ending •••• {submitted.accountNumberLast4} &nbsp;·&nbsp;
-                BSB •••• {submitted.bsbLast4} &nbsp;·&nbsp;
+                Account ending •••• {submitted.accountNumberLast4} &nbsp;·&nbsp; BSB ••••{' '}
+                {submitted.bsbLast4} &nbsp;·&nbsp;
                 {submitted.workType} •••• {submitted.tfnAbnAcnLast4}
               </Text>
               <Text type="secondary">
-                Your sensitive details have been encrypted at rest. QEGOS staff
-                will only ever see the last 4 digits shown above.
+                Your sensitive details have been encrypted at rest. QEGOS staff will only ever see
+                the last 4 digits shown above.
               </Text>
             </Space>
           }
           extra={[
-            <Button
-              key="another"
-              type="primary"
-              onClick={(): void => setSubmitted(null)}
-            >
+            <Button key="another" type="primary" onClick={(): void => setSubmitted(null)}>
               Submit another
             </Button>,
           ]}
@@ -215,9 +205,8 @@ export function ConsentFormPage(): React.ReactNode {
           File your tax — Consent form
         </Title>
         <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-          Complete the intake below. Your TFN, BSB, and account number are
-          encrypted on our servers using AES-256-GCM and are never displayed in
-          full after submission.
+          Complete the intake below. Your TFN, BSB, and account number are encrypted on our servers
+          using AES-256-GCM and are never displayed in full after submission.
         </Paragraph>
       </div>
 
@@ -240,13 +229,13 @@ export function ConsentFormPage(): React.ReactNode {
             myForms.data && myForms.data.length > 1 ? 's' : ''
           }.`}
           description={
-            myForms.data && myForms.data.length > 0 && (
+            myForms.data &&
+            myForms.data.length > 0 && (
               <Space direction="vertical" size={2}>
                 {myForms.data.slice(0, 3).map((s) => (
                   <Text key={s._id} type="secondary" style={{ fontSize: 12 }}>
-                    {new Date(s.submittedAt).toLocaleDateString()} ·{' '}
-                    {s.workType} •••• {s.tfnAbnAcnLast4} · Account ••••{' '}
-                    {s.accountNumberLast4}
+                    {new Date(s.submittedAt).toLocaleDateString()} · {s.workType} ••••{' '}
+                    {s.tfnAbnAcnLast4} · Account •••• {s.accountNumberLast4}
                   </Text>
                 ))}
               </Space>
@@ -403,7 +392,8 @@ export function ConsentFormPage(): React.ReactNode {
             >
               {({ getFieldValue }): React.ReactNode => {
                 const wt = getFieldValue('workType') as string | undefined;
-                const expectedLen = wt === 'ABN' ? 11 : wt === 'TFN' || wt === 'ACN' ? 9 : undefined;
+                const expectedLen =
+                  wt === 'ABN' ? 11 : wt === 'TFN' || wt === 'ACN' ? 9 : undefined;
                 return (
                   <Form.Item
                     name="tfnAbnAcn"
@@ -422,7 +412,9 @@ export function ConsentFormPage(): React.ReactNode {
                     ]}
                   >
                     <Input.Password
-                      placeholder={expectedLen ? `${expectedLen}-digit number` : '9 or 11 digit number'}
+                      placeholder={
+                        expectedLen ? `${expectedLen}-digit number` : '9 or 11 digit number'
+                      }
                       maxLength={expectedLen ?? 11}
                       visibilityToggle
                     />
@@ -462,9 +454,9 @@ export function ConsentFormPage(): React.ReactNode {
           {/* ─── STEP 4: Primary ID ─────────────────────────────── */}
           <div style={{ display: currentStep.key === 'primary_id' ? 'block' : 'none' }}>
             <Paragraph type="secondary">
-              Accepted documents: Australian full birth certificate, Australian
-              passport, Australian citizenship certificate, Register of
-              Citizenship by Descent extract, or foreign passport.
+              Accepted documents: Australian full birth certificate, Australian passport, Australian
+              citizenship certificate, Register of Citizenship by Descent extract, or foreign
+              passport.
             </Paragraph>
             <Form.Item
               name="primaryIdType"
@@ -492,9 +484,8 @@ export function ConsentFormPage(): React.ReactNode {
           {/* ─── STEP 5: Secondary ID ───────────────────────────── */}
           <div style={{ display: currentStep.key === 'secondary_id' ? 'block' : 'none' }}>
             <Paragraph type="secondary">
-              Accepted documents: National photo ID, foreign government ID,
-              marriage certificate, driver&apos;s licence, or current bank
-              statement / card.
+              Accepted documents: National photo ID, foreign government ID, marriage certificate,
+              driver&apos;s licence, or current bank statement / card.
             </Paragraph>
             <Form.Item
               name="secondaryIdType"
@@ -532,18 +523,15 @@ export function ConsentFormPage(): React.ReactNode {
               rules={[
                 {
                   validator: (_r, v: boolean): Promise<void> =>
-                    v
-                      ? Promise.resolve()
-                      : Promise.reject(new Error('You must accept to submit')),
+                    v ? Promise.resolve() : Promise.reject(new Error('You must accept to submit')),
                 },
               ]}
             >
               <Checkbox>
                 I agree to share my financial information with{' '}
-                <strong>Quintessential Accounting &amp; Taxation</strong>. I
-                authorise Jasmine Kaur and Quintessential Accounting &amp;
-                Taxation to access my ATO account, file returns, and act on my
-                behalf.
+                <strong>Quintessential Accounting &amp; Taxation</strong>. I authorise Jasmine Kaur
+                and Quintessential Accounting &amp; Taxation to access my ATO account, file returns,
+                and act on my behalf.
               </Checkbox>
             </Form.Item>
           </div>
@@ -555,9 +543,7 @@ export function ConsentFormPage(): React.ReactNode {
               showIcon
               message="Submission failed"
               description={
-                submit.error instanceof Error
-                  ? submit.error.message
-                  : 'Please try again.'
+                submit.error instanceof Error ? submit.error.message : 'Please try again.'
               }
               style={{ marginTop: 16 }}
             />
@@ -580,11 +566,7 @@ export function ConsentFormPage(): React.ReactNode {
                 Next
               </Button>
             ) : (
-              <Button
-                type="primary"
-                onClick={handleSubmit}
-                loading={submit.isPending}
-              >
+              <Button type="primary" onClick={handleSubmit} loading={submit.isPending}>
                 Submit form
               </Button>
             )}

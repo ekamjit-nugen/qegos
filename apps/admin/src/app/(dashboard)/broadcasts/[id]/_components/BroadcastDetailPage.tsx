@@ -13,8 +13,12 @@ export function BroadcastDetailPage({ id }: { id: string }): React.ReactNode {
   const sendCampaign = useSendCampaign();
   const { message } = App.useApp();
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!campaign) { return <Empty description="Campaign not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!campaign) {
+    return <Empty description="Campaign not found" />;
+  }
 
   const handleSend = (): void => {
     sendCampaign.mutate(campaign._id, {
@@ -56,8 +60,12 @@ export function BroadcastDetailPage({ id }: { id: string }): React.ReactNode {
               <Descriptions.Item label="Scheduled At">
                 {campaign.scheduledAt ? formatDateTime(campaign.scheduledAt) : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Total Recipients">{campaign.totalRecipients}</Descriptions.Item>
-              <Descriptions.Item label="Created At">{formatDateTime(campaign.createdAt)}</Descriptions.Item>
+              <Descriptions.Item label="Total Recipients">
+                {campaign.totalRecipients}
+              </Descriptions.Item>
+              <Descriptions.Item label="Created At">
+                {formatDateTime(campaign.createdAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -78,7 +86,10 @@ export function BroadcastDetailPage({ id }: { id: string }): React.ReactNode {
         <Col xs={24} lg={8}>
           <Card title="Status" style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 16 }}>
-              <Tag color={CAMPAIGN_STATUS_COLORS[campaign.status as CampaignStatus]} style={{ fontSize: 14, padding: '4px 12px' }}>
+              <Tag
+                color={CAMPAIGN_STATUS_COLORS[campaign.status as CampaignStatus]}
+                style={{ fontSize: 14, padding: '4px 12px' }}
+              >
                 {CAMPAIGN_STATUS_LABELS[campaign.status as CampaignStatus] ?? campaign.status}
               </Tag>
             </div>
@@ -96,8 +107,12 @@ export function BroadcastDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Timeline">
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(campaign.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Updated">{formatDateTime(campaign.updatedAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(campaign.createdAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(campaign.updatedAt)}
+              </Descriptions.Item>
               <Descriptions.Item label="Scheduled">
                 {campaign.scheduledAt ? formatDateTime(campaign.scheduledAt) : '-'}
               </Descriptions.Item>

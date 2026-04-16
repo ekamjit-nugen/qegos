@@ -5,8 +5,17 @@ import { useRouter } from 'next/navigation';
 import { Table, Tag, Select, Card, Row, Col } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useBillingDisputeList } from '@/hooks/useBillingDisputes';
-import type { BillingDispute, DisputeListQuery, DisputeStatus, DisputeType } from '@/types/billingDispute';
-import { DISPUTE_STATUS_LABELS, DISPUTE_STATUS_COLORS, DISPUTE_TYPE_LABELS } from '@/types/billingDispute';
+import type {
+  BillingDispute,
+  DisputeListQuery,
+  DisputeStatus,
+  DisputeType,
+} from '@/types/billingDispute';
+import {
+  DISPUTE_STATUS_LABELS,
+  DISPUTE_STATUS_COLORS,
+  DISPUTE_TYPE_LABELS,
+} from '@/types/billingDispute';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 
 export function BillingDisputeListPage(): React.ReactNode {
@@ -19,9 +28,7 @@ export function BillingDisputeListPage(): React.ReactNode {
       title: 'Order ID',
       dataIndex: 'orderId',
       width: 140,
-      render: (val: string) => (
-        <a onClick={() => router.push(`/orders/${val}`)}>{val}</a>
-      ),
+      render: (val: string) => <a onClick={() => router.push(`/orders/${val}`)}>{val}</a>,
     },
     {
       title: 'Dispute Type',

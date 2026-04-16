@@ -16,16 +16,8 @@ import {
   Alert,
 } from 'antd';
 import { EyeOutlined, TagOutlined } from '@ant-design/icons';
-import {
-  useCreateTemplate,
-  useUpdateTemplate,
-  usePreviewMessage,
-} from '@/hooks/useBroadcasts';
-import {
-  CHANNEL_LABELS,
-  TEMPLATE_CATEGORY_LABELS,
-  MERGE_TAGS,
-} from '@/types/broadcast';
+import { useCreateTemplate, useUpdateTemplate, usePreviewMessage } from '@/hooks/useBroadcasts';
+import { CHANNEL_LABELS, TEMPLATE_CATEGORY_LABELS, MERGE_TAGS } from '@/types/broadcast';
 import type {
   BroadcastTemplate,
   CreateTemplateInput,
@@ -236,11 +228,17 @@ export function TemplateEditor({ template, open, onClose }: Props): React.ReactN
             label="Subject line"
             rules={[{ required: true, message: 'Subject is required for email' }]}
           >
-            <Input placeholder="e.g. Your {{financialYear}} return is ready to file" maxLength={500} />
+            <Input
+              placeholder="e.g. Your {{financialYear}} return is ready to file"
+              maxLength={500}
+            />
           </Form.Item>
         )}
 
-        <Form.Item label="Insert merge tag" tooltip="Click a tag to insert it at the cursor position. Falls back to a sensible default per recipient when data is missing.">
+        <Form.Item
+          label="Insert merge tag"
+          tooltip="Click a tag to insert it at the cursor position. Falls back to a sensible default per recipient when data is missing."
+        >
           <Space wrap size={[6, 6]}>
             {MERGE_TAGS.map((t) => (
               <Tooltip key={t.tag} title={`{{${t.tag}}} → ${t.sample}`}>
@@ -259,7 +257,9 @@ export function TemplateEditor({ template, open, onClose }: Props): React.ReactN
 
         <Form.Item
           name="body"
-          label={channel === 'sms' ? 'SMS body' : channel === 'email' ? 'Email body' : 'WhatsApp body'}
+          label={
+            channel === 'sms' ? 'SMS body' : channel === 'email' ? 'Email body' : 'WhatsApp body'
+          }
           rules={[
             { required: true, message: 'Body is required' },
             { max: channel === 'sms' ? 1600 : 10000 },
@@ -293,9 +293,7 @@ export function TemplateEditor({ template, open, onClose }: Props): React.ReactN
         {preview ? (
           <div>
             {preview.subject && (
-              <div style={{ marginBottom: 8, fontWeight: 500 }}>
-                Subject: {preview.subject}
-              </div>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>Subject: {preview.subject}</div>
             )}
             {channel === 'email' && preview.htmlBody ? (
               <div

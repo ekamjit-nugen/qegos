@@ -39,10 +39,7 @@ function getModels(): {
 /**
  * Emit a typed payment event.
  */
-function emitPaymentEvent(
-  eventName: string,
-  payload: PaymentEventPayload,
-): void {
+function emitPaymentEvent(eventName: string, payload: PaymentEventPayload): void {
   paymentEvents.emit(eventName, payload);
 }
 
@@ -229,14 +226,7 @@ export async function processStripeWebhook(
     gatewayTxnId = (object?.id as string) ?? '';
   }
 
-  return processWebhookEvent(
-    eventId,
-    'stripe',
-    eventType,
-    payload,
-    gatewayTxnId,
-    STRIPE_EVENT_MAP,
-  );
+  return processWebhookEvent(eventId, 'stripe', eventType, payload, gatewayTxnId, STRIPE_EVENT_MAP);
 }
 
 /**
@@ -249,12 +239,5 @@ export async function processPayzooWebhook(
 ): Promise<{ processed: boolean; duplicate: boolean }> {
   const gatewayTxnId = (payload.transactionId as string) ?? '';
 
-  return processWebhookEvent(
-    eventId,
-    'payzoo',
-    eventType,
-    payload,
-    gatewayTxnId,
-    PAYZOO_EVENT_MAP,
-  );
+  return processWebhookEvent(eventId, 'payzoo', eventType, payload, gatewayTxnId, PAYZOO_EVENT_MAP);
 }

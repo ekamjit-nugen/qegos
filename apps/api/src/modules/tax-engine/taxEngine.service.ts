@@ -1,5 +1,7 @@
 import type { Model, Connection, FilterQuery } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 import { calculateTaxEstimate } from './taxCalculator';
 import { runTaxRuleTestSuite } from './taxRuleTestSuite';
 import type {
@@ -13,8 +15,6 @@ import type {
   EstimateContext,
   TaxRuleStatus,
 } from './taxEngine.types';
-import type { ICounterDocument } from '../../database/counter.model';
-import { getNextSequence } from '../../database/counter.model';
 
 // ─── Dependencies ──────────────────────────────────────────────────────────
 
@@ -30,42 +30,101 @@ export interface TaxEngineServiceDeps {
 
 export interface TaxEngineServiceResult {
   // Tax Rules
-  createDraft: (data: Record<string, unknown>, createdBy: string) => Promise<ITaxRuleConfigDocument>;
+  createDraft: (
+    data: Record<string, unknown>,
+    createdBy: string,
+  ) => Promise<ITaxRuleConfigDocument>;
   updateDraft: (id: string, data: Record<string, unknown>) => Promise<ITaxRuleConfigDocument>;
-  activate: (id: string, performedBy: string) => Promise<{ activated: ITaxRuleConfigDocument; testResults: TaxRuleTestResult[] }>;
-  correct: (snapshotId: string, corrections: Record<string, unknown>, changeReason: string, createdBy: string) => Promise<ITaxRuleConfigDocument>;
+  activate: (
+    id: string,
+    performedBy: string,
+  ) => Promise<{ activated: ITaxRuleConfigDocument; testResults: TaxRuleTestResult[] }>;
+  correct: (
+    snapshotId: string,
+    corrections: Record<string, unknown>,
+    changeReason: string,
+    createdBy: string,
+  ) => Promise<ITaxRuleConfigDocument>;
   deleteDraft: (id: string) => Promise<void>;
   getBySnapshotId: (snapshotId: string) => Promise<ITaxRuleConfigDocument>;
   getActiveForFY: (financialYear: string) => Promise<ITaxRuleConfigDocument>;
   getHistory: (financialYear: string) => Promise<ITaxRuleConfigDocument[]>;
-  listRules: (query: { page?: number; limit?: number; status?: string; financialYear?: string }) => Promise<{ data: ITaxRuleConfigDocument[]; meta: PaginationMeta }>;
+  listRules: (query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    financialYear?: string;
+  }) => Promise<{ data: ITaxRuleConfigDocument[]; meta: PaginationMeta }>;
   validateRules: (id: string) => Promise<TaxRuleTestResult[]>;
   getRuleById: (id: string) => Promise<ITaxRuleConfigDocument>;
 
   // Tax Estimates
-  calculateEstimate: (input: TaxEstimateInput, context: EstimateContext, userId?: string, leadId?: string, orderId?: string, performedBy?: string) => Promise<TaxEstimateOutput & { estimateNumber: string }>;
-  quickEstimate: (income: number, deductions: number, residencyStatus: string) => Promise<{ estimatedRefund: { low: number; high: number }; disclaimer: string }>;
+  calculateEstimate: (
+    input: TaxEstimateInput,
+    context: EstimateContext,
+    userId?: string,
+    leadId?: string,
+    orderId?: string,
+    performedBy?: string,
+  ) => Promise<TaxEstimateOutput & { estimateNumber: string }>;
+  quickEstimate: (
+    income: number,
+    deductions: number,
+    residencyStatus: string,
+  ) => Promise<{ estimatedRefund: { low: number; high: number }; disclaimer: string }>;
   recalculate: (input: TaxEstimateInput, snapshotId: string) => Promise<TaxEstimateOutput>;
-  compare: (inputA: TaxEstimateInput, inputB: TaxEstimateInput, snapshotId?: string) => Promise<{ resultA: TaxEstimateOutput; resultB: TaxEstimateOutput; diff: Record<string, { a: number; b: number; delta: number }> }>;
+  compare: (
+    inputA: TaxEstimateInput,
+    inputB: TaxEstimateInput,
+    snapshotId?: string,
+  ) => Promise<{
+    resultA: TaxEstimateOutput;
+    resultB: TaxEstimateOutput;
+    diff: Record<string, { a: number; b: number; delta: number }>;
+  }>;
 
   // Tax Results
-  createResult: (data: Record<string, unknown>, enteredBy: string) => Promise<ITaxReturnResultDocument>;
-  getResult: (orderId: string, scopeFilter?: Record<string, unknown>) => Promise<ITaxReturnResultDocument>;
-  updateResult: (orderId: string, data: Record<string, unknown>, scopeFilter?: Record<string, unknown>) => Promise<ITaxReturnResultDocument>;
+  createResult: (
+    data: Record<string, unknown>,
+    enteredBy: string,
+  ) => Promise<ITaxReturnResultDocument>;
+  getResult: (
+    orderId: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ITaxReturnResultDocument>;
+  updateResult: (
+    orderId: string,
+    data: Record<string, unknown>,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ITaxReturnResultDocument>;
   verifyResult: (orderId: string, verifiedBy: string) => Promise<ITaxReturnResultDocument>;
   lockResult: (id: string, lockedBy: string) => Promise<ITaxReturnResultDocument>;
-  createAmendment: (originalOrderId: string, amendmentData: Record<string, unknown>, enteredBy: string) => Promise<ITaxReturnResultDocument>;
-  getAmendments: (orderId: string, scopeFilter?: Record<string, unknown>) => Promise<ITaxReturnResultDocument[]>;
+  createAmendment: (
+    originalOrderId: string,
+    amendmentData: Record<string, unknown>,
+    enteredBy: string,
+  ) => Promise<ITaxReturnResultDocument>;
+  getAmendments: (
+    orderId: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ITaxReturnResultDocument[]>;
   getEstimatesForOrder: (orderId: string) => Promise<ITaxEstimateLogDocument[]>;
-  compareEstimateVsResult: (orderId: string) => Promise<{ estimate: ITaxEstimateLogDocument | null; result: ITaxReturnResultDocument; variance: Record<string, { estimated: number; actual: number; delta: number }> }>;
+  compareEstimateVsResult: (orderId: string) => Promise<{
+    estimate: ITaxEstimateLogDocument | null;
+    result: ITaxReturnResultDocument;
+    variance: Record<string, { estimated: number; actual: number; delta: number }>;
+  }>;
 }
 
 // ─── Factory ───────────────────────────────────────────────────────────────
 
 export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineServiceResult {
   const {
-    TaxRuleConfigModel, TaxEstimateLogModel, TaxReturnResultModel,
-    CounterModel, connection,
+    TaxRuleConfigModel,
+    TaxEstimateLogModel,
+    TaxReturnResultModel,
+    CounterModel,
+    connection,
   } = deps;
 
   // ═══ TAX RULES ═══════════════════════════════════════════════════════════
@@ -90,7 +149,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     data: Record<string, unknown>,
   ): Promise<ITaxRuleConfigDocument> {
     const rule = await TaxRuleConfigModel.findById(id);
-    if (!rule) throw AppError.notFound('Tax rule configuration');
+    if (!rule) {
+      throw AppError.notFound('Tax rule configuration');
+    }
 
     if (rule.status !== 'draft') {
       throw AppError.badRequest('Only draft rules can be edited');
@@ -111,7 +172,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     _performedBy: string,
   ): Promise<{ activated: ITaxRuleConfigDocument; testResults: TaxRuleTestResult[] }> {
     const rule = await TaxRuleConfigModel.findById(id);
-    if (!rule) throw AppError.notFound('Tax rule configuration');
+    if (!rule) {
+      throw AppError.notFound('Tax rule configuration');
+    }
 
     if (rule.status === 'active') {
       throw AppError.conflict('Tax rule is already active');
@@ -158,7 +221,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     }
 
     const activated = await TaxRuleConfigModel.findById(id).lean<ITaxRuleConfigDocument>();
-    if (!activated) throw AppError.notFound('Tax rule configuration');
+    if (!activated) {
+      throw AppError.notFound('Tax rule configuration');
+    }
 
     return { activated: activated as ITaxRuleConfigDocument, testResults };
   }
@@ -169,8 +234,12 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     changeReason: string,
     createdBy: string,
   ): Promise<ITaxRuleConfigDocument> {
-    const original = await TaxRuleConfigModel.findOne({ snapshotId }).lean<ITaxRuleConfigDocument>();
-    if (!original) throw AppError.notFound('Tax rule configuration with given snapshotId');
+    const original = await TaxRuleConfigModel.findOne({
+      snapshotId,
+    }).lean<ITaxRuleConfigDocument>();
+    if (!original) {
+      throw AppError.notFound('Tax rule configuration with given snapshotId');
+    }
 
     // VER-INV-07: Create new version, do NOT modify original
     const correctionData = {
@@ -199,7 +268,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
 
   async function deleteDraft(id: string): Promise<void> {
     const rule = await TaxRuleConfigModel.findById(id);
-    if (!rule) throw AppError.notFound('Tax rule configuration');
+    if (!rule) {
+      throw AppError.notFound('Tax rule configuration');
+    }
 
     // VER-INV-10: Only delete if draft AND usageCount=0
     if (rule.status !== 'draft') {
@@ -214,7 +285,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
 
   async function getBySnapshotId(snapshotId: string): Promise<ITaxRuleConfigDocument> {
     const rule = await TaxRuleConfigModel.findOne({ snapshotId }).lean<ITaxRuleConfigDocument>();
-    if (!rule) throw AppError.notFound('Tax rule configuration');
+    if (!rule) {
+      throw AppError.notFound('Tax rule configuration');
+    }
     return rule as ITaxRuleConfigDocument;
   }
 
@@ -235,19 +308,30 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
       .lean<ITaxRuleConfigDocument[]>();
   }
 
-  async function listRules(
-    query: { page?: number; limit?: number; status?: string; financialYear?: string },
-  ): Promise<{ data: ITaxRuleConfigDocument[]; meta: PaginationMeta }> {
+  async function listRules(query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    financialYear?: string;
+  }): Promise<{ data: ITaxRuleConfigDocument[]; meta: PaginationMeta }> {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 20, 100);
     const skip = (page - 1) * limit;
 
     const filter: FilterQuery<ITaxRuleConfigDocument> = {};
-    if (query.status) filter.status = query.status;
-    if (query.financialYear) filter.financialYear = query.financialYear;
+    if (query.status) {
+      filter.status = query.status;
+    }
+    if (query.financialYear) {
+      filter.financialYear = query.financialYear;
+    }
 
     const [data, total] = await Promise.all([
-      TaxRuleConfigModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean<ITaxRuleConfigDocument[]>(),
+      TaxRuleConfigModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean<ITaxRuleConfigDocument[]>(),
       TaxRuleConfigModel.countDocuments(filter),
     ]);
 
@@ -259,13 +343,17 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
 
   async function validateRules(id: string): Promise<TaxRuleTestResult[]> {
     const rule = await TaxRuleConfigModel.findById(id);
-    if (!rule) throw AppError.notFound('Tax rule configuration');
+    if (!rule) {
+      throw AppError.notFound('Tax rule configuration');
+    }
     return runTaxRuleTestSuite(rule.toObject() as ITaxRuleConfigDocument);
   }
 
   async function getRuleById(id: string): Promise<ITaxRuleConfigDocument> {
     const rule = await TaxRuleConfigModel.findById(id).lean<ITaxRuleConfigDocument>();
-    if (!rule) throw AppError.notFound('Tax rule configuration');
+    if (!rule) {
+      throw AppError.notFound('Tax rule configuration');
+    }
     return rule as ITaxRuleConfigDocument;
   }
 
@@ -361,7 +449,7 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     const output = calculateTaxEstimate(input, rule as ITaxRuleConfigDocument);
     // ±10% range
     const refund = output.estimatedRefundOrOwing;
-    const margin = Math.round(Math.abs(refund) * 0.10);
+    const margin = Math.round(Math.abs(refund) * 0.1);
 
     return {
       estimatedRefund: {
@@ -400,9 +488,17 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     const resultB = calculateTaxEstimate(inputB, rules);
 
     const diffFields = [
-      'grossIncome', 'totalDeductions', 'taxableIncome', 'baseTax',
-      'medicareLevyAmount', 'medicareLevySurcharge', 'litoOffset',
-      'saptoOffset', 'hecsRepayment', 'totalTaxPayable', 'estimatedRefundOrOwing',
+      'grossIncome',
+      'totalDeductions',
+      'taxableIncome',
+      'baseTax',
+      'medicareLevyAmount',
+      'medicareLevySurcharge',
+      'litoOffset',
+      'saptoOffset',
+      'hecsRepayment',
+      'totalTaxPayable',
+      'estimatedRefundOrOwing',
     ] as const;
 
     const diff: Record<string, { a: number; b: number; delta: number }> = {};
@@ -440,7 +536,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
       Object.assign(filter, scopeFilter);
     }
     const result = await TaxReturnResultModel.findOne(filter).lean<ITaxReturnResultDocument>();
-    if (!result) throw AppError.notFound('Tax return result');
+    if (!result) {
+      throw AppError.notFound('Tax return result');
+    }
     return result as ITaxReturnResultDocument;
   }
 
@@ -454,10 +552,19 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
       Object.assign(filter, scopeFilter);
     }
     const result = await TaxReturnResultModel.findOne(filter);
-    if (!result) throw AppError.notFound('Tax return result');
+    if (!result) {
+      throw AppError.notFound('Tax return result');
+    }
 
     // Protected fields
-    const protectedKeys = ['_id', 'orderId', 'userId', 'enteredBy', 'returnType', 'originalReturnId'];
+    const protectedKeys = [
+      '_id',
+      'orderId',
+      'userId',
+      'enteredBy',
+      'returnType',
+      'originalReturnId',
+    ];
     for (const [key, value] of Object.entries(data)) {
       if (!protectedKeys.includes(key)) {
         result.set(key, value);
@@ -473,7 +580,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     verifiedBy: string,
   ): Promise<ITaxReturnResultDocument> {
     const result = await TaxReturnResultModel.findOne({ orderId });
-    if (!result) throw AppError.notFound('Tax return result');
+    if (!result) {
+      throw AppError.notFound('Tax return result');
+    }
 
     if (result.verifiedBy) {
       throw AppError.conflict('Tax return result has already been verified');
@@ -484,12 +593,11 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     return result;
   }
 
-  async function lockResult(
-    id: string,
-    lockedBy: string,
-  ): Promise<ITaxReturnResultDocument> {
+  async function lockResult(id: string, lockedBy: string): Promise<ITaxReturnResultDocument> {
     const result = await TaxReturnResultModel.findById(id);
-    if (!result) throw AppError.notFound('Tax return result');
+    if (!result) {
+      throw AppError.notFound('Tax return result');
+    }
 
     if (result.isLocked) {
       throw AppError.conflict('Tax return result is already locked');
@@ -508,7 +616,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
     );
 
     const updated = await TaxReturnResultModel.findById(id).lean<ITaxReturnResultDocument>();
-    if (!updated) throw AppError.notFound('Tax return result');
+    if (!updated) {
+      throw AppError.notFound('Tax return result');
+    }
     return updated as ITaxReturnResultDocument;
   }
 
@@ -583,7 +693,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
       returnType: 'original',
     }).lean<ITaxReturnResultDocument>();
 
-    if (!original) return [];
+    if (!original) {
+      return [];
+    }
 
     const filter: FilterQuery<ITaxReturnResultDocument> = {
       originalReturnId: original._id,
@@ -604,9 +716,7 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
       .lean<ITaxEstimateLogDocument[]>();
   }
 
-  async function compareEstimateVsResult(
-    orderId: string,
-  ): Promise<{
+  async function compareEstimateVsResult(orderId: string): Promise<{
     estimate: ITaxEstimateLogDocument | null;
     result: ITaxReturnResultDocument;
     variance: Record<string, { estimated: number; actual: number; delta: number }>;
@@ -615,7 +725,9 @@ export function createTaxEngineService(deps: TaxEngineServiceDeps): TaxEngineSer
       orderId,
       returnType: 'original',
     }).lean<ITaxReturnResultDocument>();
-    if (!result) throw AppError.notFound('Tax return result');
+    if (!result) {
+      throw AppError.notFound('Tax return result');
+    }
 
     // Find most recent estimate for this order
     const estimate = await TaxEstimateLogModel.findOne({ orderId })

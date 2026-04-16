@@ -22,9 +22,7 @@ export interface CreateDisputeParams {
   ticketId?: string;
 }
 
-export async function createDispute(
-  params: CreateDisputeParams,
-): Promise<IBillingDisputeDocument> {
+export async function createDispute(params: CreateDisputeParams): Promise<IBillingDisputeDocument> {
   return BillingDisputeModel.create({
     ...params,
     status: 'raised',
@@ -47,8 +45,12 @@ export async function listDisputes(
   const { status, disputeType, scopeFilter, page = 1, limit = 20 } = params;
 
   const filter: Record<string, unknown> = {};
-  if (status) filter.status = status;
-  if (disputeType) filter.disputeType = disputeType;
+  if (status) {
+    filter.status = status;
+  }
+  if (disputeType) {
+    filter.disputeType = disputeType;
+  }
   if (scopeFilter && Object.keys(scopeFilter).length > 0) {
     Object.assign(filter, scopeFilter);
   }
@@ -56,11 +58,7 @@ export async function listDisputes(
   const skip = (page - 1) * limit;
 
   const [disputes, total] = await Promise.all([
-    BillingDisputeModel.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    BillingDisputeModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     BillingDisputeModel.countDocuments(filter),
   ]);
 

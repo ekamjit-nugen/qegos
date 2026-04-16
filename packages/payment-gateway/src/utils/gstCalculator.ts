@@ -1,8 +1,4 @@
-import type {
-  GSTCalculation,
-  LineItemWithGST,
-  OrderGSTSummary,
-} from '../types';
+import type { GSTCalculation, LineItemWithGST, OrderGSTSummary } from '../types';
 
 /**
  * BIL-INV-01: Calculate GST for a single line item.
@@ -13,10 +9,7 @@ import type {
  *
  * All arithmetic in integer cents — no floating point.
  */
-export function calculateLineItemGST(
-  priceInCents: number,
-  gstInclusive: boolean,
-): GSTCalculation {
+export function calculateLineItemGST(priceInCents: number, gstInclusive: boolean): GSTCalculation {
   if (!Number.isInteger(priceInCents) || priceInCents < 0) {
     throw new Error('Price must be a non-negative integer (cents)');
   }
@@ -65,10 +58,14 @@ export function calculateOrderGST(lineItems: LineItemWithGST[]): OrderGSTSummary
 
   for (const item of lineItems) {
     if (!Number.isInteger(item.priceInCents) || item.priceInCents < 0) {
-      throw new Error(`Invalid price for line item "${item.description}": must be a non-negative integer`);
+      throw new Error(
+        `Invalid price for line item "${item.description}": must be a non-negative integer`,
+      );
     }
     if (!Number.isInteger(item.quantity) || item.quantity < 0) {
-      throw new Error(`Invalid quantity for line item "${item.description}": must be a non-negative integer`);
+      throw new Error(
+        `Invalid quantity for line item "${item.description}": must be a non-negative integer`,
+      );
     }
 
     // Calculate GST per single unit

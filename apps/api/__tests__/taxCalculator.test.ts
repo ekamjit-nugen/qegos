@@ -21,18 +21,18 @@ const FY2025_RULES: ITaxRuleConfig = {
   brackets: [
     { min: 0, max: 1820000, rate: 0, baseTax: 0 },
     { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 },
-    { min: 4500000, max: 13500000, rate: 0.30, baseTax: 428800 },
+    { min: 4500000, max: 13500000, rate: 0.3, baseTax: 428800 },
     { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3128800 },
     { min: 19000000, max: null, rate: 0.45, baseTax: 5163800 },
   ],
   nonResidentBrackets: [
-    { min: 0, max: 13500000, rate: 0.30, baseTax: 0 },
+    { min: 0, max: 13500000, rate: 0.3, baseTax: 0 },
     { min: 13500000, max: 19000000, rate: 0.37, baseTax: 4050000 },
     { min: 19000000, max: null, rate: 0.45, baseTax: 6085000 },
   ],
   workingHolidayBrackets: [
     { min: 0, max: 4500000, rate: 0.15, baseTax: 0 },
-    { min: 4500000, max: 13500000, rate: 0.30, baseTax: 675000 },
+    { min: 4500000, max: 13500000, rate: 0.3, baseTax: 675000 },
     { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3375000 },
     { min: 19000000, max: null, rate: 0.45, baseTax: 5410000 },
   ],
@@ -69,7 +69,7 @@ const FY2025_RULES: ITaxRuleConfig = {
     { min: 16645600, max: 18103999, rate: 0.085 },
     { min: 18104000, max: 19720999, rate: 0.09 },
     { min: 19721000, max: 21518599, rate: 0.095 },
-    { min: 21518600, max: null, rate: 0.10 },
+    { min: 21518600, max: null, rate: 0.1 },
   ],
   lito: {
     maxOffset: 70000,
@@ -83,10 +83,10 @@ const FY2025_RULES: ITaxRuleConfig = {
     thresholdSingle: 3290000,
     phaseOutRate: 0.125,
   },
-  cgtDiscount: 0.50,
+  cgtDiscount: 0.5,
   instantAssetWriteOff: 2000000,
   superannuationRate: 0.115,
-  gstRate: 0.10,
+  gstRate: 0.1,
   changeLog: [],
   usageCount: 0,
   isFrozen: false,
@@ -661,7 +661,16 @@ describe('calculateTaxEstimate — Pure Function', () => {
       const withDeductions = calculateTaxEstimate(
         makeInput({
           grossEmploymentIncome: 8000000,
-          deductions: { workRelated: 100000, selfEducation: 0, vehicleExpenses: 0, homeOffice: 0, donations: 0, incomeProtection: 0, accountingFees: 0, other: 0 },
+          deductions: {
+            workRelated: 100000,
+            selfEducation: 0,
+            vehicleExpenses: 0,
+            homeOffice: 0,
+            donations: 0,
+            incomeProtection: 0,
+            accountingFees: 0,
+            other: 0,
+          },
         }),
         FY2025_RULES,
       );
@@ -672,11 +681,22 @@ describe('calculateTaxEstimate — Pure Function', () => {
       const output = calculateTaxEstimate(
         makeInput({
           grossEmploymentIncome: 5000000,
-          deductions: { workRelated: 25000, selfEducation: 0, vehicleExpenses: 0, homeOffice: 0, donations: 0, incomeProtection: 0, accountingFees: 0, other: 0 },
+          deductions: {
+            workRelated: 25000,
+            selfEducation: 0,
+            vehicleExpenses: 0,
+            homeOffice: 0,
+            donations: 0,
+            incomeProtection: 0,
+            accountingFees: 0,
+            other: 0,
+          },
         }),
         FY2025_RULES,
       );
-      expect(output.warnings.some((w) => w.toLowerCase().includes('standard deduction'))).toBe(true);
+      expect(output.warnings.some((w) => w.toLowerCase().includes('standard deduction'))).toBe(
+        true,
+      );
     });
   });
 });

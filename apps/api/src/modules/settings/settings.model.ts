@@ -39,9 +39,7 @@ export function createSettingModel(connection: Connection): Model<ISettingDocume
  * Seed default settings if they don't exist.
  * Called once on server startup.
  */
-export async function seedDefaultSettings(
-  SettingModel: Model<ISettingDocument>,
-): Promise<void> {
+export async function seedDefaultSettings(SettingModel: Model<ISettingDocument>): Promise<void> {
   const defaults = getDefaultSettings();
   for (const def of defaults) {
     await SettingModel.findOneAndUpdate(

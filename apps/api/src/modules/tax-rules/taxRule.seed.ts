@@ -21,9 +21,9 @@ export async function seedTaxRules(
     effectiveTo: new Date('2025-06-30'),
     status: 'active',
     brackets: [
-      { min: 0, max: 1820000, rate: 0, baseTax: 0 },             // $0 - $18,200: nil
-      { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 },    // $18,201 - $45,000: 16%
-      { min: 4500000, max: 13500000, rate: 0.30, baseTax: 428800 }, // $45,001 - $135,000: 30%
+      { min: 0, max: 1820000, rate: 0, baseTax: 0 }, // $0 - $18,200: nil
+      { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 }, // $18,201 - $45,000: 16%
+      { min: 4500000, max: 13500000, rate: 0.3, baseTax: 428800 }, // $45,001 - $135,000: 30%
       { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3128800 }, // $135,001 - $190,000: 37%
       { min: 19000000, max: null, rate: 0.45, baseTax: 5163800 }, // $190,001+: 45%
     ],
@@ -53,7 +53,7 @@ export async function seedTaxRules(
       { min: 16645600, max: 18103999, rate: 0.085 },
       { min: 18104000, max: 19720999, rate: 0.09 },
       { min: 19721000, max: 21518599, rate: 0.095 },
-      { min: 21518600, max: null, rate: 0.10 },
+      { min: 21518600, max: null, rate: 0.1 },
     ],
     lito: {
       maxOffset: 70000, // $700
@@ -62,7 +62,7 @@ export async function seedTaxRules(
       reductionRate: 0.05, // 5 cents per dollar over lower threshold
     },
     superannuationRate: 0.115, // 11.5% for FY2024-25
-    gstRate: 0.10,
+    gstRate: 0.1,
     usageCount: 0,
     createdBy,
     isFrozen: false,

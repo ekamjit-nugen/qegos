@@ -25,7 +25,12 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/qrcode": "^1.5.5"
   },
-  "keywords": ["auth", "jwt", "mfa", "otp"],
+  "keywords": [
+    "auth",
+    "jwt",
+    "mfa",
+    "otp"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

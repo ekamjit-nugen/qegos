@@ -1,10 +1,28 @@
 'use client';
 
 import React from 'react';
-import { Row, Col, Card, Descriptions, Tag, Spin, Empty, Button, Form, Input, Select, InputNumber, App } from 'antd';
+import {
+  Row,
+  Col,
+  Card,
+  Descriptions,
+  Tag,
+  Spin,
+  Empty,
+  Button,
+  Form,
+  Input,
+  Select,
+  InputNumber,
+  App,
+} from 'antd';
 import { useBillingDispute, useUpdateBillingDispute } from '@/hooks/useBillingDisputes';
 import type { DisputeStatus } from '@/types/billingDispute';
-import { DISPUTE_STATUS_LABELS, DISPUTE_STATUS_COLORS, DISPUTE_TYPE_LABELS } from '@/types/billingDispute';
+import {
+  DISPUTE_STATUS_LABELS,
+  DISPUTE_STATUS_COLORS,
+  DISPUTE_TYPE_LABELS,
+} from '@/types/billingDispute';
 import { formatCurrency, formatDateTime } from '@/lib/utils/format';
 
 const RESOLUTION_OPTIONS = [
@@ -33,8 +51,12 @@ export function BillingDisputeDetailPage({ id }: { id: string }): React.ReactNod
   const { message } = App.useApp();
   const [form] = Form.useForm();
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!dispute) { return <Empty description="Billing dispute not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!dispute) {
+    return <Empty description="Billing dispute not found" />;
+  }
 
   const canEdit = dispute.status === 'investigating' || dispute.status === 'pending_approval';
   const nextStatus = STATUS_TRANSITIONS[dispute.status];
@@ -64,12 +86,16 @@ export function BillingDisputeDetailPage({ id }: { id: string }): React.ReactNod
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <h2 style={{ margin: 0 }}>
-          Billing Dispute{' '}
-          <Tag color="blue">
-            {DISPUTE_TYPE_LABELS[dispute.disputeType]}
-          </Tag>
+          Billing Dispute <Tag color="blue">{DISPUTE_TYPE_LABELS[dispute.disputeType]}</Tag>
         </h2>
       </div>
 
@@ -90,10 +116,14 @@ export function BillingDisputeDetailPage({ id }: { id: string }): React.ReactNod
                 {dispute.staffAssessment ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Resolution">
-                {dispute.resolution ? (RESOLUTION_LABELS[dispute.resolution] ?? dispute.resolution) : '-'}
+                {dispute.resolution
+                  ? (RESOLUTION_LABELS[dispute.resolution] ?? dispute.resolution)
+                  : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Resolved Amount">
-                {dispute.resolvedAmount !== undefined ? formatCurrency(dispute.resolvedAmount) : '-'}
+                {dispute.resolvedAmount !== undefined
+                  ? formatCurrency(dispute.resolvedAmount)
+                  : '-'}
               </Descriptions.Item>
             </Descriptions>
           </Card>
@@ -106,7 +136,8 @@ export function BillingDisputeDetailPage({ id }: { id: string }): React.ReactNod
                 initialValues={{
                   staffAssessment: dispute.staffAssessment ?? '',
                   resolution: dispute.resolution ?? undefined,
-                  resolvedAmount: dispute.resolvedAmount !== undefined ? dispute.resolvedAmount : undefined,
+                  resolvedAmount:
+                    dispute.resolvedAmount !== undefined ? dispute.resolvedAmount : undefined,
                 }}
                 onFinish={handleAssessmentSubmit}
               >
@@ -187,8 +218,12 @@ export function BillingDisputeDetailPage({ id }: { id: string }): React.ReactNod
 
           <Card title="Timeline">
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(dispute.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Updated">{formatDateTime(dispute.updatedAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(dispute.createdAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(dispute.updatedAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

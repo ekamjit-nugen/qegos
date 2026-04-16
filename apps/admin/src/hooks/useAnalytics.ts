@@ -69,10 +69,7 @@ export function useClv(topN = 20) {
   return useQuery({
     queryKey: ['analytics', 'clv', topN],
     queryFn: async () => {
-      const res = await api.post<ApiResponse<ClvEntry[]>>(
-        '/analytics/clv',
-        { topN },
-      );
+      const res = await api.post<ApiResponse<ClvEntry[]>>('/analytics/clv', { topN });
       return res.data.data;
     },
     staleTime: 5 * 60_000,
@@ -100,10 +97,10 @@ export function useChannelRoi(params: DateRangeParams) {
   return useQuery({
     queryKey: ['analytics', 'channel-roi', params.dateFrom, params.dateTo],
     queryFn: async () => {
-      const res = await api.post<ApiResponse<ChannelRoiEntry[]>>(
-        '/analytics/channel-roi',
-        { dateFrom: params.dateFrom, dateTo: params.dateTo },
-      );
+      const res = await api.post<ApiResponse<ChannelRoiEntry[]>>('/analytics/channel-roi', {
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+      });
       return res.data.data;
     },
     staleTime: 5 * 60_000,
@@ -112,7 +109,10 @@ export function useChannelRoi(params: DateRangeParams) {
 
 // ─── Seasonal Trends ────────────────────────────────────────────────
 
-export function useSeasonalTrends(params: DateRangeParams, granularity: 'week' | 'month' = 'month') {
+export function useSeasonalTrends(
+  params: DateRangeParams,
+  granularity: 'week' | 'month' = 'month',
+) {
   return useQuery({
     queryKey: ['analytics', 'seasonal-trends', params.dateFrom, params.dateTo, granularity],
     queryFn: async () => {
@@ -205,10 +205,7 @@ export interface ExportJobResponse {
 export function useExportAnalytics() {
   return useMutation({
     mutationFn: async (params: ExportParams) => {
-      const res = await api.post<ApiResponse<ExportJobResponse>>(
-        '/analytics/export',
-        params,
-      );
+      const res = await api.post<ApiResponse<ExportJobResponse>>('/analytics/export', params);
       return res.data.data;
     },
   });

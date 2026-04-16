@@ -33,9 +33,7 @@ const dataExportSchema = new Schema<IDataExportDocument>(
 
 dataExportSchema.index({ status: 1, expiresAt: 1 });
 
-export function createDataExportModel(
-  connection: Connection,
-): Model<IDataExportDocument> {
+export function createDataExportModel(connection: Connection): Model<IDataExportDocument> {
   if (connection.models.DataExport) {
     return connection.models.DataExport as Model<IDataExportDocument>;
   }

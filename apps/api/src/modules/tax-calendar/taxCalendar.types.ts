@@ -15,9 +15,16 @@ export type DeadlineType =
   | 'custom';
 
 export const DEADLINE_TYPES: DeadlineType[] = [
-  'individual_filing', 'bas_quarterly', 'bas_monthly', 'payg_instalment',
-  'super_guarantee', 'fringe_benefits', 'company_return', 'trust_return',
-  'smsf_return', 'custom',
+  'individual_filing',
+  'bas_quarterly',
+  'bas_monthly',
+  'payg_instalment',
+  'super_guarantee',
+  'fringe_benefits',
+  'company_return',
+  'trust_return',
+  'smsf_return',
+  'custom',
 ];
 
 export type ApplicableTo =
@@ -31,8 +38,14 @@ export type ApplicableTo =
   | 'custom_segment';
 
 export const APPLICABLE_TO_VALUES: ApplicableTo[] = [
-  'all_clients', 'individual', 'self_employed', 'business',
-  'company', 'trust', 'smsf', 'custom_segment',
+  'all_clients',
+  'individual',
+  'self_employed',
+  'business',
+  'company',
+  'trust',
+  'smsf',
+  'custom_segment',
 ];
 
 // ─── Reminder Schedule ─────────────────────────────────────────────────────
@@ -84,7 +97,14 @@ export interface IDeadlineReminderDocument extends IDeadlineReminder, Document {
 export type AustralianState = 'NSW' | 'VIC' | 'QLD' | 'SA' | 'WA' | 'TAS' | 'NT' | 'ACT';
 
 export const AUSTRALIAN_STATES: AustralianState[] = [
-  'NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT',
+  'NSW',
+  'VIC',
+  'QLD',
+  'SA',
+  'WA',
+  'TAS',
+  'NT',
+  'ACT',
 ];
 
 /**

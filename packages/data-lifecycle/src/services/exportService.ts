@@ -1,9 +1,5 @@
 import type { Model, Types } from 'mongoose';
-import type {
-  IDataExportDocument,
-  DataExportFormat,
-  ModelFieldConfig,
-} from '../types';
+import type { IDataExportDocument, DataExportFormat, ModelFieldConfig } from '../types';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
@@ -36,7 +32,8 @@ export async function createExportRequest(
 
   if (existing) {
     const err = new Error('An export request is already in progress') as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 409;
     err.code = 'EXPORT_ALREADY_PENDING';
@@ -69,7 +66,8 @@ export async function executeExport(
 
   if (!request) {
     const err = new Error('Export request not found or not in pending state') as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 404;
     err.code = 'EXPORT_NOT_FOUND';
@@ -136,17 +134,13 @@ export async function executeExport(
 
 // ─── List Exports ──────────────────────────────────────────────────────────
 
-export async function listExports(
-  userId: Types.ObjectId,
-): Promise<IDataExportDocument[]> {
+export async function listExports(userId: Types.ObjectId): Promise<IDataExportDocument[]> {
   return DataExportModel.find({ userId }).sort({ createdAt: -1 }).limit(10);
 }
 
 // ─── Get Export ────────────────────────────────────────────────────────────
 
-export async function getExport(
-  exportId: Types.ObjectId,
-): Promise<IDataExportDocument | null> {
+export async function getExport(exportId: Types.ObjectId): Promise<IDataExportDocument | null> {
   return DataExportModel.findById(exportId);
 }
 

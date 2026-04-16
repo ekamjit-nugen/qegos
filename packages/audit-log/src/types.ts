@@ -24,13 +24,7 @@ export type AuditAction =
   | 'reject'
   | 'execute';
 
-export type AuditSeverity =
-  | 'info'
-  | 'low'
-  | 'medium'
-  | 'high'
-  | 'warning'
-  | 'critical';
+export type AuditSeverity = 'info' | 'low' | 'medium' | 'high' | 'warning' | 'critical';
 
 export type AuditActorType =
   | 'super_admin'
@@ -108,8 +102,5 @@ export interface AuditMiddlewareOptions {
  */
 export interface AuditLogDI {
   log: (entry: Record<string, unknown>) => Promise<void>;
-  logFromRequest: (
-    req: Request,
-    entry: Record<string, unknown>,
-  ) => Promise<void>;
+  logFromRequest: (req: Request, entry: Record<string, unknown>) => Promise<void>;
 }

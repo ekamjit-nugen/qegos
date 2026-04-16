@@ -44,12 +44,12 @@ export async function getChannelRoi(
     },
   ]);
 
-  if (campaigns.length === 0) return [];
+  if (campaigns.length === 0) {
+    return [];
+  }
 
   // 2. Leads per campaign → channel
-  const allCampaignIds = campaigns.flatMap(
-    (c: { campaignIds: unknown[] }) => c.campaignIds,
-  );
+  const allCampaignIds = campaigns.flatMap((c: { campaignIds: unknown[] }) => c.campaignIds);
 
   const leads = await LeadModel.aggregate([
     {
@@ -79,9 +79,9 @@ export async function getChannelRoi(
   );
 
   // 3. Revenue from converted orders' payments
-  const allOrderIds = leads.flatMap(
-    (l: { convertedOrderIds: unknown[] }) => l.convertedOrderIds,
-  ).filter(Boolean);
+  const allOrderIds = leads
+    .flatMap((l: { convertedOrderIds: unknown[] }) => l.convertedOrderIds)
+    .filter(Boolean);
 
   const revenueByOrder = new Map<string, number>();
   if (allOrderIds.length > 0) {
@@ -105,39 +105,48 @@ export async function getChannelRoi(
   }
 
   // 4. Assemble per channel
-  return campaigns.map((c: {
-    _id: string;
-    campaignCount: number;
-    campaignIds: Array<{ toString: () => string }>;
-    costCents: number;
-  }) => {
-    let leadsGenerated = 0;
-    let conversions = 0;
-    let revenueCents = 0;
+  return campaigns
+    .map(
+      (c: {
+        _id: string;
+        campaignCount: number;
+        campaignIds: Array<{ toString: () => string }>;
+        costCents: number;
+      }) => {
+        let leadsGenerated = 0;
+        let conversions = 0;
+        let revenueCents = 0;
 
-    for (const cid of c.campaignIds) {
-      const data = leadsByCampaign.get(String(cid));
-      if (!data) continue;
-      leadsGenerated += data.leadsGenerated;
-      for (const oid of data.convertedOrderIds) {
-        if (!oid) continue;
-        conversions++;
-        revenueCents += revenueByOrder.get(String(oid)) ?? 0;
-      }
-    }
+        for (const cid of c.campaignIds) {
+          const data = leadsByCampaign.get(String(cid));
+          if (!data) {
+            continue;
+          }
+          leadsGenerated += data.leadsGenerated;
+          for (const oid of data.convertedOrderIds) {
+            if (!oid) {
+              continue;
+            }
+            conversions++;
+            revenueCents += revenueByOrder.get(String(oid)) ?? 0;
+          }
+        }
 
-    const roi = c.costCents > 0
-      ? Math.round(((revenueCents - c.costCents) / c.costCents) * 100) / 100
-      : 0;
+        const roi =
+          c.costCents > 0
+            ? Math.round(((revenueCents - c.costCents) / c.costCents) * 100) / 100
+            : 0;
 
-    return {
-      channel: c._id,
-      campaignCount: c.campaignCount,
-      leadsGenerated,
-      conversions,
-      revenueCents,
-      costCents: c.costCents,
-      roi,
-    };
-  }).sort((a: ChannelRoiEntry, b: ChannelRoiEntry) => b.revenueCents - a.revenueCents);
+        return {
+          channel: c._id,
+          campaignCount: c.campaignCount,
+          leadsGenerated,
+          conversions,
+          revenueCents,
+          costCents: c.costCents,
+          roi,
+        };
+      },
+    )
+    .sort((a: ChannelRoiEntry, b: ChannelRoiEntry) => b.revenueCents - a.revenueCents);
 }

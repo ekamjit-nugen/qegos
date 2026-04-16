@@ -11,7 +11,9 @@ export function useOrderList(filters: OrderListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
       const res = await api.get<PaginatedResponse<Order>>(`/orders?${params.toString()}`);
       return res.data;

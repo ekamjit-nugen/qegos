@@ -66,11 +66,7 @@ function buildEnumOptions(
   }));
 }
 
-function extractField(
-  key: string,
-  raw: unknown,
-  isRequired: boolean,
-): FieldNode | null {
+function extractField(key: string, raw: unknown, isRequired: boolean): FieldNode | null {
   const f = asObject(raw);
   if (!f) return null;
   const xq = asObject(f['x-qegos']) ?? {};
@@ -168,21 +164,10 @@ function renderWidget(field: FieldNode): React.ReactNode {
     case 'date':
       return <DatePicker style={{ width: '100%' }} placeholder={placeholder} />;
     case 'select':
-      return (
-        <Select
-          placeholder={placeholder}
-          options={field.enumValues}
-          allowClear
-        />
-      );
+      return <Select placeholder={placeholder} options={field.enumValues} allowClear />;
     case 'multi_select':
       return (
-        <Select
-          mode="multiple"
-          placeholder={placeholder}
-          options={field.enumValues}
-          allowClear
-        />
+        <Select mode="multiple" placeholder={placeholder} options={field.enumValues} allowClear />
       );
     case 'radio':
       return (

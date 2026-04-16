@@ -1,16 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  Card,
-  Descriptions,
-  InputNumber,
-  Space,
-  Spin,
-  Typography,
-  message,
-} from 'antd';
+import { Button, Card, Descriptions, InputNumber, Space, Spin, Typography, message } from 'antd';
 import { SaveOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useSettings, useUpdateSetting } from '@/hooks/useSettings';
 
@@ -98,7 +89,9 @@ export function SettingsPage(): React.ReactNode {
                 max={240}
                 step={5}
                 value={slotDuration}
-                onChange={(v) => { if (v !== null) setSlotDuration(v); }}
+                onChange={(v) => {
+                  if (v !== null) setSlotDuration(v);
+                }}
                 style={{ width: 100 }}
               />
               <Text type="secondary" style={{ fontSize: 12 }}>
@@ -113,7 +106,9 @@ export function SettingsPage(): React.ReactNode {
                 max={60}
                 step={5}
                 value={bufferMinutes}
-                onChange={(v) => { if (v !== null) setBufferMinutes(v); }}
+                onChange={(v) => {
+                  if (v !== null) setBufferMinutes(v);
+                }}
                 style={{ width: 100 }}
               />
               <Text type="secondary" style={{ fontSize: 12 }}>

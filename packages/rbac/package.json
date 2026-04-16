@@ -14,7 +14,11 @@
     "ioredis": "^5.0.0",
     "mongoose": "^8.0.0"
   },
-  "keywords": ["rbac", "permissions", "access-control"],
+  "keywords": [
+    "rbac",
+    "permissions",
+    "access-control"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

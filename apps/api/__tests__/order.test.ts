@@ -160,7 +160,7 @@ describe('Order Management', () => {
     });
 
     it('should reject floating point monetary values', () => {
-      const invalidValues = [165.50, 99.99, 0.01, 1000.5];
+      const invalidValues = [165.5, 99.99, 0.01, 1000.5];
       invalidValues.forEach((v) => {
         expect(Number.isInteger(v)).toBe(false);
       });

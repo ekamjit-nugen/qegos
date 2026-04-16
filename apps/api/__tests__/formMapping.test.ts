@@ -140,9 +140,7 @@ describe('Form Mapping — Authored Schema Validator', () => {
       // "two" is not in properties
       const result = validateAuthoredSchema(s);
       expect(result.valid).toBe(false);
-      expect(
-        result.issues.find((i) => i.code === 'STEP_NOT_IN_PROPERTIES'),
-      ).toBeTruthy();
+      expect(result.issues.find((i) => i.code === 'STEP_NOT_IN_PROPERTIES')).toBeTruthy();
     });
 
     it('flags a property not declared as a step', () => {
@@ -228,9 +226,7 @@ describe('Form Mapping — Authored Schema Validator', () => {
       delete one.properties;
       const result = validateAuthoredSchema(s);
       expect(result.valid).toBe(false);
-      expect(
-        result.issues.find((i) => i.code === 'STEP_MISSING_PROPERTIES'),
-      ).toBeTruthy();
+      expect(result.issues.find((i) => i.code === 'STEP_MISSING_PROPERTIES')).toBeTruthy();
     });
   });
 });

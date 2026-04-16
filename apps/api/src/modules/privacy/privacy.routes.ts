@@ -162,9 +162,7 @@ export function createPrivacyRoutes(deps: PrivacyRouteDeps): Router {
       const userId = authReq.user.userId as unknown as Types.ObjectId;
 
       const { requests } = await listErasureRequests({});
-      const userRequests = requests.filter(
-        (r) => r.userId.toString() === userId.toString(),
-      );
+      const userRequests = requests.filter((r) => r.userId.toString() === userId.toString());
 
       res.status(200).json({
         status: 200,

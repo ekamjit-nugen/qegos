@@ -24,7 +24,9 @@ export async function getChurnRisk(
   ]);
   const lastFYUserIds = lastFYUsers.map((u: { _id: unknown }) => u._id);
 
-  if (lastFYUserIds.length === 0) return [];
+  if (lastFYUserIds.length === 0) {
+    return [];
+  }
 
   // Users who filed current FY
   const currentFYUsers = await TaxYearSummaryModel.aggregate([
@@ -36,11 +38,11 @@ export async function getChurnRisk(
   );
 
   // At-risk = last FY minus current FY
-  const atRiskIds = lastFYUserIds.filter(
-    (id: unknown) => !currentFYUserIdSet.has(String(id)),
-  );
+  const atRiskIds = lastFYUserIds.filter((id: unknown) => !currentFYUserIdSet.has(String(id)));
 
-  if (atRiskIds.length === 0) return [];
+  if (atRiskIds.length === 0) {
+    return [];
+  }
 
   // Fetch user details and last payment
   const users = await UserModel.find(

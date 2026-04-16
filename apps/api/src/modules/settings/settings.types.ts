@@ -41,9 +41,10 @@ export function getDefaultSettings(): Array<{
   description: string;
 }> {
   const slotDuration = Number(process.env.APPOINTMENT_SLOT_DURATION_MINUTES) || 30;
-  const bufferMinutes = process.env.APPOINTMENT_BUFFER_MINUTES !== undefined
-    ? Number(process.env.APPOINTMENT_BUFFER_MINUTES)
-    : 5;
+  const bufferMinutes =
+    process.env.APPOINTMENT_BUFFER_MINUTES !== undefined
+      ? Number(process.env.APPOINTMENT_BUFFER_MINUTES)
+      : 5;
 
   return [
     {

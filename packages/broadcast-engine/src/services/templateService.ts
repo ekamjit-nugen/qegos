@@ -24,10 +24,7 @@ export function initTemplateService(
  * Replace {{tag}} patterns with merge data values.
  * BRC-INV-08: Never send unresolved tags — use fallback values.
  */
-export function renderMergeTags(
-  template: string,
-  mergeData: Record<string, string>,
-): string {
+export function renderMergeTags(template: string, mergeData: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, tag: string) => {
     if (tag in mergeData && mergeData[tag] !== undefined && mergeData[tag] !== '') {
       return mergeData[tag];
@@ -94,9 +91,7 @@ export function renderMessage(
   }
 
   if (channel === 'email') {
-    const subject = options?.subject
-      ? renderMergeTags(options.subject, mergeData)
-      : undefined;
+    const subject = options?.subject ? renderMergeTags(options.subject, mergeData) : undefined;
     const htmlBody = appendEmailFooter(rendered, config, options?.unsubscribeUrl);
     return { body: rendered, subject, htmlBody };
   }
@@ -131,9 +126,15 @@ export async function listTemplates(filters: {
   limit?: number;
 }): Promise<{ templates: IBroadcastTemplateDocument[]; total: number }> {
   const query: Record<string, unknown> = {};
-  if (filters.channel) query.channel = filters.channel;
-  if (filters.category) query.category = filters.category;
-  if (filters.isActive !== undefined) query.isActive = filters.isActive;
+  if (filters.channel) {
+    query.channel = filters.channel;
+  }
+  if (filters.category) {
+    query.category = filters.category;
+  }
+  if (filters.isActive !== undefined) {
+    query.isActive = filters.isActive;
+  }
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
@@ -151,7 +152,13 @@ export async function listTemplates(filters: {
 
 export async function updateTemplate(
   id: string,
-  data: Partial<{ name: string; subject: string; body: string; isActive: boolean; category: TemplateCategory }>,
+  data: Partial<{
+    name: string;
+    subject: string;
+    body: string;
+    isActive: boolean;
+    category: TemplateCategory;
+  }>,
 ): Promise<IBroadcastTemplateDocument | null> {
   return TemplateModel.findByIdAndUpdate(id, { $set: data }, { new: true });
 }

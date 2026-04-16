@@ -48,7 +48,7 @@ export interface IAppointment {
   staffId: Types.ObjectId;
   date: Date;
   startTime: string; // HH:mm UTC
-  endTime: string;   // HH:mm UTC
+  endTime: string; // HH:mm UTC
   type: AppointmentType;
   meetingLink?: string;
   status: AppointmentStatus;
@@ -67,9 +67,9 @@ export interface IStaffAvailability {
   staffId: Types.ObjectId;
   dayOfWeek: number; // 0=Sun, 6=Sat
   startTime: string; // HH:mm
-  endTime: string;   // HH:mm
+  endTime: string; // HH:mm
   isBlocked: boolean;
-  blockDate?: Date;   // specific date for one-off blocks
+  blockDate?: Date; // specific date for one-off blocks
   blockReason?: string;
   isDeleted: boolean;
 }
@@ -90,9 +90,9 @@ export interface AppointmentListQuery {
 }
 
 export interface AvailableSlot {
-  date: string;       // ISO date string
-  startTime: string;  // HH:mm
-  endTime: string;    // HH:mm
+  date: string; // ISO date string
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
 }
 
 export interface CalendarDayEntry {
@@ -124,10 +124,7 @@ export function timeToMinutes(time: string): number {
 }
 
 /** Check if two time ranges overlap (exclusive endpoints) */
-export function timesOverlap(
-  startA: string, endA: string,
-  startB: string, endB: string,
-): boolean {
+export function timesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
   const a0 = timeToMinutes(startA);
   const a1 = timeToMinutes(endA);
   const b0 = timeToMinutes(startB);

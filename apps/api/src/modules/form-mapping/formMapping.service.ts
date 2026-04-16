@@ -53,7 +53,10 @@ export interface FormMappingService {
   getMapping(
     mappingId: string,
   ): Promise<{ mapping: IFormMappingDocument; versions: IFormMappingVersionDocument[] }>;
-  createMapping(input: CreateMappingInput, actorId: string): Promise<{ mapping: IFormMappingDocument; version: IFormMappingVersionDocument }>;
+  createMapping(
+    input: CreateMappingInput,
+    actorId: string,
+  ): Promise<{ mapping: IFormMappingDocument; version: IFormMappingVersionDocument }>;
   getVersion(mappingId: string, version: number): Promise<IFormMappingVersionDocument>;
   updateDraft(
     mappingId: string,
@@ -75,34 +78,25 @@ export interface FormMappingService {
     version: number,
     actorId: string,
   ): Promise<IFormMappingVersionDocument>;
-  enableVersion(
-    mappingId: string,
-    version: number,
-  ): Promise<IFormMappingVersionDocument>;
-  setDefault(
-    mappingId: string,
-    version: number,
-  ): Promise<IFormMappingVersionDocument>;
-  deleteDraft(
-    mappingId: string,
-    version: number,
-  ): Promise<void>;
+  enableVersion(mappingId: string, version: number): Promise<IFormMappingVersionDocument>;
+  setDefault(mappingId: string, version: number): Promise<IFormMappingVersionDocument>;
+  deleteDraft(mappingId: string, version: number): Promise<void>;
   findDefaultForOrder(
     salesItemId: string,
     financialYear: string,
   ): Promise<{ mapping: IFormMappingDocument; version: IFormMappingVersionDocument } | null>;
 }
 
-export function createFormMappingService(
-  deps: FormMappingServiceDeps,
-): FormMappingService {
+export function createFormMappingService(deps: FormMappingServiceDeps): FormMappingService {
   const { FormMappingModel, FormMappingVersionModel, connection } = deps;
 
   // ─── Internal helpers ───────────────────────────────────────────────
 
   async function mustGetMapping(mappingId: string): Promise<IFormMappingDocument> {
     const m = await FormMappingModel.findById(mappingId);
-    if (!m) throw AppError.notFound('Form mapping');
+    if (!m) {
+      throw AppError.notFound('Form mapping');
+    }
     return m;
   }
 
@@ -111,7 +105,9 @@ export function createFormMappingService(
     version: number,
   ): Promise<IFormMappingVersionDocument> {
     const v = await FormMappingVersionModel.findOne({ mappingId, version });
-    if (!v) throw AppError.notFound(`Form mapping version ${version}`);
+    if (!v) {
+      throw AppError.notFound(`Form mapping version ${version}`);
+    }
     return v;
   }
 
@@ -141,8 +137,12 @@ export function createFormMappingService(
   return {
     async listMappings(filter) {
       const q: Record<string, unknown> = {};
-      if (filter.salesItemId) q.salesItemId = filter.salesItemId;
-      if (filter.financialYear) q.financialYear = filter.financialYear;
+      if (filter.salesItemId) {
+        q.salesItemId = filter.salesItemId;
+      }
+      if (filter.financialYear) {
+        q.financialYear = filter.financialYear;
+      }
       const mappings = await FormMappingModel.find(q).sort({ updatedAt: -1 }).lean();
 
       // Enrich with default version + latest draft + active count
@@ -246,17 +246,26 @@ export function createFormMappingService(
       if (input.jsonSchema) {
         const steps = assertSchemaValid(input.jsonSchema);
         v.jsonSchema = input.jsonSchema;
-        if (input.uiOrder && input.uiOrder.length > 0) v.uiOrder = input.uiOrder;
-        else v.uiOrder = steps;
+        if (input.uiOrder && input.uiOrder.length > 0) {
+          v.uiOrder = input.uiOrder;
+        } else {
+          v.uiOrder = steps;
+        }
       }
-      if (input.notes !== undefined) v.notes = input.notes;
+      if (input.notes !== undefined) {
+        v.notes = input.notes;
+      }
 
       // title/description live on the parent
       if (input.title || input.description !== undefined) {
         const parent = await FormMappingModel.findById(mappingId);
         if (parent) {
-          if (input.title) parent.title = input.title;
-          if (input.description !== undefined) parent.description = input.description;
+          if (input.title) {
+            parent.title = input.title;
+          }
+          if (input.description !== undefined) {
+            parent.description = input.description;
+          }
           await parent.save();
         }
       }
@@ -461,7 +470,9 @@ export function createFormMappingService(
       }
 
       const refreshed = await FormMappingVersionModel.findById(target._id);
-      if (!refreshed) throw AppError.notFound('Form mapping version');
+      if (!refreshed) {
+        throw AppError.notFound('Form mapping version');
+      }
       return refreshed;
     },
 
@@ -480,14 +491,18 @@ export function createFormMappingService(
 
     async findDefaultForOrder(salesItemId, financialYear) {
       const mapping = await FormMappingModel.findOne({ salesItemId, financialYear });
-      if (!mapping) return null;
+      if (!mapping) {
+        return null;
+      }
       const version = await FormMappingVersionModel.findOne({
         mappingId: mapping._id,
         isDefault: true,
         status: 'published',
         lifecycleStatus: 'active',
       });
-      if (!version) return null;
+      if (!version) {
+        return null;
+      }
       return { mapping, version };
     },
   };

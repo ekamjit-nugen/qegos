@@ -59,7 +59,12 @@ export function init(
     providers.set('sms', twilioProvider);
   }
 
-  if (config.sesRegion && config.sesAccessKeyId && config.sesSecretAccessKey && config.sesFromEmail) {
+  if (
+    config.sesRegion &&
+    config.sesAccessKeyId &&
+    config.sesSecretAccessKey &&
+    config.sesFromEmail
+  ) {
     initSESProvider({
       region: config.sesRegion,
       accessKeyId: config.sesAccessKeyId,

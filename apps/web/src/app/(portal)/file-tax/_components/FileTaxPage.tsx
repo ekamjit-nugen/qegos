@@ -293,7 +293,10 @@ export function FileTaxPage(): React.ReactNode {
   const [promoCode, setPromoCode] = useState('');
   const [promoResult, setPromoResult] = useState<PromoCodeValidationResult | null>(null);
   const [useCredits, setUseCredits] = useState(false);
-  const [submittedOrder, setSubmittedOrder] = useState<{ orderId: string; orderNumber: string } | null>(null);
+  const [submittedOrder, setSubmittedOrder] = useState<{
+    orderId: string;
+    orderNumber: string;
+  } | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [, setTick] = useState(0);
 
@@ -333,13 +336,22 @@ export function FileTaxPage(): React.ReactNode {
   // ── Ticker for "saved Xs ago" display ────────────────────────────────
   useEffect(() => {
     if (!lastSavedAt) return;
-    const id = setInterval(() => { setTick((n) => n + 1); }, 5000);
-    return () => { clearInterval(id); };
+    const id = setInterval(() => {
+      setTick((n) => n + 1);
+    }, 5000);
+    return () => {
+      clearInterval(id);
+    };
   }, [lastSavedAt]);
 
   // ── Save draft helper ────────────────────────────────────────────────
   const saveDraft = useCallback(
-    (opts: { step?: number; answers?: Record<string, unknown>; personal?: typeof personalDetails; silent?: boolean }) => {
+    (opts: {
+      step?: number;
+      answers?: Record<string, unknown>;
+      personal?: typeof personalDetails;
+      silent?: boolean;
+    }) => {
       if (!selectedMapping) return;
       const step = opts.step ?? currentStep;
       const answers = opts.answers ?? formAnswers;
@@ -362,7 +374,8 @@ export function FileTaxPage(): React.ReactNode {
             setLastSavedAt(new Date());
           },
           onError: () => {
-            if (!opts.silent) void message.error('Failed to auto-save. Your progress may not be saved.');
+            if (!opts.silent)
+              void message.error('Failed to auto-save. Your progress may not be saved.');
           },
         },
       );
@@ -384,72 +397,97 @@ export function FileTaxPage(): React.ReactNode {
   );
 
   // ── Handlers ─────────────────────────────────────────────────────────
-  const handleSelectMapping = useCallback((mapping: AvailableFormMapping) => {
-    // Check if a draft exists for this mapping
-    const existing = drafts?.find(
-      (d) => d.mappingId === mapping.mappingId && d.financialYear === mapping.financialYear,
-    );
-    if (existing) {
-      Modal.confirm({
-        title: 'Resume where you left off?',
-        icon: <CloudSyncOutlined style={{ color: t.colorPrimary }} />,
-        content: `You have a saved draft for ${mapping.serviceTitle} (FY ${mapping.financialYear}). Continue from there?`,
-        okText: 'Resume Draft',
-        cancelText: 'Start Fresh',
-        onOk: () => { resumeDraft(mapping, existing); },
-        onCancel: () => { startFresh(mapping); },
+  const handleSelectMapping = useCallback(
+    (mapping: AvailableFormMapping) => {
+      // Check if a draft exists for this mapping
+      const existing = drafts?.find(
+        (d) => d.mappingId === mapping.mappingId && d.financialYear === mapping.financialYear,
+      );
+      if (existing) {
+        Modal.confirm({
+          title: 'Resume where you left off?',
+          icon: <CloudSyncOutlined style={{ color: t.colorPrimary }} />,
+          content: `You have a saved draft for ${mapping.serviceTitle} (FY ${mapping.financialYear}). Continue from there?`,
+          okText: 'Resume Draft',
+          cancelText: 'Start Fresh',
+          onOk: () => {
+            resumeDraft(mapping, existing);
+          },
+          onCancel: () => {
+            startFresh(mapping);
+          },
+        });
+      } else {
+        startFresh(mapping);
+      }
+    },
+    [drafts, t.colorPrimary],
+  );
+
+  const resumeDraft = useCallback(
+    (mapping: AvailableFormMapping, draft: FormDraft) => {
+      setSelectedMapping(mapping);
+      setCurrentDraftId(draft._id);
+      setFormAnswers(draft.answers ?? {});
+      setPersonalDetails({
+        firstName: draft.personalDetails?.firstName ?? user?.firstName ?? '',
+        lastName: draft.personalDetails?.lastName ?? user?.lastName ?? '',
+        email: draft.personalDetails?.email ?? user?.email ?? '',
+        mobile: draft.personalDetails?.mobile ?? '',
       });
-    } else {
-      startFresh(mapping);
-    }
-  }, [drafts, t.colorPrimary]);
+      setCurrentStep(Math.min(draft.currentStep, totalFormSteps + 1));
+      formInstance.setFieldsValue(draft.answers ?? {});
+      setLastSavedAt(draft.updatedAt ? new Date(draft.updatedAt) : null);
+    },
+    [formInstance, user, totalFormSteps],
+  );
 
-  const resumeDraft = useCallback((mapping: AvailableFormMapping, draft: FormDraft) => {
-    setSelectedMapping(mapping);
-    setCurrentDraftId(draft._id);
-    setFormAnswers(draft.answers ?? {});
-    setPersonalDetails({
-      firstName: draft.personalDetails?.firstName ?? user?.firstName ?? '',
-      lastName: draft.personalDetails?.lastName ?? user?.lastName ?? '',
-      email: draft.personalDetails?.email ?? user?.email ?? '',
-      mobile: draft.personalDetails?.mobile ?? '',
-    });
-    setCurrentStep(Math.min(draft.currentStep, totalFormSteps + 1));
-    formInstance.setFieldsValue(draft.answers ?? {});
-    setLastSavedAt(draft.updatedAt ? new Date(draft.updatedAt) : null);
-  }, [formInstance, user, totalFormSteps]);
+  const startFresh = useCallback(
+    (mapping: AvailableFormMapping) => {
+      setSelectedMapping(mapping);
+      setCurrentDraftId(null);
+      setFormAnswers({});
+      setCurrentStep(0);
+      formInstance.resetFields();
+      setLastSavedAt(null);
+    },
+    [formInstance],
+  );
 
-  const startFresh = useCallback((mapping: AvailableFormMapping) => {
-    setSelectedMapping(mapping);
-    setCurrentDraftId(null);
-    setFormAnswers({});
-    setCurrentStep(0);
-    formInstance.resetFields();
-    setLastSavedAt(null);
-  }, [formInstance]);
+  const handleContinueDraft = useCallback(
+    (draft: FormDraft) => {
+      const mapping = mappings?.find((m) => m.mappingId === draft.mappingId);
+      if (!mapping) {
+        void message.warning('This form is no longer available.');
+        return;
+      }
+      resumeDraft(mapping, draft);
+    },
+    [mappings, resumeDraft],
+  );
 
-  const handleContinueDraft = useCallback((draft: FormDraft) => {
-    const mapping = mappings?.find((m) => m.mappingId === draft.mappingId);
-    if (!mapping) {
-      void message.warning('This form is no longer available.');
-      return;
-    }
-    resumeDraft(mapping, draft);
-  }, [mappings, resumeDraft]);
-
-  const handleDiscardDraft = useCallback((draftId: string) => {
-    deleteDraftMutation.mutate(draftId, {
-      onSuccess: () => { void message.success('Draft discarded'); },
-      onError: () => { void message.error('Failed to discard draft'); },
-    });
-  }, [deleteDraftMutation]);
+  const handleDiscardDraft = useCallback(
+    (draftId: string) => {
+      deleteDraftMutation.mutate(draftId, {
+        onSuccess: () => {
+          void message.success('Draft discarded');
+        },
+        onError: () => {
+          void message.error('Failed to discard draft');
+        },
+      });
+    },
+    [deleteDraftMutation],
+  );
 
   const handleExitToDrafts = useCallback(() => {
     // Save one final time then return to landing
     if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
     formInstance
       .validateFields({ validateOnly: true })
-      .catch(() => { /* ignore validation for silent save */ })
+      .catch(() => {
+        /* ignore validation for silent save */
+      })
       .finally(() => {
         const values = formInstance.getFieldsValue(true) as Record<string, unknown>;
         const merged = { ...formAnswers, ...values };
@@ -478,7 +516,15 @@ export function FileTaxPage(): React.ReactNode {
       .catch(() => {
         void message.warning('Please fill in all required fields');
       });
-  }, [currentStep, formAnswers, formInstance, personalForm, personalDetails, personalDetailsStepIdx, saveDraft]);
+  }, [
+    currentStep,
+    formAnswers,
+    formInstance,
+    personalForm,
+    personalDetails,
+    personalDetailsStepIdx,
+    saveDraft,
+  ]);
 
   const handleFormStepBack = useCallback(() => {
     const values = formInstance.getFieldsValue(true) as Record<string, unknown>;
@@ -519,7 +565,9 @@ export function FileTaxPage(): React.ReactNode {
             void message.success(`Promo applied! -${formatCurrency(result.calculatedDiscount)}`);
           }
         },
-        onError: () => { void message.error('Failed to validate promo code'); },
+        onError: () => {
+          void message.error('Failed to validate promo code');
+        },
       },
     );
   }, [promoCode, selectedMapping, validatePromoMutation]);
@@ -554,10 +602,23 @@ export function FileTaxPage(): React.ReactNode {
           setCurrentStep(doneStepIdx);
           setCurrentDraftId(null);
         },
-        onError: () => { void message.error('Failed to submit form. Please try again.'); },
+        onError: () => {
+          void message.error('Failed to submit form. Please try again.');
+        },
       },
     );
-  }, [selectedMapping, personalDetails, formAnswers, submitMutation, promoCode, promoResult, useCredits, pricing, currentDraftId, doneStepIdx]);
+  }, [
+    selectedMapping,
+    personalDetails,
+    formAnswers,
+    submitMutation,
+    promoCode,
+    promoResult,
+    useCredits,
+    pricing,
+    currentDraftId,
+    doneStepIdx,
+  ]);
 
   // ── Loading ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -590,8 +651,16 @@ export function FileTaxPage(): React.ReactNode {
             <Title level={2} style={{ color: '#fff', marginBottom: 8 }}>
               File your tax return in minutes
             </Title>
-            <Paragraph style={{ color: 'rgba(255,255,255,0.9)', fontSize: 15, marginBottom: 0, maxWidth: 620 }}>
-              Pick a service, answer a few questions, and we'll take it from there. Your progress is auto-saved — come back anytime.
+            <Paragraph
+              style={{
+                color: 'rgba(255,255,255,0.9)',
+                fontSize: 15,
+                marginBottom: 0,
+                maxWidth: 620,
+              }}
+            >
+              Pick a service, answer a few questions, and we'll take it from there. Your progress is
+              auto-saved — come back anytime.
             </Paragraph>
           </div>
           <RocketOutlined
@@ -611,7 +680,9 @@ export function FileTaxPage(): React.ReactNode {
           <div style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <CloudSyncOutlined style={{ color: t.colorPrimary, fontSize: 18 }} />
-              <Title level={5} style={{ margin: 0 }}>Continue where you left off</Title>
+              <Title level={5} style={{ margin: 0 }}>
+                Continue where you left off
+              </Title>
               <Badge count={drafts.length} style={{ backgroundColor: t.colorPrimary }} />
             </div>
             <Row gutter={[16, 16]}>
@@ -629,7 +700,9 @@ export function FileTaxPage(): React.ReactNode {
                         type="primary"
                         size="small"
                         icon={<PlayCircleOutlined />}
-                        onClick={() => { handleContinueDraft(draft); }}
+                        onClick={() => {
+                          handleContinueDraft(draft);
+                        }}
                       >
                         Continue
                       </Button>,
@@ -638,16 +711,22 @@ export function FileTaxPage(): React.ReactNode {
                         title="Discard this draft?"
                         okText="Yes, discard"
                         cancelText="Cancel"
-                        onConfirm={() => { handleDiscardDraft(draft._id); }}
+                        onConfirm={() => {
+                          handleDiscardDraft(draft._id);
+                        }}
                       >
                         <Button size="small" type="text" danger icon={<DeleteOutlined />} />
                       </Popconfirm>,
                     ]}
                   >
                     <div style={{ marginBottom: 8 }}>
-                      <Text strong style={{ fontSize: 14 }} ellipsis>{draft.serviceTitle}</Text>
+                      <Text strong style={{ fontSize: 14 }} ellipsis>
+                        {draft.serviceTitle}
+                      </Text>
                       <br />
-                      <Tag color="blue" style={{ marginTop: 4 }}>FY {draft.financialYear}</Tag>
+                      <Tag color="blue" style={{ marginTop: 4 }}>
+                        FY {draft.financialYear}
+                      </Tag>
                     </div>
                     <div style={{ fontSize: 12, color: t.colorTextSecondary, marginBottom: 6 }}>
                       <ClockCircleOutlined /> Saved {formatTimeAgo(draft.updatedAt)}
@@ -666,7 +745,9 @@ export function FileTaxPage(): React.ReactNode {
         )}
 
         {/* Service picker */}
-        <Title level={4} style={{ marginBottom: 4 }}>Choose a service</Title>
+        <Title level={4} style={{ marginBottom: 4 }}>
+          Choose a service
+        </Title>
         <Paragraph type="secondary" style={{ marginBottom: 20 }}>
           Select the tax filing service that fits your needs.
         </Paragraph>
@@ -677,7 +758,9 @@ export function FileTaxPage(): React.ReactNode {
               image={<FileTextOutlined style={{ fontSize: 64, color: t.colorTextQuaternary }} />}
               description={
                 <>
-                  <Title level={5} style={{ marginTop: 12 }}>No tax forms available yet</Title>
+                  <Title level={5} style={{ marginTop: 12 }}>
+                    No tax forms available yet
+                  </Title>
                   <Text type="secondary">Please check back later or contact support.</Text>
                 </>
               }
@@ -689,7 +772,9 @@ export function FileTaxPage(): React.ReactNode {
               <Col xs={24} md={12} key={mapping.mappingId}>
                 <Card
                   hoverable
-                  onClick={() => { handleSelectMapping(mapping); }}
+                  onClick={() => {
+                    handleSelectMapping(mapping);
+                  }}
                   style={{
                     cursor: 'pointer',
                     height: '100%',
@@ -698,7 +783,14 @@ export function FileTaxPage(): React.ReactNode {
                   }}
                   styles={{ body: { padding: 24 } }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: 16,
+                    }}
+                  >
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Tag color="geekblue" style={{ marginBottom: 8 }}>
                         {mapping.serviceCategory?.toUpperCase() ?? 'TAX'}
@@ -706,7 +798,10 @@ export function FileTaxPage(): React.ReactNode {
                       <Title level={5} style={{ margin: '4px 0 4px', lineHeight: 1.3 }}>
                         {mapping.serviceTitle}
                       </Title>
-                      <Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>
+                      <Text
+                        type="secondary"
+                        style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
+                      >
                         FY {mapping.financialYear} · {mapping.title}
                       </Text>
                       {mapping.description && (
@@ -721,12 +816,24 @@ export function FileTaxPage(): React.ReactNode {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: 11, color: t.colorTextTertiary }}>Starting at</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: t.colorPrimary, lineHeight: 1.2 }}>
+                      <div
+                        style={{
+                          fontSize: 22,
+                          fontWeight: 700,
+                          color: t.colorPrimary,
+                          lineHeight: 1.2,
+                        }}
+                      >
                         {formatCurrency(mapping.servicePrice)}
                       </div>
                     </div>
                   </div>
-                  <Button type="primary" block style={{ marginTop: 16 }} icon={<PlayCircleOutlined />}>
+                  <Button
+                    type="primary"
+                    block
+                    style={{ marginTop: 16 }}
+                    icon={<PlayCircleOutlined />}
+                  >
                     Start filing
                   </Button>
                 </Card>
@@ -759,14 +866,28 @@ export function FileTaxPage(): React.ReactNode {
         }}
         styles={{ body: { padding: '16px 20px' } }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 16,
+            marginBottom: 12,
+          }}
+        >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Text strong style={{ fontSize: 15 }}>{selectedMapping.serviceTitle}</Text>
-            <Text type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>FY {selectedMapping.financialYear}</Text>
+            <Text strong style={{ fontSize: 15 }}>
+              {selectedMapping.serviceTitle}
+            </Text>
+            <Text type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>
+              FY {selectedMapping.financialYear}
+            </Text>
           </div>
           <Space size="small">
             {saveDraftMutation.isPending ? (
-              <Tag icon={<CloudSyncOutlined spin />} color="processing">Saving…</Tag>
+              <Tag icon={<CloudSyncOutlined spin />} color="processing">
+                Saving…
+              </Tag>
             ) : lastSavedAt ? (
               <Tag icon={<CheckCircleOutlined />} color="success">
                 Saved {formatTimeAgo(lastSavedAt)}
@@ -799,7 +920,11 @@ export function FileTaxPage(): React.ReactNode {
       {/* ─── Form Steps ─── */}
       {activeFormStep && (
         <Card
-          title={<Space><SolutionOutlined /> {activeFormStep.title}</Space>}
+          title={
+            <Space>
+              <SolutionOutlined /> {activeFormStep.title}
+            </Space>
+          }
           style={{ borderRadius: 12 }}
         >
           {activeFormStep.description && (
@@ -814,14 +939,20 @@ export function FileTaxPage(): React.ReactNode {
             form={formInstance}
             layout="vertical"
             initialValues={formAnswers}
-            onValuesChange={(_changed, all) => { scheduleAutoSave(all as Record<string, unknown>); }}
+            onValuesChange={(_changed, all) => {
+              scheduleAutoSave(all as Record<string, unknown>);
+            }}
           >
             {activeFormStep.fields.map((field) => (
               <Form.Item
                 key={field.key}
                 name={field.key}
                 label={field.label}
-                rules={field.required ? [{ required: true, message: `${field.label} is required` }] : undefined}
+                rules={
+                  field.required
+                    ? [{ required: true, message: `${field.label} is required` }]
+                    : undefined
+                }
                 tooltip={field.description}
                 valuePropName={field.widget === 'checkbox' ? 'checked' : 'value'}
               >
@@ -830,10 +961,7 @@ export function FileTaxPage(): React.ReactNode {
             ))}
           </Form>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
-            <Button
-              onClick={handleFormStepBack}
-              disabled={currentStep === 0}
-            >
+            <Button onClick={handleFormStepBack} disabled={currentStep === 0}>
               Back
             </Button>
             <Button type="primary" size="large" onClick={handleFormStepNext}>
@@ -846,7 +974,11 @@ export function FileTaxPage(): React.ReactNode {
       {/* ─── Personal Details ─── */}
       {currentStep === personalDetailsStepIdx && (
         <Card
-          title={<Space><UserOutlined /> Your Personal Details</Space>}
+          title={
+            <Space>
+              <UserOutlined /> Your Personal Details
+            </Space>
+          }
           style={{ borderRadius: 12 }}
         >
           <Alert
@@ -858,17 +990,29 @@ export function FileTaxPage(): React.ReactNode {
           <Form form={personalForm} layout="vertical" initialValues={personalDetails}>
             <Row gutter={16}>
               <Col xs={24} md={12}>
-                <Form.Item name="firstName" label="First Name" rules={[{ required: true, message: 'First name is required' }]}>
+                <Form.Item
+                  name="firstName"
+                  label="First Name"
+                  rules={[{ required: true, message: 'First name is required' }]}
+                >
                   <Input size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item name="lastName" label="Last Name" rules={[{ required: true, message: 'Last name is required' }]}>
+                <Form.Item
+                  name="lastName"
+                  label="Last Name"
+                  rules={[{ required: true, message: 'Last name is required' }]}
+                >
                   <Input size="large" />
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Enter a valid email' }]}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ type: 'email', message: 'Enter a valid email' }]}
+            >
               <Input type="email" size="large" />
             </Form.Item>
             <Form.Item name="mobile" label="Mobile Number">
@@ -876,7 +1020,13 @@ export function FileTaxPage(): React.ReactNode {
             </Form.Item>
           </Form>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
-            <Button onClick={() => { setCurrentStep(personalDetailsStepIdx - 1); }}>Back</Button>
+            <Button
+              onClick={() => {
+                setCurrentStep(personalDetailsStepIdx - 1);
+              }}
+            >
+              Back
+            </Button>
             <Button type="primary" size="large" onClick={handlePersonalNext}>
               Continue to Review
             </Button>
@@ -886,7 +1036,14 @@ export function FileTaxPage(): React.ReactNode {
 
       {/* ─── Review & Submit ─── */}
       {currentStep === reviewStepIdx && (
-        <Card title={<Space><CheckCircleOutlined /> Review Your Submission</Space>} style={{ borderRadius: 12 }}>
+        <Card
+          title={
+            <Space>
+              <CheckCircleOutlined /> Review Your Submission
+            </Space>
+          }
+          style={{ borderRadius: 12 }}
+        >
           <Card size="small" type="inner" title="Service" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -901,15 +1058,29 @@ export function FileTaxPage(): React.ReactNode {
           </Card>
 
           <Card size="small" type="inner" title="Personal Details" style={{ marginBottom: 16 }}>
-            <Text strong>{personalDetails.firstName} {personalDetails.lastName}</Text>
-            {personalDetails.email && <><br /><Text type="secondary">{personalDetails.email}</Text></>}
-            {personalDetails.mobile && <><br /><Text type="secondary">{personalDetails.mobile}</Text></>}
+            <Text strong>
+              {personalDetails.firstName} {personalDetails.lastName}
+            </Text>
+            {personalDetails.email && (
+              <>
+                <br />
+                <Text type="secondary">{personalDetails.email}</Text>
+              </>
+            )}
+            {personalDetails.mobile && (
+              <>
+                <br />
+                <Text type="secondary">{personalDetails.mobile}</Text>
+              </>
+            )}
           </Card>
 
           <Card size="small" type="inner" title="Your Answers" style={{ marginBottom: 16 }}>
             {parsedForm.steps.map((step) => (
               <div key={step.id} style={{ marginBottom: 12 }}>
-                <Text strong style={{ color: t.colorPrimary, fontSize: 13 }}>{step.title}</Text>
+                <Text strong style={{ color: t.colorPrimary, fontSize: 13 }}>
+                  {step.title}
+                </Text>
                 {step.fields.map((field) => {
                   const val = formAnswers[field.key];
                   if (val === undefined || val === null || val === '') return null;
@@ -925,15 +1096,24 @@ export function FileTaxPage(): React.ReactNode {
           </Card>
 
           <Card size="small" type="inner" title="Discounts & Credits" style={{ marginBottom: 16 }}>
-            <Text strong style={{ display: 'block', marginBottom: 6 }}>Promo Code</Text>
+            <Text strong style={{ display: 'block', marginBottom: 6 }}>
+              Promo Code
+            </Text>
             <Space.Compact style={{ width: '100%', marginBottom: 8 }}>
               <Input
                 placeholder="Enter promo code"
                 value={promoCode}
-                onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoResult(null); }}
+                onChange={(e) => {
+                  setPromoCode(e.target.value.toUpperCase());
+                  setPromoResult(null);
+                }}
                 style={{ textTransform: 'uppercase' }}
               />
-              <Button onClick={handleValidatePromo} loading={validatePromoMutation.isPending} disabled={!promoCode.trim()}>
+              <Button
+                onClick={handleValidatePromo}
+                loading={validatePromoMutation.isPending}
+                disabled={!promoCode.trim()}
+              >
                 Apply
               </Button>
             </Space.Compact>
@@ -949,7 +1129,12 @@ export function FileTaxPage(): React.ReactNode {
             )}
             {(creditData?.balance ?? 0) > 0 && (
               <div>
-                <Checkbox checked={useCredits} onChange={(e) => { setUseCredits(e.target.checked); }}>
+                <Checkbox
+                  checked={useCredits}
+                  onChange={(e) => {
+                    setUseCredits(e.target.checked);
+                  }}
+                >
                   Use credit balance ({formatCurrency(creditData?.balance ?? 0)} available)
                 </Checkbox>
               </div>
@@ -983,7 +1168,9 @@ export function FileTaxPage(): React.ReactNode {
             )}
             <Divider style={{ margin: '8px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Text strong style={{ fontSize: 16 }}>Total</Text>
+              <Text strong style={{ fontSize: 16 }}>
+                Total
+              </Text>
               <Text strong style={{ fontSize: 20, color: t.colorPrimary }}>
                 {formatCurrency(pricing.total)}
               </Text>
@@ -991,8 +1178,20 @@ export function FileTaxPage(): React.ReactNode {
           </Card>
 
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Button onClick={() => { setCurrentStep(personalDetailsStepIdx); }}>Back</Button>
-            <Button type="primary" size="large" onClick={handleSubmit} loading={submitMutation.isPending} icon={<RocketOutlined />}>
+            <Button
+              onClick={() => {
+                setCurrentStep(personalDetailsStepIdx);
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleSubmit}
+              loading={submitMutation.isPending}
+              icon={<RocketOutlined />}
+            >
               Submit Tax Filing
             </Button>
           </div>
@@ -1007,18 +1206,38 @@ export function FileTaxPage(): React.ReactNode {
             title="Tax Filing Submitted!"
             subTitle={
               <span>
-                Order <Text strong>{submittedOrder.orderNumber}</Text> is now under review.<br />
+                Order <Text strong>{submittedOrder.orderNumber}</Text> is now under review.
+                <br />
                 Our team will reach out if anything else is needed.
               </span>
             }
             extra={[
-              <Button type="primary" key="orders" size="large" onClick={() => { router.push(`/orders/${submittedOrder.orderId}`); }}>
+              <Button
+                type="primary"
+                key="orders"
+                size="large"
+                onClick={() => {
+                  router.push(`/orders/${submittedOrder.orderId}`);
+                }}
+              >
                 View Order
               </Button>,
-              <Button key="appointment" size="large" onClick={() => { router.push('/appointments'); }}>
+              <Button
+                key="appointment"
+                size="large"
+                onClick={() => {
+                  router.push('/appointments');
+                }}
+              >
                 Book Appointment
               </Button>,
-              <Button key="home" size="large" onClick={() => { router.push('/'); }}>
+              <Button
+                key="home"
+                size="large"
+                onClick={() => {
+                  router.push('/');
+                }}
+              >
                 Dashboard
               </Button>,
             ]}

@@ -13,8 +13,14 @@ export interface XeroWebhookEvent {
   resourceId: string;
   eventDateUtc: string;
   eventType: 'Create' | 'Update' | 'Delete';
-  eventCategory: 'CONTACT' | 'INVOICE' | 'PAYMENT' | 'CREDIT_NOTE'
-    | 'ACCOUNT' | 'MANUAL_JOURNAL' | 'BANK_TRANSACTION';
+  eventCategory:
+    | 'CONTACT'
+    | 'INVOICE'
+    | 'PAYMENT'
+    | 'CREDIT_NOTE'
+    | 'ACCOUNT'
+    | 'MANUAL_JOURNAL'
+    | 'BANK_TRANSACTION';
   tenantId: string;
   tenantType: string;
 }
@@ -55,15 +61,27 @@ export function initWebhookHandler(d: WebhookHandlerDeps): void {
  * Deduplicate webhook events using Redis SET with TTL.
  * Xero may send the same event multiple times; we store processed event keys for 24h.
  */
-async function isEventProcessed(tenantId: string, resourceId: string, eventType: string): Promise<boolean> {
-  if (!deps) return false;
+async function isEventProcessed(
+  tenantId: string,
+  resourceId: string,
+  eventType: string,
+): Promise<boolean> {
+  if (!deps) {
+    return false;
+  }
   const key = `xero:webhook:processed:${tenantId}:${resourceId}:${eventType}`;
   const exists = await deps.redisClient.get(key);
   return exists !== null;
 }
 
-async function markEventProcessed(tenantId: string, resourceId: string, eventType: string): Promise<void> {
-  if (!deps) return;
+async function markEventProcessed(
+  tenantId: string,
+  resourceId: string,
+  eventType: string,
+): Promise<void> {
+  if (!deps) {
+    return;
+  }
   const key = `xero:webhook:processed:${tenantId}:${resourceId}:${eventType}`;
   await deps.redisClient.set(key, '1', 'EX', 86400); // 24h TTL
 }
@@ -71,7 +89,9 @@ async function markEventProcessed(tenantId: string, resourceId: string, eventTyp
 // ─── Event Handlers ─────────────────────────────────────────────────────────
 
 async function handleContactEvent(event: XeroWebhookEvent): Promise<void> {
-  if (!deps) return;
+  if (!deps) {
+    return;
+  }
 
   // Log the inbound Xero contact change — downstream sync can pick it up
   await deps.XeroSyncLogModel.create({
@@ -90,7 +110,9 @@ async function handleContactEvent(event: XeroWebhookEvent): Promise<void> {
 }
 
 async function handleInvoiceEvent(event: XeroWebhookEvent): Promise<void> {
-  if (!deps) return;
+  if (!deps) {
+    return;
+  }
 
   // Find matching local order by xeroInvoiceId
   const order = await deps.OrderModel.findOne({ xeroInvoiceId: event.resourceId }).lean();
@@ -112,7 +134,9 @@ async function handleInvoiceEvent(event: XeroWebhookEvent): Promise<void> {
 }
 
 async function handlePaymentEvent(event: XeroWebhookEvent): Promise<void> {
-  if (!deps) return;
+  if (!deps) {
+    return;
+  }
 
   await deps.XeroSyncLogModel.create({
     entityType: 'payment',
@@ -146,7 +170,9 @@ export async function processWebhookEvents(payload: XeroWebhookPayload): Promise
   skipped: number;
   errors: number;
 }> {
-  if (!deps) throw new Error('Webhook handler not initialized — call initWebhookHandler() first');
+  if (!deps) {
+    throw new Error('Webhook handler not initialized — call initWebhookHandler() first');
+  }
 
   const result = { processed: 0, skipped: 0, errors: 0 };
 
@@ -168,7 +194,9 @@ export async function processWebhookEvents(payload: XeroWebhookPayload): Promise
 
       // Idempotency check
       const alreadyProcessed = await isEventProcessed(
-        event.tenantId, event.resourceId, event.eventType,
+        event.tenantId,
+        event.resourceId,
+        event.eventType,
       );
       if (alreadyProcessed) {
         result.skipped++;
@@ -208,10 +236,7 @@ export async function processWebhookEvents(payload: XeroWebhookPayload): Promise
 
   // Update last sync timestamp
   if (result.processed > 0) {
-    await deps.XeroConfigModel.findOneAndUpdate(
-      {},
-      { $set: { lastSyncAt: new Date() } },
-    );
+    await deps.XeroConfigModel.findOneAndUpdate({}, { $set: { lastSyncAt: new Date() } });
   }
 
   return result;

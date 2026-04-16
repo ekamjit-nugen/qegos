@@ -19,9 +19,7 @@ const EXECUTIVE_SUMMARY_TTL = 600; // 10 min (computed every 5 min, so always fr
 /**
  * Read pre-computed executive summary from Redis.
  */
-export async function getExecutiveSummary(
-  redis: Redis,
-): Promise<ExecutiveSummaryResponse | null> {
+export async function getExecutiveSummary(redis: Redis): Promise<ExecutiveSummaryResponse | null> {
   return getCached<ExecutiveSummaryResponse>(redis, EXECUTIVE_SUMMARY_KEY);
 }
 
@@ -85,16 +83,15 @@ export async function computeExecutiveSummary(
 
   const thisMonthTotal = thisMonthRevenue.reduce((s, r) => s + r.totalCents, 0);
   const lastMonthTotal = lastMonthRevenue.reduce((s, r) => s + r.totalCents, 0);
-  const mom = lastMonthTotal > 0
-    ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 10000) / 100
-    : 0;
+  const mom =
+    lastMonthTotal > 0
+      ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 10000) / 100
+      : 0;
 
   // Pipeline conversion = Won(6) / total leads
   const totalLeads = pipeline.reduce((s, p) => s + p.count, 0);
   const wonLeads = pipeline.find((p) => p.stage === 6)?.count ?? 0;
-  const conversionRate = totalLeads > 0
-    ? Math.round((wonLeads / totalLeads) * 10000) / 100
-    : 0;
+  const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 10000) / 100 : 0;
 
   // Avg days to convert: sum of avgDaysInStage for stages 1-6
   const avgDaysToConvert = pipeline

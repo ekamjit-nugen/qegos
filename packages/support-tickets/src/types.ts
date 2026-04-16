@@ -13,14 +13,27 @@ export type TicketStatus =
   | 'closed';
 
 export const TICKET_STATUSES: TicketStatus[] = [
-  'open', 'assigned', 'in_progress', 'waiting_on_client',
-  'waiting_on_ato', 'escalated', 'resolved', 'closed',
+  'open',
+  'assigned',
+  'in_progress',
+  'waiting_on_client',
+  'waiting_on_ato',
+  'escalated',
+  'resolved',
+  'closed',
 ];
 
 /** Valid status transitions */
 export const TICKET_STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   open: ['assigned', 'in_progress', 'escalated', 'closed'],
-  assigned: ['in_progress', 'waiting_on_client', 'waiting_on_ato', 'escalated', 'resolved', 'closed'],
+  assigned: [
+    'in_progress',
+    'waiting_on_client',
+    'waiting_on_ato',
+    'escalated',
+    'resolved',
+    'closed',
+  ],
   in_progress: ['waiting_on_client', 'waiting_on_ato', 'escalated', 'resolved'],
   waiting_on_client: ['in_progress', 'resolved', 'closed'],
   waiting_on_ato: ['in_progress', 'resolved'],
@@ -46,16 +59,35 @@ export type TicketCategory =
   | 'amendment_request';
 
 export const TICKET_CATEGORIES: TicketCategory[] = [
-  'billing_query', 'refund_request', 'return_status', 'document_issue',
-  'staff_complaint', 'technical_issue', 'deadline_concern', 'ato_query',
-  'general_enquiry', 'amendment_request',
+  'billing_query',
+  'refund_request',
+  'return_status',
+  'document_issue',
+  'staff_complaint',
+  'technical_issue',
+  'deadline_concern',
+  'ato_query',
+  'general_enquiry',
+  'amendment_request',
 ];
 
 export type TicketSource =
-  | 'chat' | 'whatsapp' | 'phone' | 'email' | 'portal' | 'walk_in' | 'admin_created';
+  | 'chat'
+  | 'whatsapp'
+  | 'phone'
+  | 'email'
+  | 'portal'
+  | 'walk_in'
+  | 'admin_created';
 
 export const TICKET_SOURCES: TicketSource[] = [
-  'chat', 'whatsapp', 'phone', 'email', 'portal', 'walk_in', 'admin_created',
+  'chat',
+  'whatsapp',
+  'phone',
+  'email',
+  'portal',
+  'walk_in',
+  'admin_created',
 ];
 
 export type ResolutionCategory =
@@ -68,8 +100,13 @@ export type ResolutionCategory =
   | 'no_action_needed';
 
 export const RESOLUTION_CATEGORIES: ResolutionCategory[] = [
-  'resolved_as_expected', 'refund_issued', 'correction_made',
-  'escalated_to_ato', 'client_error', 'system_error', 'no_action_needed',
+  'resolved_as_expected',
+  'refund_issued',
+  'correction_made',
+  'escalated_to_ato',
+  'client_error',
+  'system_error',
+  'no_action_needed',
 ];
 
 export type MessageSenderType = 'client' | 'staff' | 'system';

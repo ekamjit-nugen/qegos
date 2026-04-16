@@ -21,15 +21,27 @@ import type { PipelineStageEntry } from '@/types/analytics';
 import React, { useState } from 'react';
 
 const STAGE_COLORS = [
-  '#bae0ff', '#91caff', '#69b1ff', '#4096ff',
-  '#1677ff', '#52c41a', '#ff4d4f', '#d9d9d9',
+  '#bae0ff',
+  '#91caff',
+  '#69b1ff',
+  '#4096ff',
+  '#1677ff',
+  '#52c41a',
+  '#ff4d4f',
+  '#d9d9d9',
 ];
 
 type ViewMode = 'chart' | 'table';
 
 const tableColumns: ColumnsType<PipelineStageEntry> = [
   { title: 'Stage', dataIndex: 'stageName', key: 'stageName', width: 120 },
-  { title: 'Count', dataIndex: 'count', key: 'count', width: 70, sorter: (a, b) => a.count - b.count },
+  {
+    title: 'Count',
+    dataIndex: 'count',
+    key: 'count',
+    width: 70,
+    sorter: (a, b) => a.count - b.count,
+  },
   {
     title: 'Value',
     dataIndex: 'totalValueCents',
@@ -57,7 +69,7 @@ const tableColumns: ColumnsType<PipelineStageEntry> = [
     dataIndex: 'isBottleneck',
     key: 'bottleneck',
     width: 100,
-    render: (v: boolean) => v ? <Tag color="red">Bottleneck</Tag> : <Tag color="green">OK</Tag>,
+    render: (v: boolean) => (v ? <Tag color="red">Bottleneck</Tag> : <Tag color="green">OK</Tag>),
   },
 ];
 
@@ -82,7 +94,9 @@ export function PipelineHealthWidget(): React.ReactNode {
           <RiseOutlined />
           <span style={{ marginLeft: 8 }}>Pipeline Health</span>
           {data?.some((s) => s.isBottleneck) && (
-            <Tag color="red" style={{ marginLeft: 8 }}>Bottleneck</Tag>
+            <Tag color="red" style={{ marginLeft: 8 }}>
+              Bottleneck
+            </Tag>
           )}
         </span>
       }

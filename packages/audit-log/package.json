@@ -14,7 +14,11 @@
     "@nugen/validator": "^1.0.0",
     "mongoose": "^8.0.0"
   },
-  "keywords": ["audit-log", "compliance", "append-only"],
+  "keywords": [
+    "audit-log",
+    "compliance",
+    "append-only"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

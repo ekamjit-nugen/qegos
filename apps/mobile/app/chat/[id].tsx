@@ -1,21 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
-import {
-  FlatList,
-  StyleSheet,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import {
-  Text,
-  TextInput,
-  IconButton,
-  Appbar,
-  Surface,
-  useTheme,
-} from 'react-native-paper';
-import { ChatSkeleton } from '@/components/ScreenSkeleton';
+import { FlatList, StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, TextInput, IconButton, Appbar, Surface, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ChatSkeleton } from '@/components/ScreenSkeleton';
 import { useAuth } from '@/lib/auth/useAuth';
 import { useConversationMessages, useSendMessage } from '@/hooks/useChat';
 import { useChatSocket } from '@/hooks/useSocket';
@@ -38,15 +25,21 @@ export default function ChatConversationScreen(): React.ReactNode {
     id,
     useCallback((payload) => {
       setIsTyping(payload.isTyping);
-      if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); }
-      typingTimeoutRef.current = setTimeout(() => { setIsTyping(false); }, 3000);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+      }, 3000);
     }, []),
   );
 
   const messages = data?.data ?? [];
 
   async function handleSend(): Promise<void> {
-    if (!messageText.trim() || !id) { return; }
+    if (!messageText.trim() || !id) {
+      return;
+    }
     const body = messageText.trim();
     setMessageText('');
     await sendMessage.mutateAsync({ conversationId: id, body });
@@ -59,27 +52,16 @@ export default function ChatConversationScreen(): React.ReactNode {
     }
   }
 
-  function renderMessage({
-    item,
-  }: {
-    item: ChatMessage;
-  }): React.ReactElement {
+  function renderMessage({ item }: { item: ChatMessage }): React.ReactElement {
     const isOwn = item.senderId === user?._id;
 
     return (
-      <View
-        style={[
-          styles.messageRow,
-          isOwn ? styles.messageRowRight : styles.messageRowLeft,
-        ]}
-      >
+      <View style={[styles.messageRow, isOwn ? styles.messageRowRight : styles.messageRowLeft]}>
         <Surface
           style={[
             styles.messageBubble,
             {
-              backgroundColor: isOwn
-                ? theme.colors.primaryContainer
-                : theme.colors.surfaceVariant,
+              backgroundColor: isOwn ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
             },
           ]}
           elevation={1}

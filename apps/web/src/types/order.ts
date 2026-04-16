@@ -45,7 +45,13 @@ export interface OrderLineItem {
   completedAt?: string;
 }
 
-export type SigningStatus = 'not_started' | 'awaiting_client' | 'client_signed' | 'awaiting_admin' | 'completed' | 'declined';
+export type SigningStatus =
+  | 'not_started'
+  | 'awaiting_client'
+  | 'client_signed'
+  | 'awaiting_admin'
+  | 'completed'
+  | 'declined';
 
 export const SIGNING_STATUS_LABELS: Record<SigningStatus, string> = {
   not_started: 'Not Started',

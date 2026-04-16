@@ -5,10 +5,7 @@ import {
   hasApprovalAuthority,
 } from '../src/services/refundService';
 import { initWebhookProcessor } from '../src/services/webhookProcessor';
-import type {
-  IPaymentProvider,
-  PaymentGateway,
-} from '../src/types';
+import type { IPaymentProvider, PaymentGateway } from '../src/types';
 
 // ─── Mock Provider ───────────────────────────────────────────────────────────
 
@@ -100,8 +97,8 @@ describe('RefundService', () => {
     });
 
     it('should require admin (userType <= 1) for "admin" level', () => {
-      expect(hasApprovalAuthority(0, 'admin')).toBe(true);  // super_admin
-      expect(hasApprovalAuthority(1, 'admin')).toBe(true);  // admin
+      expect(hasApprovalAuthority(0, 'admin')).toBe(true); // super_admin
+      expect(hasApprovalAuthority(1, 'admin')).toBe(true); // admin
       expect(hasApprovalAuthority(2, 'admin')).toBe(false); // client
       expect(hasApprovalAuthority(3, 'admin')).toBe(false); // staff
     });
@@ -154,14 +151,16 @@ describe('RefundService', () => {
         refundedAmount: 8000,
       });
 
-      await expect(processRefund({
-        paymentId: '507f1f77bcf86cd799439011',
-        amount: 5000, // 8000 + 5000 = 13000 > 10000
-        reason: 'Too much',
-        idempotencyKey: 'refund-key-3',
-        actorId: 'admin-123',
-        actorType: 1,
-      })).rejects.toThrow('exceeds captured amount');
+      await expect(
+        processRefund({
+          paymentId: '507f1f77bcf86cd799439011',
+          amount: 5000, // 8000 + 5000 = 13000 > 10000
+          reason: 'Too much',
+          idempotencyKey: 'refund-key-3',
+          actorId: 'admin-123',
+          actorType: 1,
+        }),
+      ).rejects.toThrow('exceeds captured amount');
     });
 
     it('should require admin for refund > $500 (BIL-INV-04)', async () => {
@@ -171,14 +170,16 @@ describe('RefundService', () => {
       });
 
       // Staff (userType 3) trying to refund 60000 cents ($600)
-      await expect(processRefund({
-        paymentId: '507f1f77bcf86cd799439011',
-        amount: 60000,
-        reason: 'Large refund',
-        idempotencyKey: 'refund-key-4',
-        actorId: 'staff-123',
-        actorType: 3,
-      })).rejects.toThrow('Admin approval');
+      await expect(
+        processRefund({
+          paymentId: '507f1f77bcf86cd799439011',
+          amount: 60000,
+          reason: 'Large refund',
+          idempotencyKey: 'refund-key-4',
+          actorId: 'staff-123',
+          actorType: 3,
+        }),
+      ).rejects.toThrow('Admin approval');
     });
 
     it('should require super_admin for refund > $2000 (BIL-INV-04)', async () => {
@@ -188,38 +189,44 @@ describe('RefundService', () => {
       });
 
       // Admin (userType 1) trying to refund 250000 cents ($2500)
-      await expect(processRefund({
-        paymentId: '507f1f77bcf86cd799439011',
-        amount: 250000,
-        reason: 'Very large refund',
-        idempotencyKey: 'refund-key-5',
-        actorId: 'admin-123',
-        actorType: 1,
-      })).rejects.toThrow('Super Admin approval');
+      await expect(
+        processRefund({
+          paymentId: '507f1f77bcf86cd799439011',
+          amount: 250000,
+          reason: 'Very large refund',
+          idempotencyKey: 'refund-key-5',
+          actorId: 'admin-123',
+          actorType: 1,
+        }),
+      ).rejects.toThrow('Super Admin approval');
     });
 
     it('should reject refund on non-succeeded payment', async () => {
       currentMockPayment = createMockPayment({ status: 'pending' });
 
-      await expect(processRefund({
-        paymentId: '507f1f77bcf86cd799439011',
-        reason: 'Refund pending payment',
-        idempotencyKey: 'refund-key-6',
-        actorId: 'admin-123',
-        actorType: 1,
-      })).rejects.toThrow('cannot be refunded');
+      await expect(
+        processRefund({
+          paymentId: '507f1f77bcf86cd799439011',
+          reason: 'Refund pending payment',
+          idempotencyKey: 'refund-key-6',
+          actorId: 'admin-123',
+          actorType: 1,
+        }),
+      ).rejects.toThrow('cannot be refunded');
     });
 
     it('should throw NotFound for non-existent payment', async () => {
       currentMockPayment = null;
 
-      await expect(processRefund({
-        paymentId: '507f1f77bcf86cd799439099',
-        reason: 'Nonexistent',
-        idempotencyKey: 'refund-key-7',
-        actorId: 'admin-123',
-        actorType: 1,
-      })).rejects.toThrow('not found');
+      await expect(
+        processRefund({
+          paymentId: '507f1f77bcf86cd799439099',
+          reason: 'Nonexistent',
+          idempotencyKey: 'refund-key-7',
+          actorId: 'admin-123',
+          actorType: 1,
+        }),
+      ).rejects.toThrow('not found');
     });
   });
 });

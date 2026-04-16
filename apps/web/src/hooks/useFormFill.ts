@@ -21,7 +21,10 @@ export function useAvailableFormMappings(): ReturnType<typeof useQuery<Available
 
 // ─── Form Mapping Schema ───────────────────────────────────────────────────
 
-export function useFormMappingSchema(mappingId: string | undefined, version: number | undefined): ReturnType<typeof useQuery<AvailableFormMapping>> {
+export function useFormMappingSchema(
+  mappingId: string | undefined,
+  version: number | undefined,
+): ReturnType<typeof useQuery<AvailableFormMapping>> {
   return useQuery({
     queryKey: ['portal', 'form-mappings', mappingId, 'version', version],
     queryFn: async () => {
@@ -36,14 +39,13 @@ export function useFormMappingSchema(mappingId: string | undefined, version: num
 
 // ─── Submit Form Fill ──────────────────────────────────────────────────────
 
-export function useSubmitFormFill(): ReturnType<typeof useMutation<FormFillResult, Error, FormFillSubmission & { draftId?: string }>> {
+export function useSubmitFormFill(): ReturnType<
+  typeof useMutation<FormFillResult, Error, FormFillSubmission & { draftId?: string }>
+> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: FormFillSubmission & { draftId?: string }) => {
-      const res = await api.post<ApiResponse<FormFillResult>>(
-        '/portal/form-fill/submit',
-        data,
-      );
+      const res = await api.post<ApiResponse<FormFillResult>>('/portal/form-fill/submit', data);
       return res.data.data;
     },
     onSuccess: () => {
@@ -81,9 +83,7 @@ export function useFormDrafts(): ReturnType<typeof useQuery<FormDraft[]>> {
   return useQuery({
     queryKey: ['portal', 'form-fill', 'drafts'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ drafts: FormDraft[] }>>(
-        '/portal/form-fill/drafts',
-      );
+      const res = await api.get<ApiResponse<{ drafts: FormDraft[] }>>('/portal/form-fill/drafts');
       return res.data.data.drafts;
     },
   });
@@ -112,14 +112,13 @@ export interface SaveDraftResult {
   };
 }
 
-export function useSaveDraft(): ReturnType<typeof useMutation<SaveDraftResult, Error, SaveDraftPayload>> {
+export function useSaveDraft(): ReturnType<
+  typeof useMutation<SaveDraftResult, Error, SaveDraftPayload>
+> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: SaveDraftPayload) => {
-      const res = await api.put<ApiResponse<SaveDraftResult>>(
-        '/portal/form-fill/drafts',
-        data,
-      );
+      const res = await api.put<ApiResponse<SaveDraftResult>>('/portal/form-fill/drafts', data);
       return res.data.data;
     },
     onSuccess: () => {

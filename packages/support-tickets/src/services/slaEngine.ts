@@ -33,12 +33,16 @@ export function isBusinessHour(date: Date): boolean {
 
   if (isTaxSeason) {
     // Mon-Sat (1-6), extended hours
-    if (day === 0) return false; // Sunday
+    if (day === 0) {
+      return false;
+    } // Sunday
     return hour >= config.taxSeasonStart && hour < config.taxSeasonEnd;
   }
 
   // Standard: Mon-Fri (1-5)
-  if (day === 0 || day === 6) return false;
+  if (day === 0 || day === 6) {
+    return false;
+  }
   return hour >= config.businessHoursStart && hour < config.businessHoursEnd;
 }
 
@@ -48,10 +52,7 @@ export function isBusinessHour(date: Date): boolean {
  * Calculate SLA deadline by adding business minutes to a start time.
  * Skips non-business hours and weekends.
  */
-export function calculateSlaDeadline(
-  startTime: Date,
-  priority: TicketPriority,
-): Date {
+export function calculateSlaDeadline(startTime: Date, priority: TicketPriority): Date {
   const sla = SLA_BY_PRIORITY[priority];
   let remainingMinutes = sla.resolutionMinutes;
 
@@ -70,10 +71,7 @@ export function calculateSlaDeadline(
 /**
  * Calculate first response deadline.
  */
-export function calculateFirstResponseDeadline(
-  startTime: Date,
-  priority: TicketPriority,
-): Date {
+export function calculateFirstResponseDeadline(startTime: Date, priority: TicketPriority): Date {
   const sla = SLA_BY_PRIORITY[priority];
   let remainingMinutes = sla.firstResponseMinutes;
 
@@ -92,11 +90,7 @@ export function calculateFirstResponseDeadline(
 /**
  * Check if SLA is at 80% elapsed (imminent breach warning).
  */
-export function isSlaImminent(
-  createdAt: Date,
-  slaDeadline: Date,
-  now: Date = new Date(),
-): boolean {
+export function isSlaImminent(createdAt: Date, slaDeadline: Date, now: Date = new Date()): boolean {
   const total = slaDeadline.getTime() - createdAt.getTime();
   const elapsed = now.getTime() - createdAt.getTime();
   return elapsed >= total * 0.8 && elapsed < total;
@@ -105,20 +99,14 @@ export function isSlaImminent(
 /**
  * Check if SLA has been breached.
  */
-export function isSlaBreached(
-  slaDeadline: Date,
-  now: Date = new Date(),
-): boolean {
+export function isSlaBreached(slaDeadline: Date, now: Date = new Date()): boolean {
   return now.getTime() > slaDeadline.getTime();
 }
 
 /**
  * Get escalation trigger time for unassigned tickets.
  */
-export function getEscalationTriggerTime(
-  createdAt: Date,
-  priority: TicketPriority,
-): Date {
+export function getEscalationTriggerTime(createdAt: Date, priority: TicketPriority): Date {
   const sla = SLA_BY_PRIORITY[priority];
   return new Date(createdAt.getTime() + sla.escalationTriggerMinutes * 60_000);
 }

@@ -19,9 +19,7 @@ export function ReviewListPage(): React.ReactNode {
     {
       title: 'Order ID',
       dataIndex: 'orderId',
-      render: (val: string) => (
-        <a onClick={() => router.push(`/orders/${val}`)}>{val}</a>
-      ),
+      render: (val: string) => <a onClick={() => router.push(`/orders/${val}`)}>{val}</a>,
     },
     {
       title: 'Preparer',

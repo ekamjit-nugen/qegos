@@ -23,10 +23,7 @@ permissionSnapshotSchema.index({ changedBy: 1, createdAt: -1 });
  * Compute diff between two permission arrays (PRM-INV-01).
  * Standalone function — not a model static, to avoid Vegeta B-15 issue.
  */
-export function computeDiff(
-  before: IPermission[],
-  after: IPermission[],
-): PermissionDiff[] {
+export function computeDiff(before: IPermission[], after: IPermission[]): PermissionDiff[] {
   const diffs: PermissionDiff[] = [];
 
   const beforeMap = new Map<string, IPermission>();

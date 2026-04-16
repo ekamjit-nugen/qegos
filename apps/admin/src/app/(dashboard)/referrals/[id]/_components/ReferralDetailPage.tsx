@@ -9,8 +9,12 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
 export function ReferralDetailPage({ id }: { id: string }): React.ReactNode {
   const { data: referral, isLoading } = useReferral(id);
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!referral) { return <Empty description="Referral not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!referral) {
+    return <Empty description="Referral not found" />;
+  }
 
   return (
     <div>
@@ -31,7 +35,9 @@ export function ReferralDetailPage({ id }: { id: string }): React.ReactNode {
                   {REFERRAL_STATUS_LABELS[referral.status]}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Reward Type">{referral.rewardType ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="Reward Type">
+                {referral.rewardType ?? '-'}
+              </Descriptions.Item>
               <Descriptions.Item label="Referrer Reward">
                 {referral.referrerRewardAmount !== undefined
                   ? formatCurrency(referral.referrerRewardAmount)
@@ -43,7 +49,9 @@ export function ReferralDetailPage({ id }: { id: string }): React.ReactNode {
                   : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Channel">{referral.channel ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="Expires">{formatDate(referral.expiresAt)}</Descriptions.Item>
+              <Descriptions.Item label="Expires">
+                {formatDate(referral.expiresAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -79,9 +87,15 @@ export function ReferralDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Timeline" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(referral.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Updated">{formatDateTime(referral.updatedAt)}</Descriptions.Item>
-              <Descriptions.Item label="Expires">{formatDate(referral.expiresAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(referral.createdAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(referral.updatedAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Expires">
+                {formatDate(referral.expiresAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

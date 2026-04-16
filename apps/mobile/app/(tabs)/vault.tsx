@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import {
-  Text,
-  Card,
-  Chip,
-  ProgressBar,
-  FAB,
-  Snackbar,
-  useTheme,
-} from 'react-native-paper';
+import { Text, Card, Chip, ProgressBar, FAB, Snackbar, useTheme } from 'react-native-paper';
 import * as DocumentPicker from 'expo-document-picker';
 import { useQueryClient } from '@tanstack/react-query';
 import { useVaultDocuments, useVaultYears, useStorageUsage } from '@/hooks/useVault';
@@ -25,16 +17,18 @@ function currentFinancialYear(): string {
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function VaultScreen(): React.ReactNode {
   const theme = useTheme();
-  const [selectedYear, setSelectedYear] = useState<string | undefined>(
-    undefined,
-  );
+  const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
 
   const storageQuery = useStorageUsage();
   const yearsQuery = useVaultYears();
@@ -57,7 +51,9 @@ export default function VaultScreen(): React.ReactNode {
         copyToCacheDirectory: true,
         multiple: false,
       });
-      if (result.canceled || !result.assets?.[0]) return;
+      if (result.canceled || !result.assets?.[0]) {
+        return;
+      }
       const asset = result.assets[0];
       upload.mutate(
         {
@@ -83,11 +79,7 @@ export default function VaultScreen(): React.ReactNode {
     }
   }
 
-  function renderDocument({
-    item,
-  }: {
-    item: VaultDocument;
-  }): React.ReactElement {
+  function renderDocument({ item }: { item: VaultDocument }): React.ReactElement {
     return (
       <Card style={styles.docCard}>
         <Card.Content>
@@ -122,11 +114,7 @@ export default function VaultScreen(): React.ReactNode {
           </View>
           <ProgressBar
             progress={storage.percentage / 100}
-            color={
-              storage.percentage > 90
-                ? theme.colors.error
-                : theme.colors.primary
-            }
+            color={storage.percentage > 90 ? theme.colors.error : theme.colors.primary}
             style={styles.storageBar}
           />
           <Text variant="bodySmall" style={styles.dimText}>

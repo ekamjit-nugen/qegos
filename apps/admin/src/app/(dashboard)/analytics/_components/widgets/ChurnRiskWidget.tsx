@@ -36,9 +36,7 @@ const columns: ColumnsType<ChurnRiskEntry> = [
     key: 'daysSinceLastOrder',
     width: 90,
     render: (days: number) => (
-      <Tag color={days > 365 ? 'red' : days > 180 ? 'orange' : 'default'}>
-        {days}d
-      </Tag>
+      <Tag color={days > 365 ? 'red' : days > 180 ? 'orange' : 'default'}>{days}d</Tag>
     ),
     sorter: (a, b) => a.daysSinceLastOrder - b.daysSinceLastOrder,
     defaultSortOrder: 'descend',
@@ -56,7 +54,9 @@ export function ChurnRiskWidget(): React.ReactNode {
           <WarningOutlined style={{ color: '#ff4d4f' }} />
           <span style={{ marginLeft: 8 }}>Churn Risk</span>
           {data && data.length > 0 && (
-            <Tag color="red" style={{ marginLeft: 8 }}>{data.length}</Tag>
+            <Tag color="red" style={{ marginLeft: 8 }}>
+              {data.length}
+            </Tag>
           )}
         </span>
       }

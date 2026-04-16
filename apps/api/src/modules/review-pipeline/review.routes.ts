@@ -47,8 +47,11 @@ export interface ReviewRouteDeps {
 export function createReviewRoutes(deps: ReviewRouteDeps): Router {
   const router = Router();
   const {
-    ReviewAssignmentModel, OrderModel, UserModel,
-    authenticate: auth, checkPermission: check,
+    ReviewAssignmentModel,
+    OrderModel,
+    UserModel,
+    authenticate: auth,
+    checkPermission: check,
   } = deps;
 
   const service = createReviewService({ ReviewAssignmentModel, OrderModel, UserModel });
@@ -89,16 +92,18 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
       const skip = (page - 1) * limit;
 
       const filter: Record<string, unknown> = {};
-      if (req.query.status) { filter.status = req.query.status; }
-      if (req.query.reviewerId) { filter.reviewerId = req.query.reviewerId; }
-      if (req.query.preparerId) { filter.preparerId = req.query.preparerId; }
+      if (req.query.status) {
+        filter.status = req.query.status;
+      }
+      if (req.query.reviewerId) {
+        filter.reviewerId = req.query.reviewerId;
+      }
+      if (req.query.preparerId) {
+        filter.preparerId = req.query.preparerId;
+      }
 
       const [data, total] = await Promise.all([
-        ReviewAssignmentModel.find(filter)
-          .sort({ updatedAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        ReviewAssignmentModel.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
         ReviewAssignmentModel.countDocuments(filter),
       ]);
 
@@ -254,7 +259,11 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
     ...validate(updateChecklistValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const { index, checked, note } = req.body as { index: number; checked: boolean; note?: string };
+      const { index, checked, note } = req.body as {
+        index: number;
+        checked: boolean;
+        note?: string;
+      };
       const review = await service.updateChecklist(
         req.params.orderId,
         index,

@@ -32,10 +32,7 @@ function ResetPasswordForm(): ReactNode {
     );
   }
 
-  const handleSubmit = async (values: {
-    password: string;
-    confirm: string;
-  }): Promise<void> => {
+  const handleSubmit = async (values: { password: string; confirm: string }): Promise<void> => {
     if (values.password !== values.confirm) {
       message.error('Passwords do not match');
       return;
@@ -47,11 +44,13 @@ function ResetPasswordForm(): ReactNode {
         password: values.password,
       });
       setDone(true);
-      setTimeout(() => { router.push('/login'); }, 2500);
+      setTimeout(() => {
+        router.push('/login');
+      }, 2500);
     } catch (err) {
       const msg =
-        (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message ?? 'Reset link is invalid or expired';
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+        'Reset link is invalid or expired';
       message.error(msg);
     } finally {
       setLoading(false);

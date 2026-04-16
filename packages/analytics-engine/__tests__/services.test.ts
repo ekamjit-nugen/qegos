@@ -6,6 +6,7 @@
  * No database required — models are faked with jest.fn().
  */
 
+import type { Model, Document } from 'mongoose';
 import { getRevenueByPeriod, getCollectionRate } from '../src/services/revenueService';
 import { getRevenueForecast } from '../src/services/forecastService';
 import { getClv } from '../src/services/clvService';
@@ -18,7 +19,6 @@ import { getChannelRoi } from '../src/services/channelRoiService';
 import { createExportJob } from '../src/services/exportService';
 import { buildCacheKey, getCached, setCache, withCache } from '../src/services/cacheService';
 import { REVENUE_PAYMENT_STATUSES, DEFAULT_CACHE_TTL } from '../src/constants';
-import type { Model, Document } from 'mongoose';
 import type { AnalyticsEngineConfig, DateRangeParams } from '../src/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -41,7 +41,9 @@ function createMockRedis(): Record<string, jest.Mock> {
   const store = new Map<string, string>();
   return {
     get: jest.fn(async (key: string) => store.get(key) ?? null),
-    set: jest.fn(async (key: string, value: string) => { store.set(key, value); }),
+    set: jest.fn(async (key: string, value: string) => {
+      store.set(key, value);
+    }),
     ttl: jest.fn(async () => 200),
   };
 }
@@ -54,7 +56,6 @@ const dateRange: DateRangeParams = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Analytics Engine Services', () => {
-
   // ─── Revenue Service ─────────────────────────────────────────────────────
 
   describe('revenueService', () => {
@@ -87,9 +88,7 @@ describe('Analytics Engine Services', () => {
       });
 
       it('uses week format when groupBy is week', async () => {
-        const PaymentModel = createMockModel([
-          { period: '2025-W01', totalCents: 50000, count: 3 },
-        ]);
+        const PaymentModel = createMockModel([{ period: '2025-W01', totalCents: 50000, count: 3 }]);
 
         const result = await getRevenueByPeriod(
           PaymentModel as unknown as Model<Document>,
@@ -153,9 +152,7 @@ describe('Analytics Engine Services', () => {
         const OrderModel = createMockModel();
 
         OrderModel.aggregate.mockResolvedValueOnce([]);
-        PaymentModel.aggregate
-          .mockResolvedValueOnce([])
-          .mockResolvedValueOnce([]);
+        PaymentModel.aggregate.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
         const result = await getCollectionRate(
           PaymentModel as unknown as Model<Document>,
@@ -235,9 +232,7 @@ describe('Analytics Engine Services', () => {
     });
 
     it('forecast quarters have confidence bounds', async () => {
-      const PaymentModel = createMockModel([
-        { period: '2025-01', totalCents: 100000, count: 5 },
-      ]);
+      const PaymentModel = createMockModel([{ period: '2025-01', totalCents: 100000, count: 5 }]);
 
       const result = await getRevenueForecast(
         PaymentModel as unknown as Model<Document>,
@@ -267,11 +262,7 @@ describe('Analytics Engine Services', () => {
 
     it('filters by REVENUE_PAYMENT_STATUSES', async () => {
       const PaymentModel = createMockModel([]);
-      await getRevenueForecast(
-        PaymentModel as unknown as Model<Document>,
-        config,
-        dateRange,
-      );
+      await getRevenueForecast(PaymentModel as unknown as Model<Document>, config, dateRange);
 
       const pipeline = PaymentModel.aggregate.mock.calls[0][0];
       expect(pipeline[0].$match.status.$in).toEqual([...REVENUE_PAYMENT_STATUSES]);
@@ -283,8 +274,20 @@ describe('Analytics Engine Services', () => {
   describe('clvService', () => {
     it('returns top customers ranked by total spent', async () => {
       const PaymentModel = createMockModel([
-        { _id: 'user-1', totalSpentCents: 500000, paymentCount: 10, firstPayment: new Date(), lastPayment: new Date() },
-        { _id: 'user-2', totalSpentCents: 300000, paymentCount: 6, firstPayment: new Date(), lastPayment: new Date() },
+        {
+          _id: 'user-1',
+          totalSpentCents: 500000,
+          paymentCount: 10,
+          firstPayment: new Date(),
+          lastPayment: new Date(),
+        },
+        {
+          _id: 'user-2',
+          totalSpentCents: 300000,
+          paymentCount: 6,
+          firstPayment: new Date(),
+          lastPayment: new Date(),
+        },
       ]);
       const UserModel = createMockModel();
       UserModel.find = jest.fn().mockReturnValue({
@@ -528,15 +531,17 @@ describe('Analytics Engine Services', () => {
   describe('serviceMixService', () => {
     it('returns services sorted by revenue with percentage', async () => {
       const OrderModel = createMockModel([
-        { serviceTitle: 'Individual Tax Return', orderCount: 50, quantity: 50, revenueCents: 2500000 },
+        {
+          serviceTitle: 'Individual Tax Return',
+          orderCount: 50,
+          quantity: 50,
+          revenueCents: 2500000,
+        },
         { serviceTitle: 'BAS Preparation', orderCount: 20, quantity: 25, revenueCents: 1000000 },
         { serviceTitle: 'SMSF Audit', orderCount: 5, quantity: 5, revenueCents: 500000 },
       ]);
 
-      const result = await getServiceMix(
-        OrderModel as unknown as Model<Document>,
-        dateRange,
-      );
+      const result = await getServiceMix(OrderModel as unknown as Model<Document>, dateRange);
 
       expect(result).toHaveLength(3);
       expect(result[0].percentOfTotal).toBeCloseTo(62.5, 1);
@@ -639,9 +644,7 @@ describe('Analytics Engine Services', () => {
       const SupportTicketModel = createMockModel([{ _id: 'staff-1', ticketsResolved: 20 }]);
       const UserModel = createMockModel();
       UserModel.find = jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue([
-          { _id: 'staff-1', firstName: 'Jane', lastName: 'Doe' },
-        ]),
+        lean: jest.fn().mockResolvedValue([{ _id: 'staff-1', firstName: 'Jane', lastName: 'Doe' }]),
       });
 
       const result = await getStaffBenchmark(
@@ -828,11 +831,14 @@ describe('Analytics Engine Services', () => {
       expect(result.format).toBe('xlsx');
       expect(result.widgets).toEqual(['revenue-forecast', 'clv']);
 
-      expect(queue.add).toHaveBeenCalledWith('analytics-export', expect.objectContaining({
-        jobId: result.jobId,
-        format: 'xlsx',
-        requestedBy: 'user-001',
-      }));
+      expect(queue.add).toHaveBeenCalledWith(
+        'analytics-export',
+        expect.objectContaining({
+          jobId: result.jobId,
+          format: 'xlsx',
+          requestedBy: 'user-001',
+        }),
+      );
     });
 
     it('supports pdf format', async () => {
@@ -910,12 +916,7 @@ describe('Analytics Engine Services', () => {
 
         expect(result).toEqual({ fresh: true });
         expect(fn).toHaveBeenCalledTimes(1);
-        expect(redis.set).toHaveBeenCalledWith(
-          'key',
-          JSON.stringify({ fresh: true }),
-          'EX',
-          300,
-        );
+        expect(redis.set).toHaveBeenCalledWith('key', JSON.stringify({ fresh: true }), 'EX', 300);
       });
     });
 
@@ -926,12 +927,7 @@ describe('Analytics Engine Services', () => {
 
         // setCache
         await setCache(redis as never, 'test-key', 60, { hello: 'world' });
-        expect(redis.set).toHaveBeenCalledWith(
-          'test-key',
-          '{"hello":"world"}',
-          'EX',
-          60,
-        );
+        expect(redis.set).toHaveBeenCalledWith('test-key', '{"hello":"world"}', 'EX', 60);
 
         // getCached
         redis.get.mockResolvedValue('{"hello":"world"}');

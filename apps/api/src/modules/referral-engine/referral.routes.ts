@@ -77,7 +77,9 @@ export function createReferralRoutes(deps: ReferralRouteDeps): Router {
         severity: 'low',
       });
 
-      res.status(200).json({ status: 200, data: { referralCode: code, channel: req.body.channel } });
+      res
+        .status(200)
+        .json({ status: 200, data: { referralCode: code, channel: req.body.channel } });
     }),
   );
 
@@ -98,7 +100,9 @@ export function createReferralRoutes(deps: ReferralRouteDeps): Router {
     ...validate(validateApply()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { referralCode, refereeUserId, refereeLeadId } = req.body as {
-        referralCode: string; refereeUserId: string; refereeLeadId?: string;
+        referralCode: string;
+        refereeUserId: string;
+        refereeLeadId?: string;
       };
 
       const referral = await applyReferral(referralCode, refereeUserId, refereeLeadId);
@@ -133,7 +137,9 @@ export function createReferralRoutes(deps: ReferralRouteDeps): Router {
         status: 200,
         data: referrals,
         pagination: {
-          page: pageNum, limit: limitNum, total,
+          page: pageNum,
+          limit: limitNum,
+          total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,

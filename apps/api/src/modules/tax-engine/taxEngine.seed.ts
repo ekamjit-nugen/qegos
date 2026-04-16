@@ -26,16 +26,16 @@ export async function seedTaxEngineRules(
 
     // ── Resident Brackets (Stage 3 tax cuts) ───────────────────────────
     brackets: [
-      { min: 0, max: 1820000, rate: 0, baseTax: 0 },             // $0 - $18,200: nil
-      { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 },    // $18,201 - $45,000: 16%
-      { min: 4500000, max: 13500000, rate: 0.30, baseTax: 428800 }, // $45,001 - $135,000: 30%
+      { min: 0, max: 1820000, rate: 0, baseTax: 0 }, // $0 - $18,200: nil
+      { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 }, // $18,201 - $45,000: 16%
+      { min: 4500000, max: 13500000, rate: 0.3, baseTax: 428800 }, // $45,001 - $135,000: 30%
       { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3128800 }, // $135,001 - $190,000: 37%
       { min: 19000000, max: null, rate: 0.45, baseTax: 5163800 }, // $190,001+: 45%
     ],
 
     // ── Non-Resident Brackets ──────────────────────────────────────────
     nonResidentBrackets: [
-      { min: 0, max: 13500000, rate: 0.30, baseTax: 0 },
+      { min: 0, max: 13500000, rate: 0.3, baseTax: 0 },
       { min: 13500000, max: 19000000, rate: 0.37, baseTax: 4050000 },
       { min: 19000000, max: null, rate: 0.45, baseTax: 6085000 },
     ],
@@ -43,7 +43,7 @@ export async function seedTaxEngineRules(
     // ── Working Holiday Maker Brackets ─────────────────────────────────
     workingHolidayBrackets: [
       { min: 0, max: 4500000, rate: 0.15, baseTax: 0 },
-      { min: 4500000, max: 13500000, rate: 0.30, baseTax: 675000 },
+      { min: 4500000, max: 13500000, rate: 0.3, baseTax: 675000 },
       { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3375000 },
       { min: 19000000, max: null, rate: 0.45, baseTax: 5410000 },
     ],
@@ -52,21 +52,21 @@ export async function seedTaxEngineRules(
     medicareLevy: {
       rate: 0.02,
       surchargeRate: 0.015,
-      lowIncomeThreshold: 2630800,        // $26,308
-      phaseInRange: 328800,               // $3,288
-      familyThreshold: 4432500,           // $44,325
-      additionalChildAmount: 407200,      // $4,072
+      lowIncomeThreshold: 2630800, // $26,308
+      phaseInRange: 328800, // $3,288
+      familyThreshold: 4432500, // $44,325
+      additionalChildAmount: 407200, // $4,072
     },
 
     // ── Medicare Levy Surcharge Tiers (no PHI) ─────────────────────────
     medicareLevySurchargeTiers: [
-      { min: 9300000, max: 10800000, rate: 0.01 },   // $93K-$108K: 1%
+      { min: 9300000, max: 10800000, rate: 0.01 }, // $93K-$108K: 1%
       { min: 10800000, max: 14400000, rate: 0.0125 }, // $108K-$144K: 1.25%
-      { min: 14400000, max: null, rate: 0.015 },      // $144K+: 1.5%
+      { min: 14400000, max: null, rate: 0.015 }, // $144K+: 1.5%
     ],
 
     medicareLevySeniorSingleThreshold: 3845100, // $38,451
-    medicareLevyFamilyPerChild: 407200,          // $4,072
+    medicareLevyFamilyPerChild: 407200, // $4,072
 
     // ── HECS-HELP Repayment Thresholds ─────────────────────────────────
     hecsHelp: [
@@ -87,30 +87,30 @@ export async function seedTaxEngineRules(
       { min: 16645600, max: 18103999, rate: 0.085 },
       { min: 18104000, max: 19720999, rate: 0.09 },
       { min: 19721000, max: 21518599, rate: 0.095 },
-      { min: 21518600, max: null, rate: 0.10 },
+      { min: 21518600, max: null, rate: 0.1 },
     ],
 
     // ── LITO (Low Income Tax Offset) ───────────────────────────────────
     lito: {
-      maxOffset: 70000,          // $700
-      lowerThreshold: 3750000,   // $37,500
-      upperThreshold: 6625000,   // $66,250
-      reductionRate: 0.05,       // 5c per dollar over lower threshold
+      maxOffset: 70000, // $700
+      lowerThreshold: 3750000, // $37,500
+      upperThreshold: 6625000, // $66,250
+      reductionRate: 0.05, // 5c per dollar over lower threshold
     },
 
     // ── SAPTO (Seniors and Pensioners Tax Offset) ──────────────────────
     sapto: {
-      maxSingle: 244600,         // $2,446
-      maxCouple: 183200,         // $1,832 (each)
-      thresholdSingle: 3290000,  // $32,900
-      phaseOutRate: 0.125,       // 12.5c per dollar over threshold
+      maxSingle: 244600, // $2,446
+      maxCouple: 183200, // $1,832 (each)
+      thresholdSingle: 3290000, // $32,900
+      phaseOutRate: 0.125, // 12.5c per dollar over threshold
     },
 
     // ── CGT & Other ────────────────────────────────────────────────────
-    cgtDiscount: 0.50,
+    cgtDiscount: 0.5,
     instantAssetWriteOff: 2000000, // $20,000
-    superannuationRate: 0.115,     // 11.5% for FY2024-25
-    gstRate: 0.10,
+    superannuationRate: 0.115, // 11.5% for FY2024-25
+    gstRate: 0.1,
 
     // ── Provenance ─────────────────────────────────────────────────────
     legislationReference: 'Income Tax Rates Act 1986, Treasury Laws Amendment (Tax Cuts) 2024',

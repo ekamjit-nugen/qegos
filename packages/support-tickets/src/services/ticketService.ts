@@ -9,10 +9,7 @@ import type {
   MessageSenderType,
   ITicketMessage,
 } from '../types';
-import {
-  TICKET_STATUS_TRANSITIONS,
-  MAX_REOPENS,
-} from '../types';
+import { TICKET_STATUS_TRANSITIONS, MAX_REOPENS } from '../types';
 import {
   calculateSlaDeadline,
   calculateFirstResponseDeadline,
@@ -25,9 +22,7 @@ import {
 
 let TicketModel: Model<ISupportTicketDocument>;
 
-export function initTicketService(
-  ticketModel: Model<ISupportTicketDocument>,
-): void {
+export function initTicketService(ticketModel: Model<ISupportTicketDocument>): void {
   TicketModel = ticketModel;
 }
 
@@ -58,10 +53,10 @@ export async function createTicket(params: CreateTicketParams): Promise<ISupport
 
   // TKT-INV-02: block creating a staff_complaint pre-assigned to its subject.
   if (
-    params.category === 'staff_complaint'
-    && params.subjectStaffId
-    && params.assignedTo
-    && params.subjectStaffId.equals(params.assignedTo)
+    params.category === 'staff_complaint' &&
+    params.subjectStaffId &&
+    params.assignedTo &&
+    params.subjectStaffId.equals(params.assignedTo)
   ) {
     const err = new Error(
       'Cannot assign staff_complaint ticket to the staff member it is about',
@@ -83,13 +78,15 @@ export async function createTicket(params: CreateTicketParams): Promise<ISupport
     assignedTo: params.assignedTo,
     subjectStaffId: params.subjectStaffId,
     slaDeadline,
-    messages: [{
-      senderId: params.userId,
-      senderType: 'client' as MessageSenderType,
-      content: params.description,
-      isInternal: false,
-      createdAt: now,
-    }],
+    messages: [
+      {
+        senderId: params.userId,
+        senderType: 'client' as MessageSenderType,
+        content: params.description,
+        isInternal: false,
+        createdAt: now,
+      },
+    ],
   });
 
   return ticket;
@@ -102,7 +99,9 @@ export async function getTicket(
   options?: { filterInternal?: boolean },
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   // TKT-INV-03: Filter internal messages for clients
   if (options?.filterInternal) {
@@ -133,12 +132,24 @@ export async function listTickets(
   const { page = 1, limit = 20, filterInternal, ...filters } = params;
   const query: Record<string, unknown> = {};
 
-  if (filters.status) query.status = filters.status;
-  if (filters.category) query.category = filters.category;
-  if (filters.priority) query.priority = filters.priority;
-  if (filters.assignedTo) query.assignedTo = filters.assignedTo;
-  if (filters.userId) query.userId = filters.userId;
-  if (filters.slaBreached !== undefined) query.slaBreached = filters.slaBreached;
+  if (filters.status) {
+    query.status = filters.status;
+  }
+  if (filters.category) {
+    query.category = filters.category;
+  }
+  if (filters.priority) {
+    query.priority = filters.priority;
+  }
+  if (filters.assignedTo) {
+    query.assignedTo = filters.assignedTo;
+  }
+  if (filters.userId) {
+    query.userId = filters.userId;
+  }
+  if (filters.slaBreached !== undefined) {
+    query.slaBreached = filters.slaBreached;
+  }
 
   const [tickets, total] = await Promise.all([
     TicketModel.find(query)
@@ -165,11 +176,14 @@ export async function updateTicketStatus(
   newStatus: TicketStatus,
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   if (!isValidTransition(ticket.status, newStatus)) {
     const err = new Error(`Invalid transition: ${ticket.status} → ${newStatus}`) as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 400;
     err.code = 'INVALID_TRANSITION';
@@ -177,8 +191,12 @@ export async function updateTicketStatus(
   }
 
   ticket.status = newStatus;
-  if (newStatus === 'resolved') ticket.resolvedAt = new Date();
-  if (newStatus === 'closed') ticket.closedAt = new Date();
+  if (newStatus === 'resolved') {
+    ticket.resolvedAt = new Date();
+  }
+  if (newStatus === 'closed') {
+    ticket.closedAt = new Date();
+  }
 
   await ticket.save();
   return ticket;
@@ -191,14 +209,16 @@ export async function assignTicket(
   staffId: Types.ObjectId,
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   // TKT-INV-02: a staff_complaint must never be routed to the staff member
   // it is about. Enforced here — callers cannot forget.
   if (
-    ticket.category === 'staff_complaint'
-    && ticket.subjectStaffId
-    && ticket.subjectStaffId.equals(staffId)
+    ticket.category === 'staff_complaint' &&
+    ticket.subjectStaffId &&
+    ticket.subjectStaffId.equals(staffId)
   ) {
     const err = new Error(
       'Cannot assign staff_complaint ticket to the staff member it is about',
@@ -209,7 +229,9 @@ export async function assignTicket(
   }
 
   ticket.assignedTo = staffId;
-  if (ticket.status === 'open') ticket.status = 'assigned';
+  if (ticket.status === 'open') {
+    ticket.status = 'assigned';
+  }
 
   await ticket.save();
   return ticket;
@@ -228,7 +250,9 @@ export async function addMessage(
   },
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   ticket.messages.push({
     senderId: message.senderId,
@@ -256,7 +280,9 @@ export async function escalateTicket(
   reason: string,
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   ticket.status = 'escalated';
   ticket.escalatedTo = escalatedTo;
@@ -284,11 +310,14 @@ export async function resolveTicket(
   resolutionCategory: ResolutionCategory,
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   if (!isValidTransition(ticket.status, 'resolved')) {
     const err = new Error(`Cannot resolve ticket in ${ticket.status} status`) as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 400;
     err.code = 'INVALID_TRANSITION';
@@ -310,11 +339,14 @@ export async function reopenTicket(
   ticketId: Types.ObjectId,
 ): Promise<ISupportTicketDocument | null> {
   const ticket = await TicketModel.findById(ticketId);
-  if (!ticket) return null;
+  if (!ticket) {
+    return null;
+  }
 
   if (ticket.status !== 'resolved') {
     const err = new Error('Only resolved tickets can be reopened') as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 400;
     err.code = 'INVALID_TRANSITION';
@@ -322,8 +354,11 @@ export async function reopenTicket(
   }
 
   if (ticket.reopenCount >= MAX_REOPENS) {
-    const err = new Error(`Maximum reopens (${MAX_REOPENS}) reached. Please create a new ticket.`) as Error & {
-      statusCode: number; code: string;
+    const err = new Error(
+      `Maximum reopens (${MAX_REOPENS}) reached. Please create a new ticket.`,
+    ) as Error & {
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 400;
     err.code = 'MAX_REOPENS_REACHED';
@@ -374,9 +409,7 @@ export interface TicketStats {
 
 export async function getTicketStats(): Promise<TicketStats> {
   const [statusCounts, breachedCount, avgRes, avgSat, byCategory, byStaff] = await Promise.all([
-    TicketModel.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
+    TicketModel.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     TicketModel.countDocuments({ slaBreached: true }),
     TicketModel.aggregate([
       { $match: { resolvedAt: { $exists: true } } },
@@ -413,7 +446,11 @@ export async function getTicketStats(): Promise<TicketStats> {
 
   return {
     open: getStatusCount('open') + getStatusCount('assigned'),
-    inProgress: getStatusCount('in_progress') + getStatusCount('waiting_on_client') + getStatusCount('waiting_on_ato') + getStatusCount('escalated'),
+    inProgress:
+      getStatusCount('in_progress') +
+      getStatusCount('waiting_on_client') +
+      getStatusCount('waiting_on_ato') +
+      getStatusCount('escalated'),
     resolved: getStatusCount('resolved') + getStatusCount('closed'),
     breached: breachedCount,
     avgResolutionMinutes: avgRes[0] ? Math.round((avgRes[0].avg as number) / 60_000) : 0,

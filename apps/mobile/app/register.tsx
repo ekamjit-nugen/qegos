@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, TextInput, Button, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth/useAuth';
@@ -153,11 +147,7 @@ export default function RegisterScreen(): React.ReactNode {
           </Button>
         )}
 
-        <Button
-          mode="text"
-          onPress={() => router.push('/login')}
-          style={styles.linkButton}
-        >
+        <Button mode="text" onPress={() => router.push('/login')} style={styles.linkButton}>
           Already have an account? Sign In
         </Button>
       </ScrollView>

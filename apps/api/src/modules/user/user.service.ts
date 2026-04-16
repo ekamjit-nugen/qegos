@@ -30,7 +30,11 @@ export function createUserService(UserModel: Model<IUserDocument>): {
   listUsers: (query: UserListQuery) => Promise<UserListResult>;
   getUserById: (id: string, scopeFilter?: Record<string, unknown>) => Promise<IUserDocument>;
   createUser: (data: Partial<IUserDocument>) => Promise<IUserDocument>;
-  updateUser: (id: string, data: Partial<IUserDocument>, scopeFilter?: Record<string, unknown>) => Promise<IUserDocument>;
+  updateUser: (
+    id: string,
+    data: Partial<IUserDocument>,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<IUserDocument>;
   toggleStatus: (id: string, scopeFilter?: Record<string, unknown>) => Promise<IUserDocument>;
   softDelete: (id: string, scopeFilter?: Record<string, unknown>) => Promise<IUserDocument>;
   updateTfn: (userId: string, tfn: string) => Promise<void>;

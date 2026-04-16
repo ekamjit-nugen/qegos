@@ -29,7 +29,9 @@ export async function createInvoice(orderId: string): Promise<{
   xeroInvoiceNumber: string;
 }> {
   const order = await OrderModel.findById(orderId);
-  if (!order) throw AppError.notFound('Order');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
 
   // XRO-INV-04: Dual idempotency — check local first
   if (order.xeroInvoiceId) {
@@ -58,7 +60,9 @@ export async function createInvoice(orderId: string): Promise<{
     const result = await callXeroApi(async (accessToken, tenantId) => {
       // XRO-INV-04: Dual idempotency — search Xero by reference (orderNumber)
       const existingInvoice = await searchXeroInvoiceByReference(
-        accessToken, tenantId, order.orderNumber as string,
+        accessToken,
+        tenantId,
+        order.orderNumber as string,
       );
 
       if (existingInvoice) {
@@ -97,7 +101,7 @@ export async function createInvoice(orderId: string): Promise<{
         throw new Error(`Xero invoice creation failed: ${res.status} ${errBody}`);
       }
 
-      const data = await res.json() as {
+      const data = (await res.json()) as {
         Invoices: Array<{ InvoiceID: string; InvoiceNumber: string }>;
       };
       const invoice = data.Invoices[0];
@@ -120,7 +124,7 @@ export async function createInvoice(orderId: string): Promise<{
 
     return { xeroInvoiceId: result.invoiceId, xeroInvoiceNumber: result.invoiceNumber };
   } catch (err: unknown) {
-    syncLog.status = (err instanceof XeroOfflineError) ? 'queued' : 'failed';
+    syncLog.status = err instanceof XeroOfflineError ? 'queued' : 'failed';
     syncLog.error = (err as Error).message;
     await syncLog.save();
     throw err;
@@ -129,13 +133,14 @@ export async function createInvoice(orderId: string): Promise<{
 
 // ─── Void Invoice (XRO-INV-08) ──────────────────────────────────────────
 
-export async function voidInvoice(
-  orderId: string,
-  adminOverride = false,
-): Promise<void> {
+export async function voidInvoice(orderId: string, adminOverride = false): Promise<void> {
   const order = await OrderModel.findById(orderId);
-  if (!order) throw AppError.notFound('Order');
-  if (!order.xeroInvoiceId) throw AppError.badRequest('Order has no Xero invoice');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
+  if (!order.xeroInvoiceId) {
+    throw AppError.badRequest('Order has no Xero invoice');
+  }
 
   // XRO-INV-08: Void requires Order.status = 9 (Cancelled) or admin override
   if (order.status !== 9 && !adminOverride) {
@@ -154,22 +159,19 @@ export async function voidInvoice(
 
   try {
     await callXeroApi(async (accessToken, tenantId) => {
-      const res = await fetch(
-        `https://api.xero.com/api.xro/2.0/Invoices/${order.xeroInvoiceId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Xero-Tenant-Id': tenantId,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({
-            InvoiceID: order.xeroInvoiceId,
-            Status: 'VOIDED',
-          }),
+      const res = await fetch(`https://api.xero.com/api.xro/2.0/Invoices/${order.xeroInvoiceId}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Xero-Tenant-Id': tenantId,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
-      );
+        body: JSON.stringify({
+          InvoiceID: order.xeroInvoiceId,
+          Status: 'VOIDED',
+        }),
+      });
 
       if (!res.ok) {
         const errBody = await res.text();
@@ -181,7 +183,7 @@ export async function voidInvoice(
     syncLog.processedAt = new Date();
     await syncLog.save();
   } catch (err: unknown) {
-    syncLog.status = (err instanceof XeroOfflineError) ? 'queued' : 'failed';
+    syncLog.status = err instanceof XeroOfflineError ? 'queued' : 'failed';
     syncLog.error = (err as Error).message;
     await syncLog.save();
     throw err;
@@ -195,7 +197,9 @@ export async function adjustInvoice(orderId: string): Promise<{
   xeroInvoiceNumber: string;
 }> {
   const order = await OrderModel.findById(orderId);
-  if (!order) throw AppError.notFound('Order');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
 
   if (order.xeroInvoiceId) {
     // Void existing invoice first
@@ -215,7 +219,9 @@ export async function bulkSyncInvoices(): Promise<{ synced: number; failed: numb
   const orders = await OrderModel.find({
     xeroInvoiceId: { $exists: false },
     status: { $gte: 4 }, // In Progress or later
-  }).select('_id').lean();
+  })
+    .select('_id')
+    .lean();
 
   let synced = 0;
   let failed = 0;
@@ -251,9 +257,11 @@ async function searchXeroInvoiceByReference(
     },
   );
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return null;
+  }
 
-  const data = await res.json() as { Invoices: Array<Record<string, unknown>> };
+  const data = (await res.json()) as { Invoices: Array<Record<string, unknown>> };
   return data.Invoices?.[0] ?? null;
 }
 

@@ -35,7 +35,9 @@ export async function getUpcomingDeadlines(
   const now = new Date();
 
   const applicableFilter: string[] = ['all_clients'];
-  if (userType) applicableFilter.push(userType);
+  if (userType) {
+    applicableFilter.push(userType);
+  }
 
   // Pull a larger-than-needed window so we can drop already-filed FYs and
   // still return `limit` items. Tax deadlines are org-wide, but once the
@@ -50,7 +52,9 @@ export async function getUpcomingDeadlines(
     .limit(10)
     .lean()) as unknown as ITaxDeadlineDocument[];
 
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) {
+    return [];
+  }
 
   const financialYears = Array.from(
     new Set(candidates.map((d) => d.financialYear).filter(Boolean)),
@@ -63,13 +67,9 @@ export async function getUpcomingDeadlines(
     .select('financialYear')
     .lean<Array<{ financialYear?: string }>>();
 
-  const filedFys = new Set(
-    filedOrders.map((o) => o.financialYear).filter(Boolean) as string[],
-  );
+  const filedFys = new Set(filedOrders.map((o) => o.financialYear).filter(Boolean) as string[]);
 
-  return candidates
-    .filter((d) => !filedFys.has(d.financialYear))
-    .slice(0, 3);
+  return candidates.filter((d) => !filedFys.has(d.financialYear)).slice(0, 3);
 }
 
 // ─── List Deadlines ─────────────────────────────────────────────────────────
@@ -89,19 +89,23 @@ export async function listDeadlines(
   const { financialYear, type, applicableTo, isActive, page = 1, limit = 20 } = params;
 
   const filter: Record<string, unknown> = {};
-  if (financialYear) filter.financialYear = financialYear;
-  if (type) filter.type = type;
-  if (applicableTo) filter.applicableTo = applicableTo;
-  if (isActive !== undefined) filter.isActive = isActive;
+  if (financialYear) {
+    filter.financialYear = financialYear;
+  }
+  if (type) {
+    filter.type = type;
+  }
+  if (applicableTo) {
+    filter.applicableTo = applicableTo;
+  }
+  if (isActive !== undefined) {
+    filter.isActive = isActive;
+  }
 
   const skip = (page - 1) * limit;
 
   const [deadlines, total] = await Promise.all([
-    TaxDeadlineModel.find(filter)
-      .sort({ deadlineDate: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    TaxDeadlineModel.find(filter).sort({ deadlineDate: 1 }).skip(skip).limit(limit).lean(),
     TaxDeadlineModel.countDocuments(filter),
   ]);
 
@@ -123,7 +127,9 @@ export async function updateDeadline(
   data: Partial<ITaxDeadlineDocument>,
 ): Promise<ITaxDeadlineDocument> {
   const deadline = await TaxDeadlineModel.findByIdAndUpdate(id, data, { new: true });
-  if (!deadline) throw AppError.notFound('Tax deadline');
+  if (!deadline) {
+    throw AppError.notFound('Tax deadline');
+  }
   return deadline;
 }
 
@@ -178,7 +184,9 @@ export async function processReminders(): Promise<number> {
           financialYear: deadline.financialYear,
         }).lean();
 
-        if (filedOrder) continue;
+        if (filedOrder) {
+          continue;
+        }
 
         // CAL-INV-03: Dedup via unique index
         try {
@@ -193,7 +201,9 @@ export async function processReminders(): Promise<number> {
           // In production: emit notification event here
         } catch (err: unknown) {
           // Duplicate key error (E11000) = already sent, skip
-          if ((err as { code?: number }).code === 11000) continue;
+          if ((err as { code?: number }).code === 11000) {
+            continue;
+          }
           throw err;
         }
       }
@@ -241,7 +251,9 @@ export function isAustralianPublicHoliday(date: Date, _state?: AustralianState):
 
   // Check fixed federal holidays
   for (const holiday of FEDERAL_HOLIDAYS_FIXED) {
-    if (holiday.month === month && holiday.day === day) return true;
+    if (holiday.month === month && holiday.day === day) {
+      return true;
+    }
   }
 
   // Easter calculation (Anonymous Gregorian algorithm)
@@ -262,10 +274,7 @@ export function isAustralianPublicHoliday(date: Date, _state?: AustralianState):
 
   const easterDates = [goodFriday, easterSaturday, easter, easterMonday];
   for (const ed of easterDates) {
-    if (
-      ed.getUTCMonth() === date.getUTCMonth() &&
-      ed.getUTCDate() === date.getUTCDate()
-    ) {
+    if (ed.getUTCMonth() === date.getUTCMonth() && ed.getUTCDate() === date.getUTCDate()) {
       return true;
     }
   }

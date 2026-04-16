@@ -38,7 +38,9 @@ export async function createMessages(
     mergeData?: Record<string, string>;
   }>,
 ): Promise<number> {
-  if (messages.length === 0) return 0;
+  if (messages.length === 0) {
+    return 0;
+  }
 
   const docs = messages.map((m) => ({
     campaignId,
@@ -67,7 +69,14 @@ export async function getQueuedMessages(
 export async function updateMessageStatus(
   messageId: Types.ObjectId,
   status: MessageStatus,
-  extra?: { gatewayId?: string; error?: string; sentAt?: Date; deliveredAt?: Date; openedAt?: Date; clickedAt?: Date },
+  extra?: {
+    gatewayId?: string;
+    error?: string;
+    sentAt?: Date;
+    deliveredAt?: Date;
+    openedAt?: Date;
+    clickedAt?: Date;
+  },
 ): Promise<void> {
   await MessageModel.findByIdAndUpdate(messageId, {
     $set: { status, ...extra },
@@ -79,10 +88,7 @@ export async function updateMessageByGatewayId(
   status: MessageStatus,
   extra?: { deliveredAt?: Date; openedAt?: Date; clickedAt?: Date; error?: string },
 ): Promise<void> {
-  await MessageModel.findOneAndUpdate(
-    { gatewayId },
-    { $set: { status, ...extra } },
-  );
+  await MessageModel.findOneAndUpdate({ gatewayId }, { $set: { status, ...extra } });
 }
 
 // ─── Bounce Handling (BRC-INV-04) ────────────────────────────────────────────
@@ -96,12 +102,16 @@ export async function handleBounce(
   bounceType: 'hard' | 'soft' | 'complaint',
 ): Promise<void> {
   const message = await MessageModel.findOne({ gatewayId });
-  if (!message) return;
+  if (!message) {
+    return;
+  }
 
   await updateMessageStatus(message._id, 'bounced');
 
   const contact = message.recipientEmail ?? message.recipientMobile;
-  if (!contact) return;
+  if (!contact) {
+    return;
+  }
 
   if (bounceType === 'hard') {
     // Immediate DND for this channel
@@ -136,10 +146,7 @@ export async function handleBounce(
   } else {
     // Soft bounce — check if 3x for this contact
     const softBounceCount = await MessageModel.countDocuments({
-      $or: [
-        { recipientEmail: contact },
-        { recipientMobile: contact },
-      ],
+      $or: [{ recipientEmail: contact }, { recipientMobile: contact }],
       status: 'bounced',
     });
 
@@ -170,7 +177,9 @@ export async function getCampaignStats(campaignId: Types.ObjectId): Promise<Camp
       $group: {
         _id: null,
         total: { $sum: 1 },
-        sent: { $sum: { $cond: [{ $in: ['$status', ['sent', 'delivered', 'opened', 'clicked']] }, 1, 0] } },
+        sent: {
+          $sum: { $cond: [{ $in: ['$status', ['sent', 'delivered', 'opened', 'clicked']] }, 1, 0] },
+        },
         delivered: { $sum: { $cond: [{ $eq: ['$status', 'delivered'] }, 1, 0] } },
         failed: { $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } },
         bounced: { $sum: { $cond: [{ $eq: ['$status', 'bounced'] }, 1, 0] } },
@@ -185,10 +194,18 @@ export async function getCampaignStats(campaignId: Types.ObjectId): Promise<Camp
 
   if (!result) {
     return {
-      totalRecipients: 0, sentCount: 0, deliveredCount: 0,
-      failedCount: 0, bouncedCount: 0, openCount: 0,
-      clickCount: 0, optOutCount: 0,
-      deliveryRate: 0, openRate: 0, clickRate: 0, optOutRate: 0,
+      totalRecipients: 0,
+      sentCount: 0,
+      deliveredCount: 0,
+      failedCount: 0,
+      bouncedCount: 0,
+      openCount: 0,
+      clickCount: 0,
+      optOutCount: 0,
+      deliveryRate: 0,
+      openRate: 0,
+      clickRate: 0,
+      optOutRate: 0,
     };
   }
 
@@ -237,7 +254,9 @@ export async function getMessageLog(
   statusFilter?: MessageStatus,
 ): Promise<{ messages: IBroadcastMessageDocument[]; total: number }> {
   const query: Record<string, unknown> = { campaignId };
-  if (statusFilter) query.status = statusFilter;
+  if (statusFilter) {
+    query.status = statusFilter;
+  }
 
   const [messages, total] = await Promise.all([
     MessageModel.find(query)

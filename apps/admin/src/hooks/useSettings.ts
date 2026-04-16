@@ -17,9 +17,7 @@ export function useSettings(): ReturnType<typeof useQuery<Setting[]>> {
   return useQuery({
     queryKey: ['admin', 'settings'],
     queryFn: async () => {
-      const res = await api.get<{ status: number; data: { settings: Setting[] } }>(
-        '/settings',
-      );
+      const res = await api.get<{ status: number; data: { settings: Setting[] } }>('/settings');
       return res.data.data.settings;
     },
   });

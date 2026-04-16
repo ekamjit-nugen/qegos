@@ -118,9 +118,7 @@ export async function getCollectionRate(
   const avgDaysToPayment = Math.round(collected[0]?.avgDays ?? 0);
   const outstandingReceivablesCents = pending[0]?.outstandingCents ?? 0;
 
-  const onTimeRate = totalInvoicedCents > 0
-    ? totalCollectedCents / totalInvoicedCents
-    : 0;
+  const onTimeRate = totalInvoicedCents > 0 ? totalCollectedCents / totalInvoicedCents : 0;
 
   return {
     onTimeRate: Math.min(onTimeRate, 1),

@@ -17,7 +17,13 @@
     "express-validator": "^7.0.0",
     "mongoose": "^8.0.0"
   },
-  "keywords": ["nugen", "file-storage", "s3", "vault", "virus-scan"],
+  "keywords": [
+    "nugen",
+    "file-storage",
+    "s3",
+    "vault",
+    "virus-scan"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

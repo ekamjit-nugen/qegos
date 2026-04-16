@@ -67,10 +67,11 @@ class QueryProfileStore {
     if (profile.durationMs >= this.config.slowThresholdMs) {
       if (this.config.logToConsole) {
         const scanWarning = profile.isCollScan ? ' ⚠ COLLSCAN' : '';
-        console.warn( // eslint-disable-line no-console
+        console.warn(
+          // eslint-disable-line no-console
           `[slow-query] ${profile.collection}.${profile.operation} ` +
-          `${profile.durationMs}ms (examined: ${profile.docsExamined}, ` +
-          `returned: ${profile.docsReturned})${scanWarning}`,
+            `${profile.durationMs}ms (examined: ${profile.docsExamined}, ` +
+            `returned: ${profile.docsReturned})${scanWarning}`,
         );
         if (profile.filter) {
           console.warn('[slow-query] filter:', JSON.stringify(profile.filter)); // eslint-disable-line no-console
@@ -107,27 +108,29 @@ class QueryProfileStore {
   }> {
     const byCollection = new Map<string, QueryProfile[]>();
     for (const p of this.profiles) {
-      if (!byCollection.has(p.collection)) byCollection.set(p.collection, []);
+      if (!byCollection.has(p.collection)) {
+        byCollection.set(p.collection, []);
+      }
       byCollection.get(p.collection)!.push(p);
     }
 
-    return [...byCollection.entries()].map(([collection, profiles]) => ({
-      collection,
-      queryCount: profiles.length,
-      avgMs: Math.round(profiles.reduce((s, p) => s + p.durationMs, 0) / profiles.length),
-      maxMs: Math.max(...profiles.map((p) => p.durationMs)),
-      collScans: profiles.filter((p) => p.isCollScan).length,
-      slowQueries: profiles.filter((p) => p.durationMs >= this.config.slowThresholdMs).length,
-    })).sort((a, b) => b.maxMs - a.maxMs);
+    return [...byCollection.entries()]
+      .map(([collection, profiles]) => ({
+        collection,
+        queryCount: profiles.length,
+        avgMs: Math.round(profiles.reduce((s, p) => s + p.durationMs, 0) / profiles.length),
+        maxMs: Math.max(...profiles.map((p) => p.durationMs)),
+        collScans: profiles.filter((p) => p.isCollScan).length,
+        slowQueries: profiles.filter((p) => p.durationMs >= this.config.slowThresholdMs).length,
+      }))
+      .sort((a, b) => b.maxMs - a.maxMs);
   }
 
   /**
    * Get the N slowest queries overall.
    */
   getSlowest(n: number = 10): QueryProfile[] {
-    return [...this.profiles]
-      .sort((a, b) => b.durationMs - a.durationMs)
-      .slice(0, n);
+    return [...this.profiles].sort((a, b) => b.durationMs - a.durationMs).slice(0, n);
   }
 
   /**
@@ -161,24 +164,27 @@ export function enableQueryProfiler(
   store = new QueryProfileStore(config);
 
   // Hook into Mongoose debug mode for query timing
-  connection.set('debug', (collectionName: string, methodName: string, ...methodArgs: unknown[]) => {
-    // We can't intercept the actual completion, but we can log the query start.
-    // For actual timing, use MongoDB profiler or Mongoose plugins.
-    const filter = (methodArgs[0] as Record<string, unknown>) ?? {};
+  connection.set(
+    'debug',
+    (collectionName: string, methodName: string, ...methodArgs: unknown[]) => {
+      // We can't intercept the actual completion, but we can log the query start.
+      // For actual timing, use MongoDB profiler or Mongoose plugins.
+      const filter = (methodArgs[0] as Record<string, unknown>) ?? {};
 
-    // Record with estimated timing (debug callback fires at query start)
-    // For accurate timing, use the Mongoose plugin approach below
-    store!.add({
-      collection: collectionName,
-      operation: methodName,
-      durationMs: 0, // Will be populated by plugin
-      filter: typeof filter === 'object' ? filter : undefined,
-      docsExamined: 0,
-      docsReturned: 0,
-      isCollScan: false,
-      timestamp: new Date(),
-    });
-  });
+      // Record with estimated timing (debug callback fires at query start)
+      // For accurate timing, use the Mongoose plugin approach below
+      store!.add({
+        collection: collectionName,
+        operation: methodName,
+        durationMs: 0, // Will be populated by plugin
+        filter: typeof filter === 'object' ? filter : undefined,
+        docsExamined: 0,
+        docsReturned: 0,
+        isCollScan: false,
+        timestamp: new Date(),
+      });
+    },
+  );
 
   return store;
 }
@@ -251,7 +257,9 @@ export function queryTimingPlugin(schema: import('mongoose').Schema): void {
       const docs = Array.isArray(result) ? result.length : 0;
 
       store.add({
-        collection: (this as unknown as { _model: { collection: { name: string } } })._model?.collection?.name ?? 'unknown',
+        collection:
+          (this as unknown as { _model: { collection: { name: string } } })._model?.collection
+            ?.name ?? 'unknown',
         operation: 'aggregate',
         durationMs: duration,
         filter: firstMatch?.$match as Record<string, unknown> | undefined,
@@ -287,7 +295,9 @@ export async function explainQuery(
     indexEfficiency: number;
   };
 }> {
-  if (!connection.db) throw new Error('No active database connection');
+  if (!connection.db) {
+    throw new Error('No active database connection');
+  }
   const col = connection.db.collection(collection);
 
   let cursor = col.find(filter);
@@ -295,16 +305,19 @@ export async function explainQuery(
     cursor = cursor.sort(sort as Record<string, 1 | -1>);
   }
 
-  const explanation = await cursor.explain('executionStats') as Record<string, unknown>;
-  const stats = explanation.executionStats as Record<string, unknown> ?? {};
-  const queryPlanner = explanation.queryPlanner as Record<string, unknown> ?? {};
-  const winningPlan = queryPlanner.winningPlan as Record<string, unknown> ?? {};
+  const explanation = (await cursor.explain('executionStats')) as Record<string, unknown>;
+  const stats = (explanation.executionStats as Record<string, unknown>) ?? {};
+  const queryPlanner = (explanation.queryPlanner as Record<string, unknown>) ?? {};
+  const winningPlan = (queryPlanner.winningPlan as Record<string, unknown>) ?? {};
 
   // Extract plan type
   const planStage = (winningPlan.stage as string) ?? 'UNKNOWN';
   const inputStage = winningPlan.inputStage as Record<string, unknown> | undefined;
   const isCollScan = planStage === 'COLLSCAN' || inputStage?.stage === 'COLLSCAN';
-  const indexName = (inputStage?.indexName as string) ?? (inputStage?.inputStage as Record<string, unknown>)?.indexName as string ?? null;
+  const indexName =
+    (inputStage?.indexName as string) ??
+    ((inputStage?.inputStage as Record<string, unknown>)?.indexName as string) ??
+    null;
 
   const nReturned = (stats.nReturned as number) ?? 0;
   const totalDocsExamined = (stats.totalDocsExamined as number) ?? 0;
@@ -312,9 +325,8 @@ export async function explainQuery(
   const executionTimeMs = (stats.executionTimeMillis as number) ?? 0;
 
   // Index efficiency: ratio of returned docs to examined docs (1.0 = perfect)
-  const indexEfficiency = totalDocsExamined > 0
-    ? Math.round((nReturned / totalDocsExamined) * 100) / 100
-    : 1;
+  const indexEfficiency =
+    totalDocsExamined > 0 ? Math.round((nReturned / totalDocsExamined) * 100) / 100 : 1;
 
   return {
     queryPlanner: {
@@ -336,22 +348,25 @@ export async function explainQuery(
  * Analyze all analytics query patterns against explain plans.
  * Returns a report of which queries use indexes efficiently.
  */
-export async function analyzeAnalyticsQueries(
-  connection: Connection,
-): Promise<Array<{
-  name: string;
-  collection: string;
-  filter: Record<string, unknown>;
-  indexUsed: string | null;
-  isCollScan: boolean;
-  efficiency: number;
-  recommendation?: string;
-}>> {
+export async function analyzeAnalyticsQueries(connection: Connection): Promise<
+  Array<{
+    name: string;
+    collection: string;
+    filter: Record<string, unknown>;
+    indexUsed: string | null;
+    isCollScan: boolean;
+    efficiency: number;
+    recommendation?: string;
+  }>
+> {
   const queries = [
     {
       name: 'Revenue by period',
       collection: 'payments',
-      filter: { status: { $in: ['succeeded', 'captured'] }, createdAt: { $gte: new Date('2025-01-01') } },
+      filter: {
+        status: { $in: ['succeeded', 'captured'] },
+        createdAt: { $gte: new Date('2025-01-01') },
+      },
     },
     {
       name: 'CLV by user',
@@ -366,12 +381,19 @@ export async function analyzeAnalyticsQueries(
     {
       name: 'Staff benchmark (orders)',
       collection: 'orders',
-      filter: { status: { $in: [6, 7, 8] }, isDeleted: { $ne: true }, processingBy: { $exists: true } },
+      filter: {
+        status: { $in: [6, 7, 8] },
+        isDeleted: { $ne: true },
+        processingBy: { $exists: true },
+      },
     },
     {
       name: 'Staff benchmark (activities)',
       collection: 'leadactivities',
-      filter: { type: { $in: ['phone_call_outbound', 'email_sent'] }, createdAt: { $gte: new Date('2025-01-01') } },
+      filter: {
+        type: { $in: ['phone_call_outbound', 'email_sent'] },
+        createdAt: { $gte: new Date('2025-01-01') },
+      },
     },
     {
       name: 'Churn risk',
@@ -381,7 +403,11 @@ export async function analyzeAnalyticsQueries(
     {
       name: 'Service mix',
       collection: 'orders',
-      filter: { status: { $ne: 9 }, isDeleted: { $ne: true }, createdAt: { $gte: new Date('2025-01-01') } },
+      filter: {
+        status: { $ne: 9 },
+        isDeleted: { $ne: true },
+        createdAt: { $gte: new Date('2025-01-01') },
+      },
     },
     {
       name: 'Collection rate (pending)',

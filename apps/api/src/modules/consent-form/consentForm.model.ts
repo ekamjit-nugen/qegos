@@ -111,8 +111,6 @@ const consentFormSchema = new Schema<IConsentFormDocument>(
   },
 );
 
-export function createConsentFormModel(
-  connection: Connection,
-): Model<IConsentFormDocument> {
+export function createConsentFormModel(connection: Connection): Model<IConsentFormDocument> {
   return connection.model<IConsentFormDocument>('ConsentForm', consentFormSchema);
 }

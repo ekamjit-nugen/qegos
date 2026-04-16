@@ -1,7 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Row, Col, Card, Descriptions, Tag, Spin, Empty, Form, Input, Select, Switch, Button, App } from 'antd';
+import {
+  Row,
+  Col,
+  Card,
+  Descriptions,
+  Tag,
+  Spin,
+  Empty,
+  Form,
+  Input,
+  Select,
+  Switch,
+  Button,
+  App,
+} from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { DEADLINE_TYPE_LABELS } from '@/types/taxCalendar';
 import { useTaxDeadline, useUpdateTaxDeadline } from '@/hooks/useTaxCalendar';
@@ -33,8 +47,12 @@ export function TaxDeadlineDetailPage({ id }: { id: string }): React.ReactNode {
     }
   }, [deadline, form]);
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!deadline) { return <Empty description="Deadline not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!deadline) {
+    return <Empty description="Deadline not found" />;
+  }
 
   const handleSubmit = async (): Promise<void> => {
     const values = await form.validateFields();
@@ -59,16 +77,26 @@ export function TaxDeadlineDetailPage({ id }: { id: string }): React.ReactNode {
           <Card title="Deadline Details" style={{ marginBottom: 16 }}>
             <Descriptions column={{ xs: 1, sm: 2 }} size="small">
               <Descriptions.Item label="Title">{deadline.title}</Descriptions.Item>
-              <Descriptions.Item label="Description">{deadline.description ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="Deadline Date">{formatDate(deadline.deadlineDate)}</Descriptions.Item>
-              <Descriptions.Item label="Type">{DEADLINE_TYPE_LABELS[deadline.type] ?? deadline.type}</Descriptions.Item>
+              <Descriptions.Item label="Description">
+                {deadline.description ?? '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Deadline Date">
+                {formatDate(deadline.deadlineDate)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Type">
+                {DEADLINE_TYPE_LABELS[deadline.type] ?? deadline.type}
+              </Descriptions.Item>
               <Descriptions.Item label="Applicable To">{deadline.applicableTo}</Descriptions.Item>
               <Descriptions.Item label="Financial Year">{deadline.financialYear}</Descriptions.Item>
               <Descriptions.Item label="Recurring">
-                <Tag color={deadline.isRecurring ? 'blue' : 'default'}>{deadline.isRecurring ? 'Yes' : 'No'}</Tag>
+                <Tag color={deadline.isRecurring ? 'blue' : 'default'}>
+                  {deadline.isRecurring ? 'Yes' : 'No'}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Active">
-                <Tag color={deadline.isActive ? 'green' : 'red'}>{deadline.isActive ? 'Yes' : 'No'}</Tag>
+                <Tag color={deadline.isActive ? 'green' : 'red'}>
+                  {deadline.isActive ? 'Yes' : 'No'}
+                </Tag>
               </Descriptions.Item>
             </Descriptions>
           </Card>
@@ -77,12 +105,20 @@ export function TaxDeadlineDetailPage({ id }: { id: string }): React.ReactNode {
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="title" label="Title" rules={[{ required: true, message: 'Title is required' }]}>
+                  <Form.Item
+                    name="title"
+                    label="Title"
+                    rules={[{ required: true, message: 'Title is required' }]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="type" label="Type" rules={[{ required: true, message: 'Type is required' }]}>
+                  <Form.Item
+                    name="type"
+                    label="Type"
+                    rules={[{ required: true, message: 'Type is required' }]}
+                  >
                     <Select options={deadlineTypeOptions} />
                   </Form.Item>
                 </Col>
@@ -92,7 +128,11 @@ export function TaxDeadlineDetailPage({ id }: { id: string }): React.ReactNode {
               </Form.Item>
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="deadlineDate" label="Deadline Date" rules={[{ required: true, message: 'Date is required' }]}>
+                  <Form.Item
+                    name="deadlineDate"
+                    label="Deadline Date"
+                    rules={[{ required: true, message: 'Date is required' }]}
+                  >
                     <Input type="date" />
                   </Form.Item>
                 </Col>
@@ -121,7 +161,12 @@ export function TaxDeadlineDetailPage({ id }: { id: string }): React.ReactNode {
                   </Form.Item>
                 </Col>
               </Row>
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={updateDeadline.isPending}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SaveOutlined />}
+                loading={updateDeadline.isPending}
+              >
                 Save Changes
               </Button>
             </Form>
@@ -132,18 +177,25 @@ export function TaxDeadlineDetailPage({ id }: { id: string }): React.ReactNode {
         <Col xs={24} lg={8}>
           <Card title="Status" style={{ marginBottom: 16 }}>
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
-              <Tag color={deadline.isActive ? 'green' : 'red'} style={{ fontSize: 16, padding: '4px 16px' }}>
+              <Tag
+                color={deadline.isActive ? 'green' : 'red'}
+                style={{ fontSize: 16, padding: '4px 16px' }}
+              >
                 {deadline.isActive ? 'Active' : 'Inactive'}
               </Tag>
             </div>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Notifications Sent">{deadline.notificationsSent ?? 0}</Descriptions.Item>
+              <Descriptions.Item label="Notifications Sent">
+                {deadline.notificationsSent ?? 0}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
           <Card title="Timeline" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(deadline.createdAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(deadline.createdAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

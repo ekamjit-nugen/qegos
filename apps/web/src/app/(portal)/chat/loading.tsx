@@ -43,7 +43,7 @@ export default function ChatLoading(): React.ReactNode {
               <Skeleton.Button
                 active
                 style={{
-                  width: 160 + (i * 25),
+                  width: 160 + i * 25,
                   height: 36,
                   borderRadius: 12,
                 }}

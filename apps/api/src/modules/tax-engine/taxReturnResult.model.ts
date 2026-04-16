@@ -155,7 +155,10 @@ taxReturnResultSchema.pre('save', function (next) {
 
 // ─── Soft-delete query middleware ─────────────────────────────────────────────
 
-function applySoftDeleteFilter(this: { getFilter(): Record<string, unknown>; setQuery(filter: Record<string, unknown>): void }): void {
+function applySoftDeleteFilter(this: {
+  getFilter(): Record<string, unknown>;
+  setQuery(filter: Record<string, unknown>): void;
+}): void {
   const filter = this.getFilter();
   if (filter['isDeleted'] === undefined) {
     this.setQuery({ ...filter, isDeleted: { $ne: true } });
@@ -168,7 +171,9 @@ taxReturnResultSchema.pre('countDocuments', applySoftDeleteFilter);
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
-export function createTaxReturnResultModel(connection: Connection): Model<ITaxReturnResultDocument> {
+export function createTaxReturnResultModel(
+  connection: Connection,
+): Model<ITaxReturnResultDocument> {
   if (connection.models['TaxReturnResult']) {
     return connection.models['TaxReturnResult'] as Model<ITaxReturnResultDocument>;
   }

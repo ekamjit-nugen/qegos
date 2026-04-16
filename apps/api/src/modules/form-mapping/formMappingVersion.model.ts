@@ -54,10 +54,7 @@ const formMappingVersionSchema = new Schema<IFormMappingVersionDocument>(
 );
 
 // Version numbers are unique per parent mapping
-formMappingVersionSchema.index(
-  { mappingId: 1, version: 1 },
-  { unique: true },
-);
+formMappingVersionSchema.index({ mappingId: 1, version: 1 }, { unique: true });
 
 // Fast lookup of the (single) draft per parent
 formMappingVersionSchema.index({ mappingId: 1, status: 1 });
@@ -81,11 +78,7 @@ formMappingVersionSchema.index(
  */
 formMappingVersionSchema.pre('save', function (next) {
   if (!this.isNew && this.status === 'published') {
-    if (
-      this.isModified('jsonSchema') ||
-      this.isModified('uiOrder') ||
-      this.isModified('version')
-    ) {
+    if (this.isModified('jsonSchema') || this.isModified('uiOrder') || this.isModified('version')) {
       const err = new Error(
         'Cannot modify jsonSchema/uiOrder/version of a published form mapping version. Fork a new draft instead.',
       );

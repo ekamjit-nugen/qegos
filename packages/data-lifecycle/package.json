@@ -14,7 +14,14 @@
     "express-validator": "^7.0.0",
     "mongoose": "^8.4.4"
   },
-  "keywords": ["nugen", "data-lifecycle", "privacy", "erasure", "export", "gdpr"],
+  "keywords": [
+    "nugen",
+    "data-lifecycle",
+    "privacy",
+    "erasure",
+    "export",
+    "gdpr"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

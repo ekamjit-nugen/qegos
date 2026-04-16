@@ -53,20 +53,19 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }): 
     setRefreshKey((k) => k + 1);
   }, []);
 
-  const value = useMemo<AnalyticsContextValue>(() => ({
-    filters: { dateFrom, dateTo, granularity },
-    setDateRange,
-    setGranularity,
-    financialYear: getCurrentFY(),
-    refreshKey,
-    refresh,
-  }), [dateFrom, dateTo, granularity, refreshKey, setDateRange, refresh]);
-
-  return (
-    <AnalyticsContext.Provider value={value}>
-      {children}
-    </AnalyticsContext.Provider>
+  const value = useMemo<AnalyticsContextValue>(
+    () => ({
+      filters: { dateFrom, dateTo, granularity },
+      setDateRange,
+      setGranularity,
+      financialYear: getCurrentFY(),
+      refreshKey,
+      refresh,
+    }),
+    [dateFrom, dateTo, granularity, refreshKey, setDateRange, refresh],
   );
+
+  return <AnalyticsContext.Provider value={value}>{children}</AnalyticsContext.Provider>;
 }
 
 export function useAnalyticsContext(): AnalyticsContextValue {

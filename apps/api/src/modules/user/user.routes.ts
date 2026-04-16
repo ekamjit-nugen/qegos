@@ -58,9 +58,17 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
       const { userId } = (req as AuthenticatedRequest).user;
       // Only allow safe self-editable fields
       const allowedFields = [
-        'firstName', 'lastName', 'email', 'mobile', 'address',
-        'dateOfBirth', 'gender', 'maritalStatus', 'preferredLanguage',
-        'preferredContact', 'timezone',
+        'firstName',
+        'lastName',
+        'email',
+        'mobile',
+        'address',
+        'dateOfBirth',
+        'gender',
+        'maritalStatus',
+        'preferredLanguage',
+        'preferredContact',
+        'timezone',
       ];
       const updates: Record<string, unknown> = {};
       for (const field of allowedFields) {
@@ -92,7 +100,7 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const result = await service.listUsers({
-        ...req.query as Record<string, string>,
+        ...(req.query as Record<string, string>),
         scopeFilter: authReq.scopeFilter,
       });
       res.status(200).json({
@@ -126,11 +134,7 @@ export function createUserRoutes(deps: UserRouteDeps): Router {
     '/',
     auth() as never,
     check('users', 'create') as never,
-    ...validate([
-      requiredString('firstName'),
-      requiredString('lastName'),
-      email(),
-    ]),
+    ...validate([requiredString('firstName'), requiredString('lastName'), email()]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const body = req.body as Record<string, unknown>;

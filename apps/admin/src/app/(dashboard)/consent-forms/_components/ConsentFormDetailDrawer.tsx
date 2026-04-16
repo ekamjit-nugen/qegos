@@ -27,11 +27,7 @@ interface ConsentFormDetailDrawerProps {
 
 function masked(last4: string | undefined): React.ReactNode {
   if (!last4) return <Text type="secondary">—</Text>;
-  return (
-    <Text code>
-      •••• {last4}
-    </Text>
-  );
+  return <Text code>•••• {last4}</Text>;
 }
 
 function formatDate(val: string | undefined): string {
@@ -43,10 +39,7 @@ function formatDate(val: string | undefined): string {
   }
 }
 
-function renderDoc(
-  url: string | undefined,
-  label: string,
-): React.ReactNode {
+function renderDoc(url: string | undefined, label: string): React.ReactNode {
   if (!url) return <Text type="secondary">—</Text>;
   return (
     <AntLink href={url} target="_blank" rel="noopener noreferrer">
@@ -99,13 +92,7 @@ function SubmissionView({ data }: { data: ConsentFormSubmission }): React.ReactN
         style={{ marginBottom: 16 }}
       />
 
-      <Descriptions
-        title="Identity"
-        bordered
-        column={1}
-        size="small"
-        style={{ marginBottom: 16 }}
-      >
+      <Descriptions title="Identity" bordered column={1} size="small" style={{ marginBottom: 16 }}>
         <Descriptions.Item label="Reference">{data._id}</Descriptions.Item>
         <Descriptions.Item label="User ID">{data.userId}</Descriptions.Item>
         <Descriptions.Item label="Submitted">{formatDate(data.submittedAt)}</Descriptions.Item>
@@ -125,13 +112,7 @@ function SubmissionView({ data }: { data: ConsentFormSubmission }): React.ReactN
         </Descriptions.Item>
       </Descriptions>
 
-      <Descriptions
-        title="Address"
-        bordered
-        column={1}
-        size="small"
-        style={{ marginBottom: 16 }}
-      >
+      <Descriptions title="Address" bordered column={1} size="small" style={{ marginBottom: 16 }}>
         <Descriptions.Item label="House / unit">{data.houseNumber}</Descriptions.Item>
         <Descriptions.Item label="Street">{data.streetName}</Descriptions.Item>
         <Descriptions.Item label="Suburb / city">{data.city}</Descriptions.Item>

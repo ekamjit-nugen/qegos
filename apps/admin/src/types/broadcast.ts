@@ -137,9 +137,9 @@ export interface CreateTemplateInput {
   body: string;
 }
 
-export type UpdateTemplateInput = Partial<
-  Omit<CreateTemplateInput, 'channel'>
-> & { isActive?: boolean };
+export type UpdateTemplateInput = Partial<Omit<CreateTemplateInput, 'channel'>> & {
+  isActive?: boolean;
+};
 
 export interface TemplateListQuery {
   channel?: SingleChannel;

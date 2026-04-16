@@ -53,10 +53,7 @@ export function usePayOrder() {
   return useMutation<PayInitResult, Error, PayInitPayload>({
     mutationFn: async (payload): Promise<PayInitResult> => {
       const { orderId, ...body } = payload;
-      const res = await api.post<{ data: PayInitResult }>(
-        `/portal/orders/${orderId}/pay`,
-        body,
-      );
+      const res = await api.post<{ data: PayInitResult }>(`/portal/orders/${orderId}/pay`, body);
       return res.data.data;
     },
     onSuccess: () => {

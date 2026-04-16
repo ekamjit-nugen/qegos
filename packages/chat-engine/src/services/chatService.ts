@@ -44,7 +44,9 @@ export async function findOrCreateConversation(
     status: 'active',
   });
 
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
 
   return ConversationModel.create({
     userId,
@@ -67,9 +69,15 @@ export async function listConversations(
   limit = 20,
 ): Promise<{ conversations: IChatConversationDocument[]; total: number }> {
   const query: Record<string, unknown> = {};
-  if (filters.userId) query.userId = filters.userId;
-  if (filters.staffId) query.staffId = filters.staffId;
-  if (filters.status) query.status = filters.status;
+  if (filters.userId) {
+    query.userId = filters.userId;
+  }
+  if (filters.staffId) {
+    query.staffId = filters.staffId;
+  }
+  if (filters.status) {
+    query.status = filters.status;
+  }
 
   const [conversations, total] = await Promise.all([
     ConversationModel.find(query)
@@ -107,7 +115,9 @@ export async function transferConversation(
     { new: true },
   );
 
-  if (!conv) return null;
+  if (!conv) {
+    return null;
+  }
 
   // CHT-INV-07: System message notifying client
   await MessageModel.create({
@@ -138,9 +148,7 @@ export interface SendMessageParams {
   mimeType?: string;
 }
 
-export async function sendMessage(
-  params: SendMessageParams,
-): Promise<IChatMessageDocument> {
+export async function sendMessage(params: SendMessageParams): Promise<IChatMessageDocument> {
   // CHT-INV-01: TFN redaction
   const { content, contentOriginal } = processMessageContent(params.content);
 
@@ -196,10 +204,7 @@ export async function markMessageRead(
   );
 }
 
-export async function getUnreadCount(
-  userId: Types.ObjectId,
-  role: string,
-): Promise<number> {
+export async function getUnreadCount(userId: Types.ObjectId, role: string): Promise<number> {
   const field = role === 'client' ? 'unreadCountUser' : 'unreadCountStaff';
   const queryField = role === 'client' ? 'userId' : 'staffId';
 
@@ -222,26 +227,24 @@ export async function listCannedResponses(
   const query: Record<string, unknown> = {
     $or: [{ isGlobal: true }, { createdBy: staffId }],
   };
-  if (category) query.category = category;
+  if (category) {
+    query.category = category;
+  }
 
   return CannedResponseModel.find(query).sort({ usageCount: -1 });
 }
 
-export async function createCannedResponse(
-  data: {
-    title: string;
-    content: string;
-    category: CannedResponseCategory;
-    createdBy: Types.ObjectId;
-    isGlobal?: boolean;
-  },
-): Promise<ICannedResponseDocument> {
+export async function createCannedResponse(data: {
+  title: string;
+  content: string;
+  category: CannedResponseCategory;
+  createdBy: Types.ObjectId;
+  isGlobal?: boolean;
+}): Promise<ICannedResponseDocument> {
   return CannedResponseModel.create(data);
 }
 
-export async function incrementCannedUsage(
-  responseId: Types.ObjectId,
-): Promise<void> {
+export async function incrementCannedUsage(responseId: Types.ObjectId): Promise<void> {
   await CannedResponseModel.findByIdAndUpdate(responseId, { $inc: { usageCount: 1 } });
 }
 

@@ -31,9 +31,7 @@ export {
   getExport,
   cleanupExpiredExports,
 } from './services/exportService';
-export {
-  enforceRetentionPolicies,
-} from './services/retentionService';
+export { enforceRetentionPolicies } from './services/retentionService';
 export * from './validators/dataLifecycleValidators';
 
 // ─── Package Initialization ────────────────────────────────────────────────
@@ -52,11 +50,7 @@ export function init(
   const DataExportModel = createDataExportModel(connection);
 
   initErasureService(ErasureRequestModel, modelConfigs);
-  initExportService(
-    DataExportModel,
-    modelConfigs,
-    config.exportExpiryHours ?? 48,
-  );
+  initExportService(DataExportModel, modelConfigs, config.exportExpiryHours ?? 48);
   initRetentionService(config.retentionPolicies ?? [], modelConfigs);
 
   return { ErasureRequestModel, DataExportModel };

@@ -45,7 +45,9 @@ export function FileUploadField({
         copyToCacheDirectory: true,
         multiple: false,
       });
-      if (result.canceled || !result.assets?.[0]) return;
+      if (result.canceled || !result.assets?.[0]) {
+        return;
+      }
 
       const asset = result.assets[0];
       upload.mutate(

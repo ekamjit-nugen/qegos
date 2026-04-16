@@ -50,15 +50,11 @@ export function useVaultUpload() {
         formData.append('description', payload.description);
       }
 
-      const response = await api.post<UploadResponse>(
-        '/portal/vault/upload',
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          // Long-running upload — bump timeout
-          timeout: 120_000,
-        },
-      );
+      const response = await api.post<UploadResponse>('/portal/vault/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        // Long-running upload — bump timeout
+        timeout: 120_000,
+      });
       return response.data.data.document;
     },
   });

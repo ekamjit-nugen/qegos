@@ -30,7 +30,9 @@ export function ExecutiveSummaryWidget(): React.ReactNode {
           <DashboardOutlined />
           <span style={{ marginLeft: 8 }}>Executive Summary</span>
           {data?.revenue.isEstimated && (
-            <Tag color="orange" style={{ marginLeft: 8 }}>Estimated</Tag>
+            <Tag color="orange" style={{ marginLeft: 8 }}>
+              Estimated
+            </Tag>
           )}
         </span>
       }
@@ -90,7 +92,11 @@ export function ExecutiveSummaryWidget(): React.ReactNode {
             <Statistic
               title="Churn Risk"
               value={data.churn.atRiskCount}
-              prefix={<WarningOutlined style={{ color: data.churn.atRiskCount > 0 ? '#ff4d4f' : '#8c8c8c' }} />}
+              prefix={
+                <WarningOutlined
+                  style={{ color: data.churn.atRiskCount > 0 ? '#ff4d4f' : '#8c8c8c' }}
+                />
+              }
               valueStyle={data.churn.atRiskCount > 0 ? { color: '#ff4d4f' } : undefined}
             />
           </Col>

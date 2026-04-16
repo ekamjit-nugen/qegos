@@ -54,8 +54,12 @@ function asString(v: unknown): string | undefined {
 }
 
 function asStringArray(v: unknown): string[] | undefined {
-  if (!Array.isArray(v)) return undefined;
-  if (!v.every((x) => typeof x === 'string')) return undefined;
+  if (!Array.isArray(v)) {
+    return undefined;
+  }
+  if (!v.every((x) => typeof x === 'string')) {
+    return undefined;
+  }
   return v as string[];
 }
 
@@ -70,18 +74,26 @@ function widgetTypeMismatch(widget: FormMappingWidget, type: string | undefined)
     case 'date':
     case 'select':
     case 'radio':
-      return type === 'string' ? null : `widget "${widget}" requires type "string" (got "${String(type)}")`;
+      return type === 'string'
+        ? null
+        : `widget "${widget}" requires type "string" (got "${String(type)}")`;
     case 'number':
     case 'currency':
       return type === 'number' || type === 'integer'
         ? null
         : `widget "${widget}" requires numeric type (got "${String(type)}")`;
     case 'checkbox':
-      return type === 'boolean' ? null : `widget "checkbox" requires type "boolean" (got "${String(type)}")`;
+      return type === 'boolean'
+        ? null
+        : `widget "checkbox" requires type "boolean" (got "${String(type)}")`;
     case 'multi_select':
-      return type === 'array' ? null : `widget "multi_select" requires type "array" (got "${String(type)}")`;
+      return type === 'array'
+        ? null
+        : `widget "multi_select" requires type "array" (got "${String(type)}")`;
     case 'file_upload':
-      return type === 'string' ? null : `widget "file_upload" requires type "string" (got "${String(type)}")`;
+      return type === 'string'
+        ? null
+        : `widget "file_upload" requires type "string" (got "${String(type)}")`;
     default:
       return `unknown widget "${String(widget)}"`;
   }
@@ -170,7 +182,9 @@ function walkStep(
   }
 
   for (const [propName, rawNode] of Object.entries(props)) {
-    if (!isObject(rawNode)) continue;
+    if (!isObject(rawNode)) {
+      continue;
+    }
     const node = rawNode;
     const path = `/properties/${stepId}/properties/${propName}`;
 
@@ -178,7 +192,9 @@ function walkStep(
     if (asString(node['type']) === 'object' && isObject(node['properties'])) {
       const inner = node['properties'] as Obj;
       for (const [innerName, innerRaw] of Object.entries(inner)) {
-        if (!isObject(innerRaw)) continue;
+        if (!isObject(innerRaw)) {
+          continue;
+        }
         const innerNode = innerRaw as Obj;
         const innerPath = `${path}/properties/${innerName}`;
         const innerXq = isObject(innerNode['x-qegos']) ? (innerNode['x-qegos'] as Obj) : undefined;
@@ -291,7 +307,9 @@ export function validateAuthoredSchema(schema: unknown): SchemaValidationResult 
   if (rootProps && declaredSteps) {
     for (const stepId of declaredSteps) {
       const rawStep = rootProps[stepId];
-      if (!isObject(rawStep)) continue;
+      if (!isObject(rawStep)) {
+        continue;
+      }
       walkStep(stepId, rawStep, issues, fieldKeys);
     }
   }

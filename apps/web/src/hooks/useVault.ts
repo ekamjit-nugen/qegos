@@ -2,12 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import type {
-  VaultDocument,
-  VaultYear,
-  StorageUsage,
-  VaultDocumentListQuery,
-} from '@/types/vault';
+import type { VaultDocument, VaultYear, StorageUsage, VaultDocumentListQuery } from '@/types/vault';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -41,7 +36,7 @@ export function useVaultDocuments(filters: VaultDocumentListQuery) {
         params.set('category', filters.category);
       }
       const response = await api.get<{ data: PaginatedResponse<VaultDocument> }>(
-        `/portal/vault/documents?${params.toString()}`
+        `/portal/vault/documents?${params.toString()}`,
       );
       return response.data.data;
     },
@@ -53,7 +48,7 @@ export function useVaultDocument(id: string | undefined) {
     queryKey: ['vault', 'documents', id],
     queryFn: async (): Promise<VaultDocumentDetail> => {
       const response = await api.get<{ data: VaultDocumentDetail }>(
-        `/portal/vault/documents/${id}`
+        `/portal/vault/documents/${id}`,
       );
       return response.data.data;
     },
@@ -86,11 +81,9 @@ export function useUploadDocument() {
 
   return useMutation<VaultDocument, Error, FormData>({
     mutationFn: async (formData: FormData): Promise<VaultDocument> => {
-      const response = await api.post<{ data: VaultDocument }>(
-        '/portal/vault/upload',
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
+      const response = await api.post<{ data: VaultDocument }>('/portal/vault/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       return response.data.data;
     },
     onSuccess: (): void => {
@@ -118,7 +111,7 @@ export function useRestoreDocument() {
   return useMutation<VaultDocument, Error, string>({
     mutationFn: async (id: string): Promise<VaultDocument> => {
       const response = await api.post<{ data: VaultDocument }>(
-        `/portal/vault/documents/${id}/restore`
+        `/portal/vault/documents/${id}/restore`,
       );
       return response.data.data;
     },

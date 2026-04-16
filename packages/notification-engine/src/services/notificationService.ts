@@ -62,7 +62,9 @@ export function calculateQuietHoursDelay(
   const hourPart = parts.find((p) => p.type === 'hour');
   const minutePart = parts.find((p) => p.type === 'minute');
 
-  if (!hourPart || !minutePart) return 0;
+  if (!hourPart || !minutePart) {
+    return 0;
+  }
 
   const currentHour = parseInt(hourPart.value, 10);
   const currentMinute = parseInt(minutePart.value, 10);
@@ -83,13 +85,15 @@ export function calculateQuietHoursDelay(
     inQuietHours = currentMinutes >= startMinutes && currentMinutes < endMinutes;
   }
 
-  if (!inQuietHours) return 0;
+  if (!inQuietHours) {
+    return 0;
+  }
 
   // Calculate delay until quiet hours end
   let delayMinutes: number;
   if (currentMinutes >= endMinutes) {
     // End is tomorrow
-    delayMinutes = (24 * 60 - currentMinutes) + endMinutes;
+    delayMinutes = 24 * 60 - currentMinutes + endMinutes;
   } else {
     delayMinutes = endMinutes - currentMinutes;
   }
@@ -116,9 +120,7 @@ export function buildDedupKey(
  * Send a notification across requested channels.
  * Enforces all NTF invariants: dedup, preferences, quiet hours, FCM token cleanup.
  */
-export async function send(
-  params: SendNotificationParams,
-): Promise<SendNotificationResult> {
+export async function send(params: SendNotificationParams): Promise<SendNotificationResult> {
   // NTF-INV-05: Dedup check (skip if no relatedResourceId)
   if (params.relatedResourceId && redisClient) {
     const dedupKey = buildDedupKey(params.type, params.recipientId, params.relatedResourceId);
@@ -201,7 +203,12 @@ export async function send(
 
     // Push: Send to all FCM tokens
     if (channel === 'push') {
-      const pushResult = await sendPush(params.recipientId, renderedTitle, renderedBody, params.data);
+      const pushResult = await sendPush(
+        params.recipientId,
+        renderedTitle,
+        renderedBody,
+        params.data,
+      );
       channelResults[channel] = pushResult;
       continue;
     }
@@ -264,7 +271,8 @@ async function sendPush(
     return { sent: false, error: 'user_not_found' };
   }
 
-  const fcmTokens = (user as unknown as { fcmTokens?: Array<{ token: string; deviceId: string }> }).fcmTokens;
+  const fcmTokens = (user as unknown as { fcmTokens?: Array<{ token: string; deviceId: string }> })
+    .fcmTokens;
   if (!fcmTokens || fcmTokens.length === 0) {
     return { sent: false, error: 'no_fcm_tokens' };
   }
@@ -314,16 +322,20 @@ async function getRecipientContact(
     return 'webhook';
   }
 
-  const user = await UserModel.findById(recipientId)
-    .select('mobile email')
-    .lean();
+  const user = await UserModel.findById(recipientId).select('mobile email').lean();
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const userDoc = user as unknown as { mobile?: string; email?: string };
 
-  if (channel === 'sms') return userDoc.mobile ?? null;
-  if (channel === 'email') return userDoc.email ?? null;
+  if (channel === 'sms') {
+    return userDoc.mobile ?? null;
+  }
+  if (channel === 'email') {
+    return userDoc.email ?? null;
+  }
 
   return null;
 }
@@ -341,9 +353,7 @@ export async function markAsRead(
   );
 }
 
-export async function markAllAsRead(
-  recipientId: string,
-): Promise<number> {
+export async function markAllAsRead(recipientId: string): Promise<number> {
   const result = await NotificationModel.updateMany(
     { recipientId, isRead: false },
     { isRead: true, readAt: new Date() },
@@ -351,9 +361,7 @@ export async function markAllAsRead(
   return result.modifiedCount;
 }
 
-export async function getUnreadCount(
-  recipientId: string,
-): Promise<number> {
+export async function getUnreadCount(recipientId: string): Promise<number> {
   return NotificationModel.countDocuments({ recipientId, isRead: false });
 }
 
@@ -367,8 +375,12 @@ export async function listNotifications(
   },
 ): Promise<{ notifications: INotificationDocument[]; total: number }> {
   const query: Record<string, unknown> = { recipientId };
-  if (filters.isRead !== undefined) query.isRead = filters.isRead;
-  if (filters.type) query.type = filters.type;
+  if (filters.isRead !== undefined) {
+    query.isRead = filters.isRead;
+  }
+  if (filters.type) {
+    query.type = filters.type;
+  }
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;

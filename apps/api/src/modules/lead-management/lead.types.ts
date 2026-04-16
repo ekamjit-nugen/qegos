@@ -32,7 +32,12 @@ export const LEAD_STATUS_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
   [LeadStatus.New]: [LeadStatus.Contacted, LeadStatus.Lost],
   [LeadStatus.Contacted]: [LeadStatus.Qualified, LeadStatus.Lost, LeadStatus.Dormant],
   [LeadStatus.Qualified]: [LeadStatus.QuoteSent, LeadStatus.Lost, LeadStatus.Dormant],
-  [LeadStatus.QuoteSent]: [LeadStatus.Negotiation, LeadStatus.Won, LeadStatus.Lost, LeadStatus.Dormant],
+  [LeadStatus.QuoteSent]: [
+    LeadStatus.Negotiation,
+    LeadStatus.Won,
+    LeadStatus.Lost,
+    LeadStatus.Dormant,
+  ],
   [LeadStatus.Negotiation]: [LeadStatus.Won, LeadStatus.Lost, LeadStatus.Dormant],
   [LeadStatus.Won]: [], // Terminal — no further transitions
   [LeadStatus.Lost]: [LeadStatus.New], // Reopen
@@ -71,7 +76,14 @@ export type PreferredContact = (typeof PREFERRED_CONTACTS)[number];
 export const AU_STATES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'] as const;
 export type AuState = (typeof AU_STATES)[number];
 
-export const MARITAL_STATUSES = ['single', 'married', 'de_facto', 'separated', 'divorced', 'widowed'] as const;
+export const MARITAL_STATUSES = [
+  'single',
+  'married',
+  'de_facto',
+  'separated',
+  'divorced',
+  'widowed',
+] as const;
 export type MaritalStatus = (typeof MARITAL_STATUSES)[number];
 
 export const EMPLOYMENT_TYPES = [

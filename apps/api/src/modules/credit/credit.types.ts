@@ -14,9 +14,9 @@ export type CreditType = (typeof CREDIT_TYPES)[number];
 export interface ICreditTransaction {
   userId: Types.ObjectId;
   type: CreditType;
-  amount: number;          // cents — positive = credit added, negative = credit used
-  balance: number;          // running balance after this transaction
-  referenceId?: string;     // referral ID, order ID, refund ID
+  amount: number; // cents — positive = credit added, negative = credit used
+  balance: number; // running balance after this transaction
+  referenceId?: string; // referral ID, order ID, refund ID
   description: string;
   expiresAt?: Date;
   createdAt: Date;

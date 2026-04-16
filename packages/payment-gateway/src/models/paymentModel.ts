@@ -1,10 +1,5 @@
 import { Schema, type Model, type Connection } from 'mongoose';
-import type {
-  IPaymentDocument,
-  PaymentStatus,
-  PaymentGateway,
-  RefundStatus,
-} from '../types';
+import type { IPaymentDocument, PaymentStatus, PaymentGateway, RefundStatus } from '../types';
 import { VALID_STATUS_TRANSITIONS } from '../types';
 
 const refundEntrySchema = new Schema(

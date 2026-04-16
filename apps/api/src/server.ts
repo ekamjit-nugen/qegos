@@ -6,6 +6,16 @@ import * as auditLog from '@nugen/audit-log';
 import * as paymentGateway from '@nugen/payment-gateway';
 import { setErrorLogger } from '@nugen/error-handler';
 import { initRateLimiter, createAuthLimiters } from '@nugen/rate-limiter';
+import { Queue, Worker, type Job } from 'bullmq';
+import * as broadcastEngine from '@nugen/broadcast-engine';
+import * as fileStorage from '@nugen/file-storage';
+import { reconcileStorageUsage } from '@nugen/file-storage';
+import * as chatEngine from '@nugen/chat-engine';
+import * as supportTickets from '@nugen/support-tickets';
+import * as whatsappConnector from '@nugen/whatsapp-connector';
+import * as notificationEngine from '@nugen/notification-engine';
+import * as analyticsEngine from '@nugen/analytics-engine';
+import * as xeroConnector from '@nugen/xero-connector';
 import { loadConfig } from './config/env';
 import { connectDatabase, getConnection, disconnectDatabase } from './database/connection';
 import { ensurePerformanceIndexes } from './database/ensureIndexes';
@@ -50,13 +60,10 @@ import { createConsentFormRoutes } from './modules/consent-form/consentForm.rout
 
 import { createCounterModel } from './database/counter.model';
 import { createAutomationHandlers } from './modules/lead-management/lead.automation';
-import { Queue, Worker, type Job } from 'bullmq';
 
 // Phase 5: Broadcast Engine
-import * as broadcastEngine from '@nugen/broadcast-engine';
 
 // Phase 6: Client Portal & Vault
-import * as fileStorage from '@nugen/file-storage';
 import { createPortalRoutes } from './modules/client-portal/portal.routes';
 import { createFormFillRoutes } from './modules/client-portal/formFill.routes';
 import { createPayOrderRoutes } from './modules/client-portal/payOrder.routes';
@@ -64,22 +71,23 @@ import { createCollectPaymentRoutes } from './modules/order-management/collectPa
 import { createFormDraftModel } from './modules/client-portal/formDraft.model';
 import { createAppointmentBookingRoutes } from './modules/client-portal/appointmentBooking.routes';
 import { hardDeleteExpiredDocuments } from './modules/client-portal/portal.service';
-import { reconcileStorageUsage } from '@nugen/file-storage';
 
 // Phase 7: Communication Suite
-import * as chatEngine from '@nugen/chat-engine';
-import * as supportTickets from '@nugen/support-tickets';
-import * as whatsappConnector from '@nugen/whatsapp-connector';
 
 // Notification Engine
-import * as notificationEngine from '@nugen/notification-engine';
 
 // Analytics Engine
-import * as analyticsEngine from '@nugen/analytics-engine';
 
 // Appointment Scheduling
-import { createAppointmentModel, createStaffAvailabilityModel } from './modules/appointment-scheduling/appointment.model';
-import { createAppointmentRoutes, processAppointmentReminders, markNoShows } from './modules/appointment-scheduling/appointment.routes';
+import {
+  createAppointmentModel,
+  createStaffAvailabilityModel,
+} from './modules/appointment-scheduling/appointment.model';
+import {
+  createAppointmentRoutes,
+  processAppointmentReminders,
+  markNoShows,
+} from './modules/appointment-scheduling/appointment.routes';
 
 // Staff Workload Balancing
 import { getWorkloadService } from './modules/staff-workload/workload.routes';
@@ -89,7 +97,6 @@ import { bootstrapStaffWorkload } from './modules/staff-workload/bootstrap';
 import { bootstrapDocumentManagement } from './modules/document-management/bootstrap';
 
 // Phase 2: Xero Integration
-import * as xeroConnector from '@nugen/xero-connector';
 import { DEFAULT_XERO_SCOPES } from '@nugen/xero-connector';
 
 // Settings
@@ -97,7 +104,10 @@ import { createSettingModel, seedDefaultSettings } from './modules/settings/sett
 import { createSettingsRoutes } from './modules/settings/settings.routes';
 
 // Promo Code & Credits
-import { createPromoCodeModel, createPromoCodeUsageModel } from './modules/promo-code/promoCode.model';
+import {
+  createPromoCodeModel,
+  createPromoCodeUsageModel,
+} from './modules/promo-code/promoCode.model';
 import { createPromoCodeRoutes } from './modules/promo-code/promoCode.routes';
 import { createPromoCodeService } from './modules/promo-code/promoCode.service';
 import { createCreditTransactionModel } from './modules/credit/credit.model';
@@ -105,10 +115,23 @@ import { createCreditRoutes } from './modules/credit/credit.routes';
 import { createCreditService } from './modules/credit/credit.service';
 
 // Phase 8: Engagement Modules
-import { createReferralModel, createReferralConfigModel } from './modules/referral-engine/referral.model';
-import { createReferralRoutes, expireStaleReferrals, expireCreditRewards } from './modules/referral-engine/referral.routes';
-import { createTaxDeadlineModel, createDeadlineReminderModel } from './modules/tax-calendar/taxCalendar.model';
-import { createCalendarRoutes, processReminders as processDeadlineReminders } from './modules/tax-calendar/taxCalendar.routes';
+import {
+  createReferralModel,
+  createReferralConfigModel,
+} from './modules/referral-engine/referral.model';
+import {
+  createReferralRoutes,
+  expireStaleReferrals,
+  expireCreditRewards,
+} from './modules/referral-engine/referral.routes';
+import {
+  createTaxDeadlineModel,
+  createDeadlineReminderModel,
+} from './modules/tax-calendar/taxCalendar.model';
+import {
+  createCalendarRoutes,
+  processReminders as processDeadlineReminders,
+} from './modules/tax-calendar/taxCalendar.routes';
 import { sendReviewReminders } from './modules/reputation-mgmt/review.routes';
 import { bootstrapReputationMgmt } from './modules/reputation-mgmt/bootstrap';
 
@@ -141,7 +164,9 @@ async function bootstrap(): Promise<void> {
   try {
     await redisClient.connect();
   } catch (err) {
-    logger.warn('Redis connection failed, continuing without Redis', { error: (err as Error).message });
+    logger.warn('Redis connection failed, continuing without Redis', {
+      error: (err as Error).message,
+    });
   }
 
   // 4. Initialize Tier 1 packages
@@ -209,15 +234,18 @@ async function bootstrap(): Promise<void> {
   const TaxReturnResultModel = createTaxReturnResultModel(connection);
 
   // Payment gateway (Phase 1)
-  const { PaymentModel, WebhookEventModel, GatewayConfigModel, providers } =
-    paymentGateway.init(connection, redisClient, {
+  const { PaymentModel, WebhookEventModel, GatewayConfigModel, providers } = paymentGateway.init(
+    connection,
+    redisClient,
+    {
       stripeSecretKey: config.STRIPE_SECRET_KEY,
       stripeWebhookSecret: config.STRIPE_WEBHOOK_SECRET,
       payzooApiKey: config.PAYZOO_API_KEY,
       payzooApiSecret: config.PAYZOO_API_SECRET,
       payzooBaseUrl: config.PAYZOO_BASE_URL,
       payzooWebhookSecret: config.PAYZOO_WEBHOOK_SECRET,
-    });
+    },
+  );
 
   // Billing dispute model (QEGOS Tier 2)
   const BillingDisputeModel = createBillingDisputeModel(connection);
@@ -248,39 +276,45 @@ async function bootstrap(): Promise<void> {
     OptOutModel: BroadcastOptOutModel,
     ConsentModel: BroadcastConsentModel,
     providers: broadcastProviders,
-  } = broadcastEngine.init(connection, redisClient, {
-    twilioAccountSid: config.TWILIO_ACCOUNT_SID,
-    twilioAuthToken: config.TWILIO_AUTH_TOKEN,
-    twilioPhoneNumber: config.TWILIO_PHONE_NUMBER,
-    sesRegion: config.AWS_SES_REGION,
-    sesAccessKeyId: config.AWS_SES_ACCESS_KEY_ID,
-    sesSecretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
-    sesFromEmail: config.AWS_SES_FROM_EMAIL,
-    whatsappApiToken: config.WHATSAPP_API_TOKEN,
-    whatsappPhoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
-    businessName: config.BUSINESS_NAME,
-    businessAbn: config.BUSINESS_ABN,
-    unsubscribeBaseUrl: config.UNSUBSCRIBE_BASE_URL,
-  }, {
-    LeadModel,
-    UserModel,
-  });
+  } = broadcastEngine.init(
+    connection,
+    redisClient,
+    {
+      twilioAccountSid: config.TWILIO_ACCOUNT_SID,
+      twilioAuthToken: config.TWILIO_AUTH_TOKEN,
+      twilioPhoneNumber: config.TWILIO_PHONE_NUMBER,
+      sesRegion: config.AWS_SES_REGION,
+      sesAccessKeyId: config.AWS_SES_ACCESS_KEY_ID,
+      sesSecretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
+      sesFromEmail: config.AWS_SES_FROM_EMAIL,
+      whatsappApiToken: config.WHATSAPP_API_TOKEN,
+      whatsappPhoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
+      businessName: config.BUSINESS_NAME,
+      businessAbn: config.BUSINESS_ABN,
+      unsubscribeBaseUrl: config.UNSUBSCRIBE_BASE_URL,
+    },
+    {
+      LeadModel,
+      UserModel,
+    },
+  );
 
   // Phase 6: File Storage & Client Portal
-  const {
-    VaultDocumentModel,
-    TaxYearSummaryModel,
-  } = fileStorage.init(connection, {
-    s3Bucket: config.S3_BUCKET ?? 'qegos-vault-dev',
-    s3QuarantineBucket: config.S3_QUARANTINE_BUCKET ?? 'qegos-quarantine-dev',
-    s3Region: config.S3_REGION ?? config.AWS_SES_REGION ?? 'ap-southeast-2',
-    s3AccessKeyId: config.S3_ACCESS_KEY_ID ?? config.AWS_SES_ACCESS_KEY_ID ?? '',
-    s3SecretAccessKey: config.S3_SECRET_ACCESS_KEY ?? config.AWS_SES_SECRET_ACCESS_KEY ?? '',
-    clamavHost: config.CLAMAV_HOST,
-    clamavPort: config.CLAMAV_PORT,
-  }, {
-    UserModel,
-  });
+  const { VaultDocumentModel, TaxYearSummaryModel } = fileStorage.init(
+    connection,
+    {
+      s3Bucket: config.S3_BUCKET ?? 'qegos-vault-dev',
+      s3QuarantineBucket: config.S3_QUARANTINE_BUCKET ?? 'qegos-quarantine-dev',
+      s3Region: config.S3_REGION ?? config.AWS_SES_REGION ?? 'ap-southeast-2',
+      s3AccessKeyId: config.S3_ACCESS_KEY_ID ?? config.AWS_SES_ACCESS_KEY_ID ?? '',
+      s3SecretAccessKey: config.S3_SECRET_ACCESS_KEY ?? config.AWS_SES_SECRET_ACCESS_KEY ?? '',
+      clamavHost: config.CLAMAV_HOST,
+      clamavPort: config.CLAMAV_PORT,
+    },
+    {
+      UserModel,
+    },
+  );
 
   // Phase 7: Communication Suite
   const {
@@ -291,25 +325,25 @@ async function bootstrap(): Promise<void> {
     encryptionKey: config.ENCRYPTION_KEY,
   });
 
-  const {
-    TicketModel: SupportTicketModel,
-  } = supportTickets.init(connection, {}, {
-    CounterModel: CounterModel,
-  });
-
-  const {
-    ConfigModel: WhatsAppConfigModel,
-    MessageModel: WhatsAppMessageModel,
-  } = whatsappConnector.init(
+  const { TicketModel: SupportTicketModel } = supportTickets.init(
     connection,
+    {},
     {
-      accessToken: config.WHATSAPP_API_TOKEN,
-      phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
-      webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+      CounterModel: CounterModel,
     },
-    // 1h Redis cache for Meta `message_templates` listing
-    redisClient as never,
   );
+
+  const { ConfigModel: WhatsAppConfigModel, MessageModel: WhatsAppMessageModel } =
+    whatsappConnector.init(
+      connection,
+      {
+        accessToken: config.WHATSAPP_API_TOKEN,
+        phoneNumberId: config.WHATSAPP_PHONE_NUMBER_ID,
+        webhookVerifyToken: config.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+      },
+      // 1h Redis cache for Meta `message_templates` listing
+      redisClient as never,
+    );
 
   // Wire the media-download pipeline. The package owns the business logic;
   // the queue + worker lives in this app so downloads retry across process
@@ -332,36 +366,44 @@ async function bootstrap(): Promise<void> {
   const xeroConfig: xeroConnector.XeroConnectorConfig = {
     xeroClientId: config.XERO_CLIENT_ID ?? '',
     xeroClientSecret: config.XERO_CLIENT_SECRET ?? '',
-    xeroRedirectUri: config.XERO_REDIRECT_URI ?? `http://localhost:${config.PORT}/api/${config.API_VERSION}/xero/callback`,
+    xeroRedirectUri:
+      config.XERO_REDIRECT_URI ??
+      `http://localhost:${config.PORT}/api/${config.API_VERSION}/xero/callback`,
     xeroScopes: DEFAULT_XERO_SCOPES,
     encryptionKey: config.ENCRYPTION_KEY,
     webhookKey: config.XERO_WEBHOOK_KEY,
   };
 
-  const {
-    XeroConfigModel,
-    XeroSyncLogModel,
-  } = xeroConnector.init(connection, redisClient, xeroConfig);
+  const { XeroConfigModel, XeroSyncLogModel } = xeroConnector.init(
+    connection,
+    redisClient,
+    xeroConfig,
+  );
 
   // Notification Engine
   const {
     NotificationModel,
     NotificationPreferenceModel,
     providers: notificationProviders,
-  } = notificationEngine.init(connection, redisClient, {
-    firebaseServiceAccountJson: config.FIREBASE_SERVICE_ACCOUNT_JSON,
-    slackWebhookUrl: config.SLACK_WEBHOOK_URL,
-    twilioAccountSid: config.TWILIO_ACCOUNT_SID,
-    twilioAuthToken: config.TWILIO_AUTH_TOKEN,
-    twilioPhoneNumber: config.TWILIO_PHONE_NUMBER,
-    sesRegion: config.AWS_SES_REGION,
-    sesAccessKeyId: config.AWS_SES_ACCESS_KEY_ID,
-    sesSecretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
-    sesFromEmail: config.AWS_SES_FROM_EMAIL,
-    defaultTimezone: 'Australia/Sydney',
-  }, {
-    UserModel: UserModel,
-  });
+  } = notificationEngine.init(
+    connection,
+    redisClient,
+    {
+      firebaseServiceAccountJson: config.FIREBASE_SERVICE_ACCOUNT_JSON,
+      slackWebhookUrl: config.SLACK_WEBHOOK_URL,
+      twilioAccountSid: config.TWILIO_ACCOUNT_SID,
+      twilioAuthToken: config.TWILIO_AUTH_TOKEN,
+      twilioPhoneNumber: config.TWILIO_PHONE_NUMBER,
+      sesRegion: config.AWS_SES_REGION,
+      sesAccessKeyId: config.AWS_SES_ACCESS_KEY_ID,
+      sesSecretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
+      sesFromEmail: config.AWS_SES_FROM_EMAIL,
+      defaultTimezone: 'Australia/Sydney',
+    },
+    {
+      UserModel: UserModel,
+    },
+  );
 
   // Phase 8: Engagement Modules — Models
   const ReferralModel = createReferralModel(connection);
@@ -384,119 +426,150 @@ async function bootstrap(): Promise<void> {
 
   // Privacy Act 1988: Data Lifecycle (GAP-C01/C02)
   const privacyModelConfigs = new Map<string, ModelFieldConfig>([
-    ['User', {
-      displayName: 'User Account',
-      model: UserModel,
-      userIdField: '_id',
-      piiFields: {
-        firstName: '[REDACTED]',
-        lastName: '[REDACTED]',
-        email: 'redacted@deleted.local',
-        mobile: '+61000000000',
-        dateOfBirth: '',
-        'address.street': '[REDACTED]',
-        'address.suburb': '[REDACTED]',
-        tfnEncrypted: '',
-        tfnLastThree: '***',
-        abnNumber: '',
-      },
-      exportExclude: ['tfnEncrypted', 'passwordHash', 'mfaSecret'],
-    }],
-    ['Lead', {
-      displayName: 'Lead Records',
-      model: LeadModel,
-      userIdField: 'convertedUserId',
-      piiFields: {
-        firstName: '[REDACTED]',
-        lastName: '[REDACTED]',
-        mobile: '+61000000000',
-        email: 'redacted@deleted.local',
-        'address.suburb': '[REDACTED]',
-      },
-    }],
-    ['Order', {
-      displayName: 'Orders',
-      model: OrderModel,
-      userIdField: 'userId',
-      piiFields: {
-        'personalDetails.firstName': '[REDACTED]',
-        'personalDetails.lastName': '[REDACTED]',
-        'personalDetails.email': 'redacted@deleted.local',
-        'personalDetails.mobile': '+61000000000',
-        'personalDetails.tfnEncrypted': '',
-        'personalDetails.tfnLastThree': '***',
-        'personalDetails.address.street': '[REDACTED]',
-        'spouse.firstName': '[REDACTED]',
-        'spouse.lastName': '[REDACTED]',
-        'spouse.tfnEncrypted': '',
-      },
-      exportExclude: ['personalDetails.tfnEncrypted', 'spouse.tfnEncrypted'],
-    }],
-    ['VaultDocument', {
-      displayName: 'Vault Documents',
-      model: VaultDocumentModel,
-      userIdField: 'userId',
-      piiFields: {},
-      hardDelete: true,
-    }],
-    ['TaxYearSummary', {
-      displayName: 'Tax Year Summaries',
-      model: TaxYearSummaryModel,
-      userIdField: 'userId',
-      piiFields: {},
-      hardDelete: true,
-    }],
-    ['ChatConversation', {
-      displayName: 'Chat Conversations',
-      model: ChatConversationModel,
-      userIdField: 'userId',
-      piiFields: {},
-      hardDelete: true,
-    }],
-    ['ChatMessage', {
-      displayName: 'Chat Messages',
-      model: ChatMessageModel,
-      userIdField: 'senderId',
-      piiFields: { content: '[REDACTED]', contentOriginal: '' },
-      exportExclude: ['contentOriginal'],
-    }],
-    ['SupportTicket', {
-      displayName: 'Support Tickets',
-      model: SupportTicketModel,
-      userIdField: 'userId',
-      piiFields: {},
-    }],
-    ['TaxEstimateLog', {
-      displayName: 'Tax Estimate Logs',
-      model: TaxEstimateLogModel,
-      userIdField: 'userId',
-      piiFields: {},
-      hardDelete: true,
-    }],
-    ['TaxReturnResult', {
-      displayName: 'Tax Return Results',
-      model: TaxReturnResultModel,
-      userIdField: 'userId',
-      piiFields: {},
-      hardDelete: true,
-    }],
-  ]);
-
-  const {
-    ErasureRequestModel,
-    DataExportModel,
-  } = dataLifecycle.init(connection, {
-    erasureGracePeriodDays: 30,
-    exportExpiryHours: 48,
-    retentionPolicies: [
+    [
+      'User',
       {
-        modelName: 'ChatMessage',
-        retentionDays: 730, // 2 years
-        action: 'anonymize',
-        dateField: 'createdAt',
+        displayName: 'User Account',
+        model: UserModel,
+        userIdField: '_id',
+        piiFields: {
+          firstName: '[REDACTED]',
+          lastName: '[REDACTED]',
+          email: 'redacted@deleted.local',
+          mobile: '+61000000000',
+          dateOfBirth: '',
+          'address.street': '[REDACTED]',
+          'address.suburb': '[REDACTED]',
+          tfnEncrypted: '',
+          tfnLastThree: '***',
+          abnNumber: '',
+        },
+        exportExclude: ['tfnEncrypted', 'passwordHash', 'mfaSecret'],
       },
     ],
-  }, privacyModelConfigs);
+    [
+      'Lead',
+      {
+        displayName: 'Lead Records',
+        model: LeadModel,
+        userIdField: 'convertedUserId',
+        piiFields: {
+          firstName: '[REDACTED]',
+          lastName: '[REDACTED]',
+          mobile: '+61000000000',
+          email: 'redacted@deleted.local',
+          'address.suburb': '[REDACTED]',
+        },
+      },
+    ],
+    [
+      'Order',
+      {
+        displayName: 'Orders',
+        model: OrderModel,
+        userIdField: 'userId',
+        piiFields: {
+          'personalDetails.firstName': '[REDACTED]',
+          'personalDetails.lastName': '[REDACTED]',
+          'personalDetails.email': 'redacted@deleted.local',
+          'personalDetails.mobile': '+61000000000',
+          'personalDetails.tfnEncrypted': '',
+          'personalDetails.tfnLastThree': '***',
+          'personalDetails.address.street': '[REDACTED]',
+          'spouse.firstName': '[REDACTED]',
+          'spouse.lastName': '[REDACTED]',
+          'spouse.tfnEncrypted': '',
+        },
+        exportExclude: ['personalDetails.tfnEncrypted', 'spouse.tfnEncrypted'],
+      },
+    ],
+    [
+      'VaultDocument',
+      {
+        displayName: 'Vault Documents',
+        model: VaultDocumentModel,
+        userIdField: 'userId',
+        piiFields: {},
+        hardDelete: true,
+      },
+    ],
+    [
+      'TaxYearSummary',
+      {
+        displayName: 'Tax Year Summaries',
+        model: TaxYearSummaryModel,
+        userIdField: 'userId',
+        piiFields: {},
+        hardDelete: true,
+      },
+    ],
+    [
+      'ChatConversation',
+      {
+        displayName: 'Chat Conversations',
+        model: ChatConversationModel,
+        userIdField: 'userId',
+        piiFields: {},
+        hardDelete: true,
+      },
+    ],
+    [
+      'ChatMessage',
+      {
+        displayName: 'Chat Messages',
+        model: ChatMessageModel,
+        userIdField: 'senderId',
+        piiFields: { content: '[REDACTED]', contentOriginal: '' },
+        exportExclude: ['contentOriginal'],
+      },
+    ],
+    [
+      'SupportTicket',
+      {
+        displayName: 'Support Tickets',
+        model: SupportTicketModel,
+        userIdField: 'userId',
+        piiFields: {},
+      },
+    ],
+    [
+      'TaxEstimateLog',
+      {
+        displayName: 'Tax Estimate Logs',
+        model: TaxEstimateLogModel,
+        userIdField: 'userId',
+        piiFields: {},
+        hardDelete: true,
+      },
+    ],
+    [
+      'TaxReturnResult',
+      {
+        displayName: 'Tax Return Results',
+        model: TaxReturnResultModel,
+        userIdField: 'userId',
+        piiFields: {},
+        hardDelete: true,
+      },
+    ],
+  ]);
+
+  const { ErasureRequestModel, DataExportModel } = dataLifecycle.init(
+    connection,
+    {
+      erasureGracePeriodDays: 30,
+      exportExpiryHours: 48,
+      retentionPolicies: [
+        {
+          modelName: 'ChatMessage',
+          retentionDays: 730, // 2 years
+          action: 'anonymize',
+          dateField: 'createdAt',
+        },
+      ],
+    },
+    privacyModelConfigs,
+  );
 
   // 5. Seed data
   await rbac.seedRoles(RoleModel);
@@ -515,7 +588,9 @@ async function bootstrap(): Promise<void> {
   if (config.NODE_ENV === 'production') {
     const indexResult = await ensurePerformanceIndexes(connection);
     if (indexResult.created.length > 0) {
-      logger.info(`Created ${indexResult.created.length} performance indexes`, { indexes: indexResult.created });
+      logger.info(`Created ${indexResult.created.length} performance indexes`, {
+        indexes: indexResult.created,
+      });
     }
     if (indexResult.errors.length > 0) {
       logger.warn('Failed to create some indexes', { errors: indexResult.errors });
@@ -695,7 +770,9 @@ async function bootstrap(): Promise<void> {
   });
 
   // Settings service for other modules to use
-  const settingsService = (await import('./modules/settings/settings.service')).createSettingsService({
+  const settingsService = (
+    await import('./modules/settings/settings.service')
+  ).createSettingsService({
     SettingModel,
   });
 
@@ -970,7 +1047,9 @@ async function bootstrap(): Promise<void> {
     UserModel: UserModel,
     authenticate: auth.authenticate,
     checkPermission: rbac.check,
-    notificationSend: notificationEngine.send as unknown as (params: Record<string, unknown>) => Promise<unknown>,
+    notificationSend: notificationEngine.send as unknown as (
+      params: Record<string, unknown>,
+    ) => Promise<unknown>,
     getSetting: settingsService.getSetting,
   });
 
@@ -1037,43 +1116,47 @@ async function bootstrap(): Promise<void> {
   }
 
   // 7. Finalize app (mount routes, error handler)
-  finalizeApp(app, {
-    authRouter,
-    rbacRouter,
-    auditRouter,
-    userRouter,
-    taxRuleRouter,
-    paymentRouter,
-    billingDisputeRouter,
-    leadRouter,
-    orderRouter,
-    collectPaymentRouter,
-    salesRouter,
-    formMappingRouter,
-    consentFormRouter,
-    reviewRouter,
-    taxEngineRouter,
-    broadcastRouter,
-    portalRouter,
-    chatRouter,
-    ticketRouter,
-    whatsappRouter,
-    privacyRouter,
-    xeroRouter,
-    settingsRouter,
-    referralRouter,
-    calendarRouter,
-    reputationRouter,
-    promoCodeRouter,
-    creditRouter,
-    notificationRouter,
-    analyticsRouter,
-    appointmentRouter,
-    staffAvailabilityRouter,
-    workloadRouter,
-    documentRouter,
-    zohoWebhookRouter,
-  }, deepHealthCheck);
+  finalizeApp(
+    app,
+    {
+      authRouter,
+      rbacRouter,
+      auditRouter,
+      userRouter,
+      taxRuleRouter,
+      paymentRouter,
+      billingDisputeRouter,
+      leadRouter,
+      orderRouter,
+      collectPaymentRouter,
+      salesRouter,
+      formMappingRouter,
+      consentFormRouter,
+      reviewRouter,
+      taxEngineRouter,
+      broadcastRouter,
+      portalRouter,
+      chatRouter,
+      ticketRouter,
+      whatsappRouter,
+      privacyRouter,
+      xeroRouter,
+      settingsRouter,
+      referralRouter,
+      calendarRouter,
+      reputationRouter,
+      promoCodeRouter,
+      creditRouter,
+      notificationRouter,
+      analyticsRouter,
+      appointmentRouter,
+      staffAvailabilityRouter,
+      workloadRouter,
+      documentRouter,
+      zohoWebhookRouter,
+    },
+    deepHealthCheck,
+  );
 
   // Fix for B-3.4, T-3.2, G-3.2: Register BullMQ automation jobs
   const automationHandlers = createAutomationHandlers({
@@ -1081,10 +1164,20 @@ async function bootstrap(): Promise<void> {
     LeadActivityModel,
     LeadReminderModel,
     recalculateScore: createLeadService({
-      LeadModel, LeadActivityModel, LeadReminderModel, connection, CounterModel,
-      UserModel: UserModel, OrderModel: OrderModel,
+      LeadModel,
+      LeadActivityModel,
+      LeadReminderModel,
+      connection,
+      CounterModel,
+      UserModel: UserModel,
+      OrderModel: OrderModel,
     }).calculateScore,
-    smartAssignBulk: getWorkloadService()?.smartAssignBulk as unknown as ((count: number, request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] }) => Promise<{ staffId: string }[]>) | undefined,
+    smartAssignBulk: getWorkloadService()?.smartAssignBulk as unknown as
+      | ((
+          count: number,
+          request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] },
+        ) => Promise<{ staffId: string }[]>)
+      | undefined,
   });
 
   // ─── BullMQ Retry Hardening ──────────────────────────────────────────────
@@ -1105,24 +1198,32 @@ async function bootstrap(): Promise<void> {
     job: Job | undefined,
     err: Error,
   ): Promise<void> {
-    if (!job) return;
+    if (!job) {
+      return;
+    }
 
     // Only move to DLQ if all attempts exhausted
-    const maxAttempts = (job.opts?.attempts ?? defaultJobOptions.attempts);
-    if (job.attemptsMade < maxAttempts) return;
+    const maxAttempts = job.opts?.attempts ?? defaultJobOptions.attempts;
+    if (job.attemptsMade < maxAttempts) {
+      return;
+    }
 
-    await deadLetterQueue.add('dead-letter-entry', {
-      originalQueue: sourceQueue,
-      originalJobName: job.name,
-      originalJobData: job.data,
-      failedAt: new Date().toISOString(),
-      attemptsMade: job.attemptsMade,
-      error: err.message,
-      stackTrace: err.stack?.slice(0, 500),
-    }, {
-      removeOnComplete: 500,  // Keep more DLQ entries for audit
-      removeOnFail: 200,
-    });
+    await deadLetterQueue.add(
+      'dead-letter-entry',
+      {
+        originalQueue: sourceQueue,
+        originalJobName: job.name,
+        originalJobData: job.data,
+        failedAt: new Date().toISOString(),
+        attemptsMade: job.attemptsMade,
+        error: err.message,
+        stackTrace: err.stack?.slice(0, 500),
+      },
+      {
+        removeOnComplete: 500, // Keep more DLQ entries for audit
+        removeOnFail: 200,
+      },
+    );
 
     jobLogger.error(`Job moved to dead-letter queue`, {
       queue: sourceQueue,
@@ -1139,18 +1240,22 @@ async function bootstrap(): Promise<void> {
 
   // Register repeatable jobs
   const repeatableJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'autoAssign', pattern: '*/5 * * * *' },       // every 5 minutes
-    { name: 'staleLeadAlert', pattern: '0 * * * *' },     // every hour
-    { name: 'autoDormant', pattern: '0 2 * * *' },        // daily at 2am
+    { name: 'autoAssign', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'staleLeadAlert', pattern: '0 * * * *' }, // every hour
+    { name: 'autoDormant', pattern: '0 2 * * *' }, // daily at 2am
     { name: 'followUpEscalation', pattern: '*/30 * * * *' }, // every 30 minutes
-    { name: 'overdueMarker', pattern: '*/15 * * * *' },   // every 15 minutes
-    { name: 'reEngagementFlag', pattern: '0 3 * * *' },   // daily at 3am
+    { name: 'overdueMarker', pattern: '*/15 * * * *' }, // every 15 minutes
+    { name: 'reEngagementFlag', pattern: '0 3 * * *' }, // daily at 3am
   ];
 
   for (const job of repeatableJobs) {
-    await automationQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await automationQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   // Worker to process automation jobs
@@ -1190,7 +1295,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'lead-automation', jobName: job.name });
   });
   automationWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'lead-automation', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'lead-automation',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('lead-automation', job, err);
   });
 
@@ -1201,17 +1311,21 @@ async function bootstrap(): Promise<void> {
   });
 
   const broadcastJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'triggerScheduled', pattern: '*/1 * * * *' },      // every 1 minute
-    { name: 'processSmsQueue', pattern: '*/5 * * * *' },       // every 5 minutes
-    { name: 'processEmailQueue', pattern: '*/5 * * * *' },     // every 5 minutes
-    { name: 'processWhatsappQueue', pattern: '*/5 * * * *' },  // every 5 minutes
-    { name: 'checkCompletion', pattern: '*/10 * * * *' },      // every 10 minutes
+    { name: 'triggerScheduled', pattern: '*/1 * * * *' }, // every 1 minute
+    { name: 'processSmsQueue', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'processEmailQueue', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'processWhatsappQueue', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'checkCompletion', pattern: '*/10 * * * *' }, // every 10 minutes
   ];
 
   for (const job of broadcastJobs) {
-    await broadcastQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await broadcastQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const broadcastWorker = new Worker(
@@ -1254,7 +1368,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'broadcast-engine', jobName: job.name });
   });
   broadcastWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'broadcast-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'broadcast-engine',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('broadcast-engine', job, err);
   });
 
@@ -1265,14 +1384,18 @@ async function bootstrap(): Promise<void> {
   });
 
   const vaultJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'hardDeleteExpired', pattern: '0 4 * * *' },       // daily at 4am
-    { name: 'reconcileStorage', pattern: '0 5 1 * *' },        // 1st of month at 5am
+    { name: 'hardDeleteExpired', pattern: '0 4 * * *' }, // daily at 4am
+    { name: 'reconcileStorage', pattern: '0 5 1 * *' }, // 1st of month at 5am
   ];
 
   for (const job of vaultJobs) {
-    await vaultQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await vaultQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const vaultWorker = new Worker(
@@ -1294,7 +1417,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'vault-maintenance', jobName: job.name });
   });
   vaultWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'vault-maintenance', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'vault-maintenance',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('vault-maintenance', job, err);
   });
 
@@ -1305,16 +1433,20 @@ async function bootstrap(): Promise<void> {
   });
 
   const ticketJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'checkSlaBreaches', pattern: '*/5 * * * *' },      // every 5 minutes
-    { name: 'autoCloseStale', pattern: '0 */6 * * *' },        // every 6 hours
-    { name: 'autoCloseResolved', pattern: '0 6 * * *' },       // daily at 6am
-    { name: 'archiveOldChats', pattern: '0 3 1 * *' },         // 1st of month at 3am
+    { name: 'checkSlaBreaches', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'autoCloseStale', pattern: '0 */6 * * *' }, // every 6 hours
+    { name: 'autoCloseResolved', pattern: '0 6 * * *' }, // daily at 6am
+    { name: 'archiveOldChats', pattern: '0 3 1 * *' }, // 1st of month at 3am
   ];
 
   for (const job of ticketJobs) {
-    await ticketQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await ticketQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const ticketWorker = new Worker(
@@ -1342,7 +1474,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'support-tickets', jobName: job.name });
   });
   ticketWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'support-tickets', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'support-tickets',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('support-tickets', job, err);
   });
 
@@ -1362,7 +1499,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'whatsapp-media', jobName: job.name });
   });
   whatsappMediaWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'whatsapp-media', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'whatsapp-media',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('whatsapp-media', job, err);
   });
 
@@ -1373,14 +1515,18 @@ async function bootstrap(): Promise<void> {
   });
 
   const privacyJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'enforceRetention', pattern: '0 2 * * 0' },          // weekly Sunday 2am
-    { name: 'cleanupExpiredExports', pattern: '0 3 * * *' },     // daily at 3am
+    { name: 'enforceRetention', pattern: '0 2 * * 0' }, // weekly Sunday 2am
+    { name: 'cleanupExpiredExports', pattern: '0 3 * * *' }, // daily at 3am
   ];
 
   for (const job of privacyJobs) {
-    await privacyQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await privacyQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const privacyWorker = new Worker(
@@ -1402,7 +1548,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'data-lifecycle', jobName: job.name });
   });
   privacyWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'data-lifecycle', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'data-lifecycle',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('data-lifecycle', job, err);
   });
 
@@ -1413,14 +1564,18 @@ async function bootstrap(): Promise<void> {
   });
 
   const xeroJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'retryFailedSyncs', pattern: '*/5 * * * *' },       // every 5 minutes
-    { name: 'flushOfflineQueue', pattern: '*/10 * * * *' },      // every 10 minutes
+    { name: 'retryFailedSyncs', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'flushOfflineQueue', pattern: '*/10 * * * *' }, // every 10 minutes
   ];
 
   for (const job of xeroJobs) {
-    await xeroQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await xeroQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const xeroWorker = new Worker(
@@ -1442,7 +1597,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'xero-sync', jobName: job.name });
   });
   xeroWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'xero-sync', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'xero-sync',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('xero-sync', job, err);
   });
 
@@ -1453,16 +1613,20 @@ async function bootstrap(): Promise<void> {
   });
 
   const engagementJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'expireReferrals', pattern: '0 2 * * *' },            // daily at 2am
-    { name: 'expireCreditRewards', pattern: '0 2 * * *' },        // daily at 2am
-    { name: 'processDeadlineReminders', pattern: '0 8 * * *' },   // daily at 8am (AEST)
-    { name: 'sendReviewReminders', pattern: '0 10 * * *' },       // daily at 10am
+    { name: 'expireReferrals', pattern: '0 2 * * *' }, // daily at 2am
+    { name: 'expireCreditRewards', pattern: '0 2 * * *' }, // daily at 2am
+    { name: 'processDeadlineReminders', pattern: '0 8 * * *' }, // daily at 8am (AEST)
+    { name: 'sendReviewReminders', pattern: '0 10 * * *' }, // daily at 10am
   ];
 
   for (const job of engagementJobs) {
-    await engagementQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await engagementQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const engagementWorker = new Worker(
@@ -1490,7 +1654,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'engagement-engine', jobName: job.name });
   });
   engagementWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'engagement-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'engagement-engine',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('engagement-engine', job, err);
   });
 
@@ -1501,13 +1670,17 @@ async function bootstrap(): Promise<void> {
   });
 
   const notificationJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'fcmTokenCleanup', pattern: '0 3 * * *' },         // daily at 3am — remove tokens not used in 30+ days
+    { name: 'fcmTokenCleanup', pattern: '0 3 * * *' }, // daily at 3am — remove tokens not used in 30+ days
   ];
 
   for (const job of notificationJobs) {
-    await notificationQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await notificationQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const notificationWorker = new Worker(
@@ -1516,10 +1689,9 @@ async function bootstrap(): Promise<void> {
       switch (job.name) {
         case 'fcmTokenCleanup': {
           const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-          await UserModel.updateMany(
-            {},
-            { $pull: { fcmTokens: { lastUsed: { $lt: thirtyDaysAgo } } } } as never,
-          );
+          await UserModel.updateMany({}, {
+            $pull: { fcmTokens: { lastUsed: { $lt: thirtyDaysAgo } } },
+          } as never);
           break;
         }
       }
@@ -1531,7 +1703,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'notification-engine', jobName: job.name });
   });
   notificationWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'notification-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'notification-engine',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('notification-engine', job, err);
   });
 
@@ -1542,13 +1719,17 @@ async function bootstrap(): Promise<void> {
   });
 
   const analyticsJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'computeExecutiveSummary', pattern: '*/5 * * * *' },  // every 5 minutes
+    { name: 'computeExecutiveSummary', pattern: '*/5 * * * *' }, // every 5 minutes
   ];
 
   for (const job of analyticsJobs) {
-    await analyticsQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await analyticsQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const analyticsWorker = new Worker(
@@ -1582,7 +1763,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'analytics-engine', jobName: job.name });
   });
   analyticsWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'analytics-engine', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'analytics-engine',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('analytics-engine', job, err);
   });
 
@@ -1593,14 +1779,18 @@ async function bootstrap(): Promise<void> {
   });
 
   const appointmentJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'processAppointmentReminders', pattern: '*/5 * * * *' },  // every 5 minutes
-    { name: 'markNoShows', pattern: '*/10 * * * *' },                 // every 10 minutes
+    { name: 'processAppointmentReminders', pattern: '*/5 * * * *' }, // every 5 minutes
+    { name: 'markNoShows', pattern: '*/10 * * * *' }, // every 10 minutes
   ];
 
   for (const job of appointmentJobs) {
-    await appointmentQueue.add(job.name, {}, {
-      repeat: { pattern: job.pattern },
-    });
+    await appointmentQueue.add(
+      job.name,
+      {},
+      {
+        repeat: { pattern: job.pattern },
+      },
+    );
   }
 
   const appointmentWorker = new Worker(
@@ -1622,7 +1812,12 @@ async function bootstrap(): Promise<void> {
     jobLogger.info('Job completed', { queue: 'appointment-scheduling', jobName: job.name });
   });
   appointmentWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', { queue: 'appointment-scheduling', jobName: job?.name, attempt: job?.attemptsMade, error: err.message });
+    jobLogger.warn('Job failed', {
+      queue: 'appointment-scheduling',
+      jobName: job?.name,
+      attempt: job?.attemptsMade,
+      error: err.message,
+    });
     void moveToDeadLetter('appointment-scheduling', job, err);
   });
 
@@ -1687,6 +1882,9 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  logger.error('Failed to start server', { error: (err as Error).message, stack: (err as Error).stack });
+  logger.error('Failed to start server', {
+    error: (err as Error).message,
+    stack: (err as Error).stack,
+  });
   process.exit(1);
 });

@@ -5,7 +5,11 @@ import { Table, Tag, Select, Card, Row, Col } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useReferralList } from '@/hooks/useReferrals';
 import type { Referral, ReferralListQuery, ReferralStatus } from '@/types/referral';
-import { REFERRAL_STATUSES, REFERRAL_STATUS_LABELS, REFERRAL_STATUS_COLORS } from '@/types/referral';
+import {
+  REFERRAL_STATUSES,
+  REFERRAL_STATUS_LABELS,
+  REFERRAL_STATUS_COLORS,
+} from '@/types/referral';
 import { formatDate } from '@/lib/utils/format';
 
 export function ReferralListPage(): React.ReactNode {

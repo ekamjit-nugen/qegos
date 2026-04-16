@@ -13,10 +13,20 @@ export const MESSAGE_TYPES: MessageType[] = ['text', 'file', 'canned_response', 
 export type SenderType = 'client' | 'staff' | 'system';
 
 export type CannedResponseCategory =
-  | 'general' | 'documents' | 'payment' | 'status' | 'deadline' | 'tax_info';
+  | 'general'
+  | 'documents'
+  | 'payment'
+  | 'status'
+  | 'deadline'
+  | 'tax_info';
 
 export const CANNED_RESPONSE_CATEGORIES: CannedResponseCategory[] = [
-  'general', 'documents', 'payment', 'status', 'deadline', 'tax_info',
+  'general',
+  'documents',
+  'payment',
+  'status',
+  'deadline',
+  'tax_info',
 ];
 
 // ─── TFN Redaction Pattern (CHT-INV-01) ─────────────────────────────────────
@@ -127,7 +137,11 @@ export interface ChatEngineRouteDeps {
 export interface ServerToClientEvents {
   new_message: (payload: { conversationId: string; message: IChatMessage }) => void;
   message_read: (payload: { conversationId: string; messageId: string; readAt: Date }) => void;
-  typing_indicator: (payload: { conversationId: string; userId: string; isTyping: boolean }) => void;
+  typing_indicator: (payload: {
+    conversationId: string;
+    userId: string;
+    isTyping: boolean;
+  }) => void;
   conversation_resolved: (payload: { conversationId: string }) => void;
   staff_presence: (payload: { staffId: string; online: boolean }) => void;
 }

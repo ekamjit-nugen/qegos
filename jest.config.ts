@@ -35,10 +35,13 @@ const config: Config = {
   clearMocks: true,
   restoreMocks: true,
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      diagnostics: false,
-      tsconfig: '<rootDir>/tsconfig.base.json',
-    }],
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        diagnostics: false,
+        tsconfig: '<rootDir>/tsconfig.base.json',
+      },
+    ],
   },
 };
 

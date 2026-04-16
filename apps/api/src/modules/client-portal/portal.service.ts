@@ -65,8 +65,16 @@ export interface UploadDocumentResult {
 
 export async function uploadDocument(params: UploadParams): Promise<UploadDocumentResult> {
   const {
-    userId, financialYear, category, fileName, mimeType,
-    buffer, uploadedBy, uploadedByUserId, description, tags,
+    userId,
+    financialYear,
+    category,
+    fileName,
+    mimeType,
+    buffer,
+    uploadedBy,
+    uploadedByUserId,
+    description,
+    tags,
   } = params;
 
   // CPV-INV-06: Quota check BEFORE upload
@@ -113,7 +121,9 @@ export async function uploadDocument(params: UploadParams): Promise<UploadDocume
     financialYear,
     category,
     isArchived: false,
-  }).sort({ version: -1 }).select('_id version');
+  })
+    .sort({ version: -1 })
+    .select('_id version');
 
   if (existing) {
     version = (existing.version ?? 1) + 1;
@@ -170,8 +180,12 @@ export async function listDocuments(
   const { userId, financialYear, category, page = 1, limit = 20 } = params;
 
   const query: Record<string, unknown> = { userId, isArchived: false };
-  if (financialYear) query.financialYear = financialYear;
-  if (category) query.category = category;
+  if (financialYear) {
+    query.financialYear = financialYear;
+  }
+  if (category) {
+    query.category = category;
+  }
 
   const [documents, total] = await Promise.all([
     VaultDocumentModel.find(query)
@@ -200,7 +214,9 @@ export async function getDocument(
     isArchived: false,
   });
 
-  if (!doc) return null;
+  if (!doc) {
+    return null;
+  }
 
   // CPV-INV-03: Presigned URL generated on-demand, 15min expiry
   const downloadUrl = await getPresignedUrl(doc.fileUrl);
@@ -319,9 +335,7 @@ export async function upsertTaxSummary(
 
 // ─── List Summaries for User ────────────────────────────────────────────────
 
-export async function listTaxSummaries(
-  userId: Types.ObjectId,
-): Promise<ITaxYearSummaryDocument[]> {
+export async function listTaxSummaries(userId: Types.ObjectId): Promise<ITaxYearSummaryDocument[]> {
   return TaxYearSummaryModel.find({ userId }).sort({ financialYear: -1 });
 }
 
@@ -347,18 +361,28 @@ export async function getYoYComparison(
     TaxYearSummaryModel.findOne({ userId, financialYear: previousFY }).lean(),
   ]);
 
-  if (!current) return null;
+  if (!current) {
+    return null;
+  }
 
   const compareFields = [
-    'totalIncome', 'totalDeductions', 'taxableIncome',
-    'medicareLevyAmount', 'totalTaxPayable', 'taxWithheld', 'refundOrOwing',
+    'totalIncome',
+    'totalDeductions',
+    'taxableIncome',
+    'medicareLevyAmount',
+    'totalTaxPayable',
+    'taxWithheld',
+    'refundOrOwing',
   ];
 
-  const changes: Record<string, { current: number; previous: number; delta: number; percentChange: number }> = {};
+  const changes: Record<
+    string,
+    { current: number; previous: number; delta: number; percentChange: number }
+  > = {};
 
   for (const field of compareFields) {
-    const curr = (current as Record<string, unknown>)[field] as number ?? 0;
-    const prev = previous ? ((previous as Record<string, unknown>)[field] as number ?? 0) : 0;
+    const curr = ((current as Record<string, unknown>)[field] as number) ?? 0;
+    const prev = previous ? (((previous as Record<string, unknown>)[field] as number) ?? 0) : 0;
     const delta = curr - prev;
     const percentChange = prev !== 0 ? Math.round((delta / Math.abs(prev)) * 10000) / 100 : 0;
 
@@ -380,8 +404,9 @@ export async function getAtoStatus(
   userId: Types.ObjectId,
   financialYear: string,
 ): Promise<ITaxYearSummaryDocument | null> {
-  return TaxYearSummaryModel.findOne({ userId, financialYear })
-    .select('atoRefundStatus assessmentDate noaReceived atoRefundIssuedDate filingDate financialYear');
+  return TaxYearSummaryModel.findOne({ userId, financialYear }).select(
+    'atoRefundStatus assessmentDate noaReceived atoRefundIssuedDate filingDate financialYear',
+  );
 }
 
 export async function updateAtoStatus(
@@ -447,14 +472,18 @@ export async function getPrefillData(
     financialYear: previousFY,
   }).lean();
 
-  if (!previousSummary) return null;
+  if (!previousSummary) {
+    return null;
+  }
 
   // Get prior-year vault documents for reference
   const priorDocs = await VaultDocumentModel.find({
     userId,
     financialYear: previousFY,
     isArchived: false,
-  }).select('category fileName').lean();
+  })
+    .select('category fileName')
+    .lean();
 
   return {
     suggested: {

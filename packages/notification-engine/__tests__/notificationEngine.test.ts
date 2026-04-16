@@ -85,9 +85,7 @@ describe('@nugen/notification-engine — Types & Constants', () => {
 
   test('recipient types include 3 types', () => {
     expect(RECIPIENT_TYPES).toHaveLength(3);
-    expect(RECIPIENT_TYPES).toEqual(
-      expect.arrayContaining(['client', 'staff', 'admin']),
-    );
+    expect(RECIPIENT_TYPES).toEqual(expect.arrayContaining(['client', 'staff', 'admin']));
   });
 
   test('preference languages include 6 languages', () => {
@@ -129,42 +127,30 @@ describe('@nugen/notification-engine — Types & Constants', () => {
 
 describe('@nugen/notification-engine — Merge Tags', () => {
   test('NTF-INV-04: renders merge tags with provided data', () => {
-    const result = renderMergeTags(
-      'Hello {{firstName}}, your order {{orderNumber}} is ready!',
-      { firstName: 'John', orderNumber: 'QGS-O-0042' },
-    );
+    const result = renderMergeTags('Hello {{firstName}}, your order {{orderNumber}} is ready!', {
+      firstName: 'John',
+      orderNumber: 'QGS-O-0042',
+    });
     expect(result).toBe('Hello John, your order QGS-O-0042 is ready!');
   });
 
   test('NTF-INV-04: uses fallback for missing data', () => {
-    const result = renderMergeTags(
-      'Hello {{firstName}}, welcome to {{companyName}}!',
-      {},
-    );
+    const result = renderMergeTags('Hello {{firstName}}, welcome to {{companyName}}!', {});
     expect(result).toBe('Hello Valued Client, welcome to QEGOS!');
   });
 
   test('NTF-INV-04: unrecognized tags resolve to empty string', () => {
-    const result = renderMergeTags(
-      'Hello {{unknownTag}}!',
-      {},
-    );
+    const result = renderMergeTags('Hello {{unknownTag}}!', {});
     expect(result).toBe('Hello !');
   });
 
   test('NTF-INV-04: empty merge data uses all fallbacks', () => {
-    const result = renderMergeTags(
-      '{{firstName}} - {{staffName}} - {{companyName}}',
-      {},
-    );
+    const result = renderMergeTags('{{firstName}} - {{staffName}} - {{companyName}}', {});
     expect(result).toBe('Valued Client -  - QEGOS');
   });
 
   test('NTF-INV-04: provided data overrides fallbacks', () => {
-    const result = renderMergeTags(
-      'Dear {{firstName}}',
-      { firstName: 'Alice' },
-    );
+    const result = renderMergeTags('Dear {{firstName}}', { firstName: 'Alice' });
     expect(result).toBe('Dear Alice');
   });
 
@@ -289,7 +275,15 @@ describe('@nugen/notification-engine — Invariant Summary', () => {
   });
 
   test('NTF-INV-04: all common merge tags have defined fallbacks', () => {
-    const expectedTags = ['firstName', 'lastName', 'orderNumber', 'staffName', 'companyName', 'deadlineDate', 'amount'];
+    const expectedTags = [
+      'firstName',
+      'lastName',
+      'orderNumber',
+      'staffName',
+      'companyName',
+      'deadlineDate',
+      'amount',
+    ];
     for (const tag of expectedTags) {
       expect(MERGE_TAG_FALLBACKS).toHaveProperty(tag);
     }

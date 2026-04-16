@@ -78,7 +78,10 @@ export function LeadStatusTransition({
     <div>
       <div style={{ marginBottom: 12 }}>
         <span style={{ marginRight: 8 }}>Current Status:</span>
-        <Tag color={LEAD_STATUS_COLORS[currentStatus]} style={{ fontSize: 14, padding: '4px 12px' }}>
+        <Tag
+          color={LEAD_STATUS_COLORS[currentStatus]}
+          style={{ fontSize: 14, padding: '4px 12px' }}
+        >
           {LEAD_STATUS_LABELS[currentStatus]}
         </Tag>
       </div>
@@ -92,7 +95,9 @@ export function LeadStatusTransition({
               type={status === LeadStatus.Won ? 'primary' : 'default'}
               danger={status === LeadStatus.Lost}
               loading={transition.isPending}
-              onClick={() => { void handleTransition(status); }}
+              onClick={() => {
+                void handleTransition(status);
+              }}
             >
               {status === LeadStatus.Won ? 'Convert & Win' : LEAD_STATUS_LABELS[status]}
             </Button>

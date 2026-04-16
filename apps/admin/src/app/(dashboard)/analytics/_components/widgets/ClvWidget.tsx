@@ -36,7 +36,7 @@ const columns: ColumnsType<ClvEntry> = [
     dataIndex: 'segment',
     key: 'segment',
     width: 90,
-    render: (v?: string) => v ? <Tag>{v}</Tag> : '-',
+    render: (v?: string) => (v ? <Tag>{v}</Tag> : '-'),
   },
   {
     title: 'Last Payment',
@@ -52,7 +52,12 @@ export function ClvWidget(): React.ReactNode {
 
   return (
     <WidgetCard
-      title={<span><TeamOutlined /><span style={{ marginLeft: 8 }}>Customer Lifetime Value</span></span>}
+      title={
+        <span>
+          <TeamOutlined />
+          <span style={{ marginLeft: 8 }}>Customer Lifetime Value</span>
+        </span>
+      }
       loading={isLoading}
       error={error as Error | null}
       onRetry={() => void refetch()}

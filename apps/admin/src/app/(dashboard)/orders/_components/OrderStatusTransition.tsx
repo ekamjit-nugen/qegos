@@ -61,7 +61,10 @@ export function OrderStatusTransition({
     <div>
       <div style={{ marginBottom: 12 }}>
         <span style={{ marginRight: 8 }}>Current:</span>
-        <Tag color={ORDER_STATUS_COLORS[currentStatus]} style={{ fontSize: 14, padding: '4px 12px' }}>
+        <Tag
+          color={ORDER_STATUS_COLORS[currentStatus]}
+          style={{ fontSize: 14, padding: '4px 12px' }}
+        >
           {ORDER_STATUS_LABELS[currentStatus]}
         </Tag>
       </div>
@@ -72,7 +75,11 @@ export function OrderStatusTransition({
             <Button
               key={status}
               size="small"
-              type={status === OrderStatus.Completed || status === OrderStatus.Lodged ? 'primary' : 'default'}
+              type={
+                status === OrderStatus.Completed || status === OrderStatus.Lodged
+                  ? 'primary'
+                  : 'default'
+              }
               danger={status === OrderStatus.Cancelled}
               loading={transition.isPending}
               onClick={() => handleTransition(status)}
@@ -86,7 +93,10 @@ export function OrderStatusTransition({
       <Modal
         title={showModal === OrderStatus.Lodged ? 'Lodge Order' : 'Cancel Order'}
         open={showModal !== null}
-        onCancel={() => { setShowModal(null); form.resetFields(); }}
+        onCancel={() => {
+          setShowModal(null);
+          form.resetFields();
+        }}
         onOk={handleModalSubmit}
         confirmLoading={transition.isPending}
       >

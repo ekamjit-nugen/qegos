@@ -28,22 +28,10 @@ export const createSigningValidation = [
   body('documentIndex')
     .isInt({ min: 0 })
     .withMessage('documentIndex must be a non-negative integer'),
-  body('clientName')
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage('clientName is required'),
-  body('clientEmail')
-    .isEmail()
-    .withMessage('clientEmail must be a valid email'),
-  body('adminName')
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage('adminName is required'),
-  body('adminEmail')
-    .isEmail()
-    .withMessage('adminEmail must be a valid email'),
+  body('clientName').isString().trim().notEmpty().withMessage('clientName is required'),
+  body('clientEmail').isEmail().withMessage('clientEmail must be a valid email'),
+  body('adminName').isString().trim().notEmpty().withMessage('adminName is required'),
+  body('adminEmail').isEmail().withMessage('adminEmail must be a valid email'),
 ];
 
 /**
@@ -51,11 +39,7 @@ export const createSigningValidation = [
  */
 export const sendForSignValidation = [
   body('orderId').isMongoId().withMessage('orderId must be a valid ObjectId'),
-  body('zohoRequestId')
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage('zohoRequestId is required'),
+  body('zohoRequestId').isString().trim().notEmpty().withMessage('zohoRequestId is required'),
 ];
 
 /**
@@ -63,16 +47,8 @@ export const sendForSignValidation = [
  */
 export const generateUriValidation = [
   body('orderId').isMongoId().withMessage('orderId must be a valid ObjectId'),
-  body('zohoRequestId')
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage('zohoRequestId is required'),
-  body('actionId')
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage('actionId is required'),
+  body('zohoRequestId').isString().trim().notEmpty().withMessage('zohoRequestId is required'),
+  body('actionId').isString().trim().notEmpty().withMessage('actionId is required'),
 ];
 
 /**

@@ -1,7 +1,4 @@
-import axios, {
-  type AxiosError,
-  type InternalAxiosRequestConfig,
-} from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import {
   getAccessToken,
   setAccessToken,
@@ -10,8 +7,7 @@ import {
   clearTokens,
 } from './tokenStorage';
 
-const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5001/api/v1';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5001/api/v1';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -21,15 +17,13 @@ export const api = axios.create({
 
 // ─── Request Interceptor ───────────────────────────────────────────────────
 
-api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-);
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  const token = await getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // ─── Response Interceptor (401 -> silent refresh) ──────────────────────────
 
@@ -88,8 +82,7 @@ api.interceptors.response.use(
         refreshToken,
       });
 
-      const { accessToken, refreshToken: newRefreshToken } =
-        response.data.data;
+      const { accessToken, refreshToken: newRefreshToken } = response.data.data;
       await setAccessToken(accessToken);
       await setRefreshToken(newRefreshToken);
       processQueue(null, accessToken);

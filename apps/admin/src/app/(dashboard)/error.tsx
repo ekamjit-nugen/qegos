@@ -29,17 +29,10 @@ export default function DashboardError({
         subTitle="An unexpected error occurred while loading this page."
         extra={
           <Space>
-            <Button
-              type="primary"
-              icon={<ReloadOutlined />}
-              onClick={() => reset()}
-            >
+            <Button type="primary" icon={<ReloadOutlined />} onClick={() => reset()}>
               Try Again
             </Button>
-            <Button
-              icon={<HomeOutlined />}
-              onClick={() => router.push('/')}
-            >
+            <Button icon={<HomeOutlined />} onClick={() => router.push('/')}>
               Back to Dashboard
             </Button>
           </Space>

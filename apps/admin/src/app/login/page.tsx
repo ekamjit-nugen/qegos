@@ -55,9 +55,7 @@ function DevCredentials({ onSelect }: { onSelect: (email: string) => void }): Re
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string, record: { color: string }) => (
-        <Tag color={record.color}>{role}</Tag>
-      ),
+      render: (role: string, record: { color: string }) => <Tag color={record.color}>{role}</Tag>,
     },
   ];
 
@@ -202,18 +200,20 @@ export default function LoginPage(): ReactNode {
                 { len: 6, message: 'Code must be 6 digits' },
               ]}
             >
-              <Input
-                prefix={<SafetyOutlined />}
-                placeholder="000000"
-                maxLength={6}
-              />
+              <Input prefix={<SafetyOutlined />} placeholder="000000" maxLength={6} />
             </Form.Item>
             <Form.Item>
               <Button type="primary" htmlType="submit" loading={loading} block>
                 Verify
               </Button>
             </Form.Item>
-            <Button type="link" onClick={() => { setMfaStep(false); }} block>
+            <Button
+              type="link"
+              onClick={() => {
+                setMfaStep(false);
+              }}
+              block
+            >
               Back to login
             </Button>
           </Form>

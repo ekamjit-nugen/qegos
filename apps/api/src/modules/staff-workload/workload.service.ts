@@ -7,11 +7,7 @@ import type {
   AssignmentRequest,
   AssignmentResult,
 } from './workload.types';
-import {
-  DEFAULT_WEIGHTS,
-  DEFAULT_CAPACITY,
-  DEFAULT_ELIGIBLE_USER_TYPES,
-} from './workload.types';
+import { DEFAULT_WEIGHTS, DEFAULT_CAPACITY, DEFAULT_ELIGIBLE_USER_TYPES } from './workload.types';
 
 interface WorkloadServiceDeps {
   UserModel: Model<any>;
@@ -52,55 +48,83 @@ export function createWorkloadService(
       staffFilter._id = { $in: staffIds };
     }
 
-    const staff = await deps.UserModel.find(staffFilter)
+    const staff = (await deps.UserModel.find(staffFilter)
       .select('_id firstName lastName email userType')
-      .lean() as unknown as Array<{ _id: unknown; firstName?: string; lastName?: string; email?: string; userType: number }>;
+      .lean()) as unknown as Array<{
+      _id: unknown;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      userType: number;
+    }>;
 
-    if (staff.length === 0) return [];
+    if (staff.length === 0) {
+      return [];
+    }
 
     const ids = staff.map((s) => s._id);
     const now = new Date();
     const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     // 5 parallel aggregations — one per workload dimension
-    const [leadCounts, orderCounts, reviewCounts, ticketCounts, appointmentCounts] = await Promise.all([
-      // Active leads per staff (status 1-5: New through Negotiation)
-      deps.LeadModel.aggregate([
-        { $match: { assignedTo: { $in: ids }, status: { $in: [1, 2, 3, 4, 5] }, isDeleted: { $ne: true } } },
-        { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
-      ]) as Promise<Array<{ _id: unknown; count: number }>>,
-
-      // Orders in progress per staff (status 1-5: pre-completion)
-      deps.OrderModel.aggregate([
-        { $match: { processingBy: { $in: ids }, status: { $in: [1, 2, 3, 4, 5] }, isDeleted: { $ne: true } } },
-        { $group: { _id: '$processingBy', count: { $sum: 1 } } },
-      ]) as Promise<Array<{ _id: unknown; count: number }>>,
-
-      // Pending reviews per staff
-      deps.ReviewAssignmentModel.aggregate([
-        { $match: { reviewerId: { $in: ids }, status: { $in: ['pending_review', 'in_review'] } } },
-        { $group: { _id: '$reviewerId', count: { $sum: 1 } } },
-      ]) as Promise<Array<{ _id: unknown; count: number }>>,
-
-      // Open tickets per staff
-      deps.SupportTicketModel.aggregate([
-        { $match: { assignedTo: { $in: ids }, status: { $in: ['open', 'in_progress', 'waiting_customer'] } } },
-        { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
-      ]) as Promise<Array<{ _id: unknown; count: number }>>,
-
-      // Upcoming appointments (next 48h) per staff
-      deps.AppointmentModel.aggregate([
-        {
-          $match: {
-            staffId: { $in: ids },
-            date: { $gte: now, $lte: in48h },
-            status: { $in: ['scheduled', 'confirmed'] },
-            isDeleted: { $ne: true },
+    const [leadCounts, orderCounts, reviewCounts, ticketCounts, appointmentCounts] =
+      await Promise.all([
+        // Active leads per staff (status 1-5: New through Negotiation)
+        deps.LeadModel.aggregate([
+          {
+            $match: {
+              assignedTo: { $in: ids },
+              status: { $in: [1, 2, 3, 4, 5] },
+              isDeleted: { $ne: true },
+            },
           },
-        },
-        { $group: { _id: '$staffId', count: { $sum: 1 } } },
-      ]) as Promise<Array<{ _id: unknown; count: number }>>,
-    ]);
+          { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+        ]) as Promise<Array<{ _id: unknown; count: number }>>,
+
+        // Orders in progress per staff (status 1-5: pre-completion)
+        deps.OrderModel.aggregate([
+          {
+            $match: {
+              processingBy: { $in: ids },
+              status: { $in: [1, 2, 3, 4, 5] },
+              isDeleted: { $ne: true },
+            },
+          },
+          { $group: { _id: '$processingBy', count: { $sum: 1 } } },
+        ]) as Promise<Array<{ _id: unknown; count: number }>>,
+
+        // Pending reviews per staff
+        deps.ReviewAssignmentModel.aggregate([
+          {
+            $match: { reviewerId: { $in: ids }, status: { $in: ['pending_review', 'in_review'] } },
+          },
+          { $group: { _id: '$reviewerId', count: { $sum: 1 } } },
+        ]) as Promise<Array<{ _id: unknown; count: number }>>,
+
+        // Open tickets per staff
+        deps.SupportTicketModel.aggregate([
+          {
+            $match: {
+              assignedTo: { $in: ids },
+              status: { $in: ['open', 'in_progress', 'waiting_customer'] },
+            },
+          },
+          { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+        ]) as Promise<Array<{ _id: unknown; count: number }>>,
+
+        // Upcoming appointments (next 48h) per staff
+        deps.AppointmentModel.aggregate([
+          {
+            $match: {
+              staffId: { $in: ids },
+              date: { $gte: now, $lte: in48h },
+              status: { $in: ['scheduled', 'confirmed'] },
+              isDeleted: { $ne: true },
+            },
+          },
+          { $group: { _id: '$staffId', count: { $sum: 1 } } },
+        ]) as Promise<Array<{ _id: unknown; count: number }>>,
+      ]);
 
     // Build lookup maps
     const toMap = (arr: Array<{ _id: unknown; count: number }>): Map<string, number> =>
@@ -121,21 +145,33 @@ export function createWorkloadService(
       const upcomingAppointments = appointmentMap.get(staffId) ?? 0;
 
       // Weighted workload score
-      const workloadScore = Math.round((
-        activeLeads * weights.activeLeads +
-        ordersInProgress * weights.ordersInProgress +
-        pendingReviews * weights.pendingReviews +
-        openTickets * weights.openTickets +
-        upcomingAppointments * weights.upcomingAppointments
-      ) * 100) / 100;
+      const workloadScore =
+        Math.round(
+          (activeLeads * weights.activeLeads +
+            ordersInProgress * weights.ordersInProgress +
+            pendingReviews * weights.pendingReviews +
+            openTickets * weights.openTickets +
+            upcomingAppointments * weights.upcomingAppointments) *
+            100,
+        ) / 100;
 
       // Capacity check
       const capacityBreaches: string[] = [];
-      if (activeLeads >= capacity.maxLeads) capacityBreaches.push('leads');
-      if (ordersInProgress >= capacity.maxOrders) capacityBreaches.push('orders');
-      if (pendingReviews >= capacity.maxReviews) capacityBreaches.push('reviews');
-      if (openTickets >= capacity.maxTickets) capacityBreaches.push('tickets');
-      if (upcomingAppointments >= capacity.maxAppointmentsPerDay) capacityBreaches.push('appointments');
+      if (activeLeads >= capacity.maxLeads) {
+        capacityBreaches.push('leads');
+      }
+      if (ordersInProgress >= capacity.maxOrders) {
+        capacityBreaches.push('orders');
+      }
+      if (pendingReviews >= capacity.maxReviews) {
+        capacityBreaches.push('reviews');
+      }
+      if (openTickets >= capacity.maxTickets) {
+        capacityBreaches.push('tickets');
+      }
+      if (upcomingAppointments >= capacity.maxAppointmentsPerDay) {
+        capacityBreaches.push('appointments');
+      }
 
       return {
         staffId,
@@ -175,12 +211,18 @@ export function createWorkloadService(
       // Exclude specific context capacity
       .filter((s) => {
         switch (request.context) {
-          case 'lead': return s.activeLeads < capacity.maxLeads;
-          case 'order': return s.ordersInProgress < capacity.maxOrders;
-          case 'review': return s.pendingReviews < capacity.maxReviews;
-          case 'ticket': return s.openTickets < capacity.maxTickets;
-          case 'appointment': return s.upcomingAppointments < capacity.maxAppointmentsPerDay;
-          default: return true;
+          case 'lead':
+            return s.activeLeads < capacity.maxLeads;
+          case 'order':
+            return s.ordersInProgress < capacity.maxOrders;
+          case 'review':
+            return s.pendingReviews < capacity.maxReviews;
+          case 'ticket':
+            return s.openTickets < capacity.maxTickets;
+          case 'appointment':
+            return s.upcomingAppointments < capacity.maxAppointmentsPerDay;
+          default:
+            return true;
         }
       });
 
@@ -196,7 +238,9 @@ export function createWorkloadService(
       candidates = candidates.filter((s) => required.has(s.userType));
     }
 
-    if (candidates.length === 0) return null;
+    if (candidates.length === 0) {
+      return null;
+    }
 
     // Sort by workload score ascending (least loaded first)
     candidates.sort((a, b) => a.workloadScore - b.workloadScore);
@@ -238,8 +282,7 @@ export function createWorkloadService(
     const increment = contextWeight[request.context] ?? 1;
 
     for (let i = 0; i < count; i++) {
-      let candidates = all
-        .filter((s) => !s.isAtCapacity);
+      let candidates = all.filter((s) => !s.isAtCapacity);
 
       if (request.excludeStaffIds && request.excludeStaffIds.length > 0) {
         const excluded = new Set(request.excludeStaffIds);
@@ -251,7 +294,9 @@ export function createWorkloadService(
         candidates = candidates.filter((s) => required.has(s.userType));
       }
 
-      if (candidates.length === 0) break;
+      if (candidates.length === 0) {
+        break;
+      }
 
       // Sort by simulated score
       candidates.sort((a, b) => {

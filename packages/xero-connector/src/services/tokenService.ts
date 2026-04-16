@@ -97,7 +97,9 @@ export async function getDecryptedTokens(): Promise<{
     .select('+xeroAccessToken +xeroRefreshToken')
     .lean();
 
-  if (!config?.xeroAccessToken || !config?.xeroRefreshToken) return null;
+  if (!config?.xeroAccessToken || !config?.xeroRefreshToken) {
+    return null;
+  }
 
   return {
     accessToken: decryptToken(config.xeroAccessToken),
@@ -122,7 +124,9 @@ export async function refreshTokenIfNeeded(
   }>,
 ): Promise<{ accessToken: string; tenantId: string } | null> {
   const tokens = await getDecryptedTokens();
-  if (!tokens) return null;
+  if (!tokens) {
+    return null;
+  }
 
   const twoMinutesFromNow = new Date(Date.now() + 2 * 60 * 1000);
 
@@ -157,12 +161,7 @@ export async function refreshTokenIfNeeded(
     const refreshed = await refreshFn(tokens.refreshToken);
     const expiresAt = new Date(Date.now() + refreshed.expiresIn * 1000);
 
-    await storeTokens(
-      refreshed.accessToken,
-      refreshed.refreshToken,
-      expiresAt,
-      tokens.tenantId,
-    );
+    await storeTokens(refreshed.accessToken, refreshed.refreshToken, expiresAt, tokens.tenantId);
 
     return { accessToken: refreshed.accessToken, tenantId: tokens.tenantId };
   } finally {

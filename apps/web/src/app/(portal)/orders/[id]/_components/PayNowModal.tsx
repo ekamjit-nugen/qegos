@@ -17,12 +17,7 @@ import {
   message,
 } from 'antd';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import {
   usePricingPreview,
   usePayOrder,
@@ -99,9 +94,7 @@ function CardPaymentForm({ intent, onSuccess }: CardPaymentFormProps): React.Rea
   return (
     <div>
       <PaymentElement options={{ layout: 'tabs' }} />
-      {error ? (
-        <Alert type="error" message={error} style={{ marginTop: 12 }} showIcon />
-      ) : null}
+      {error ? <Alert type="error" message={error} style={{ marginTop: 12 }} showIcon /> : null}
       <Button
         type="primary"
         block
@@ -240,7 +233,8 @@ export function PayNowModal({
               <Descriptions.Item
                 label={
                   <span>
-                    Promo {breakdown.promoCode ? <Tag color="purple">{breakdown.promoCode}</Tag> : null}
+                    Promo{' '}
+                    {breakdown.promoCode ? <Tag color="purple">{breakdown.promoCode}</Tag> : null}
                   </span>
                 }
               >

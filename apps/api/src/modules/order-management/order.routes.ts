@@ -156,7 +156,7 @@ export function createOrderRoutes(deps: OrderRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const result = await service.listOrders({
-        ...req.query as Record<string, string>,
+        ...(req.query as Record<string, string>),
         scopeFilter: authReq.scopeFilter,
       });
       res.status(200).json({
@@ -364,9 +364,7 @@ export function createSalesRoutes(deps: SalesRouteDeps): Router {
     '/',
     auth() as never,
     asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-      const services = await SalesModel.find({ isActive: true })
-        .sort({ sortOrder: 1 })
-        .lean();
+      const services = await SalesModel.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
       res.status(200).json({ status: 200, data: services });
     }),
   );
@@ -391,7 +389,17 @@ export function createSalesRoutes(deps: SalesRouteDeps): Router {
     ...validate(updateSalesValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       // Fix for B-3.33: Use allowlist instead of raw req.body
-      const ALLOWED_SALES_FIELDS = ['title', 'description', 'price', 'gstInclusive', 'category', 'inputBased', 'isActive', 'sortOrder', 'xeroAccountCode'] as const;
+      const ALLOWED_SALES_FIELDS = [
+        'title',
+        'description',
+        'price',
+        'gstInclusive',
+        'category',
+        'inputBased',
+        'isActive',
+        'sortOrder',
+        'xeroAccountCode',
+      ] as const;
       const rawBody = req.body as Record<string, unknown>;
       const safeUpdate: Record<string, unknown> = {};
       for (const field of ALLOWED_SALES_FIELDS) {
@@ -399,11 +407,10 @@ export function createSalesRoutes(deps: SalesRouteDeps): Router {
           safeUpdate[field] = rawBody[field];
         }
       }
-      const service = await SalesModel.findByIdAndUpdate(
-        req.params.id,
-        safeUpdate,
-        { new: true, runValidators: true },
-      );
+      const service = await SalesModel.findByIdAndUpdate(req.params.id, safeUpdate, {
+        new: true,
+        runValidators: true,
+      });
       if (!service) {
         res.status(404).json({ status: 404, code: 'NOT_FOUND', message: 'Sales item not found' });
         return;

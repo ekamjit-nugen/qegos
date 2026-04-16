@@ -22,7 +22,7 @@ export function useNotifications(page: number = 1) {
       params.set('page', String(page));
       params.set('limit', '20');
       const response = await api.get<{ data: PaginatedResponse<Notification> }>(
-        `/notifications?${params.toString()}`
+        `/notifications?${params.toString()}`,
       );
       return response.data.data;
     },
@@ -33,9 +33,7 @@ export function useUnreadNotificationCount() {
   return useQuery<{ count: number }>({
     queryKey: ['notifications', 'unreadCount'],
     queryFn: async (): Promise<{ count: number }> => {
-      const response = await api.get<{ data: { count: number } }>(
-        '/notifications/unread-count'
-      );
+      const response = await api.get<{ data: { count: number } }>('/notifications/unread-count');
       return response.data.data;
     },
   });
@@ -72,7 +70,7 @@ export function useNotificationPreferences() {
     queryKey: ['notifications', 'preferences'],
     queryFn: async (): Promise<NotificationPreferences> => {
       const response = await api.get<{ data: NotificationPreferences }>(
-        '/notifications/preferences'
+        '/notifications/preferences',
       );
       return response.data.data;
     },
@@ -83,12 +81,10 @@ export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient();
 
   return useMutation<NotificationPreferences, Error, NotificationPreferences>({
-    mutationFn: async (
-      prefs: NotificationPreferences
-    ): Promise<NotificationPreferences> => {
+    mutationFn: async (prefs: NotificationPreferences): Promise<NotificationPreferences> => {
       const response = await api.put<{ data: NotificationPreferences }>(
         '/notifications/preferences',
-        prefs
+        prefs,
       );
       return response.data.data;
     },

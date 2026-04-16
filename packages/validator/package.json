@@ -16,7 +16,11 @@
   "peerDependencies": {
     "@nugen/error-handler": "^1.0.0"
   },
-  "keywords": ["validator", "express", "australian-tax"],
+  "keywords": [
+    "validator",
+    "express",
+    "australian-tax"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

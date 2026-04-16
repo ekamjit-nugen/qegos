@@ -30,17 +30,10 @@ export default function PortalError({
         subTitle="We couldn't load this page. Please try again or go back to the dashboard."
         extra={
           <Space>
-            <Button
-              type="primary"
-              icon={<ReloadOutlined />}
-              onClick={() => reset()}
-            >
+            <Button type="primary" icon={<ReloadOutlined />} onClick={() => reset()}>
               Try Again
             </Button>
-            <Button
-              icon={<HomeOutlined />}
-              onClick={() => router.push('/')}
-            >
+            <Button icon={<HomeOutlined />} onClick={() => router.push('/')}>
               Dashboard
             </Button>
           </Space>

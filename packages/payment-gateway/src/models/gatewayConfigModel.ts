@@ -1,9 +1,5 @@
 import { Schema, type Model, type Connection } from 'mongoose';
-import type {
-  IGatewayConfigDocument,
-  PaymentGateway,
-  RoutingRule,
-} from '../types';
+import type { IGatewayConfigDocument, PaymentGateway, RoutingRule } from '../types';
 
 const gatewayConfigSchema = new Schema<IGatewayConfigDocument>(
   {

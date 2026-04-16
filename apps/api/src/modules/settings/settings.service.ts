@@ -18,7 +18,9 @@ export function createSettingsService(deps: SettingsServiceDeps): SettingsServic
 
   async function getSetting(key: string): Promise<unknown> {
     const doc = await SettingModel.findOne({ key }).lean();
-    if (!doc) return undefined;
+    if (!doc) {
+      return undefined;
+    }
     return doc.value;
   }
 

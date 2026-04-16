@@ -1,12 +1,6 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import {
-  Text,
-  Card,
-  Badge,
-  Button,
-  useTheme,
-} from 'react-native-paper';
+import { Text, Card, Badge, Button, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useConversations } from '@/hooks/useChat';
 import type { Conversation } from '@/types/chat';
@@ -19,11 +13,7 @@ export default function ChatScreen(): React.ReactNode {
 
   const conversations = data?.data ?? [];
 
-  function renderConversation({
-    item,
-  }: {
-    item: Conversation;
-  }): React.ReactElement {
+  function renderConversation({ item }: { item: Conversation }): React.ReactElement {
     const lastMessageTime = item.lastMessage?.sentAt
       ? new Date(item.lastMessage.sentAt).toLocaleDateString('en-AU', {
           day: 'numeric',
@@ -34,34 +24,22 @@ export default function ChatScreen(): React.ReactNode {
       : '';
 
     return (
-      <Card
-        style={styles.card}
-        onPress={() => router.push(`/chat/${item._id}`)}
-      >
+      <Card style={styles.card} onPress={() => router.push(`/chat/${item._id}`)}>
         <Card.Content>
           <View style={styles.cardHeader}>
             <Text
               variant="titleSmall"
-              style={[
-                styles.subject,
-                item.unreadCount > 0 && styles.unreadSubject,
-              ]}
+              style={[styles.subject, item.unreadCount > 0 && styles.unreadSubject]}
               numberOfLines={1}
             >
               {item.subject}
             </Text>
             {item.unreadCount > 0 && (
-              <Badge style={{ backgroundColor: theme.colors.primary }}>
-                {item.unreadCount}
-              </Badge>
+              <Badge style={{ backgroundColor: theme.colors.primary }}>{item.unreadCount}</Badge>
             )}
           </View>
           {item.lastMessage && (
-            <Text
-              variant="bodySmall"
-              numberOfLines={2}
-              style={styles.preview}
-            >
+            <Text variant="bodySmall" numberOfLines={2} style={styles.preview}>
               {item.lastMessage.body}
             </Text>
           )}
@@ -80,7 +58,9 @@ export default function ChatScreen(): React.ReactNode {
   if (isError) {
     return (
       <View style={styles.center}>
-        <Text variant="titleMedium" style={{ marginBottom: 8 }}>Failed to load conversations</Text>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+          Failed to load conversations
+        </Text>
         <Text variant="bodyMedium" style={{ opacity: 0.6, marginBottom: 16, textAlign: 'center' }}>
           Please check your connection and try again.
         </Text>

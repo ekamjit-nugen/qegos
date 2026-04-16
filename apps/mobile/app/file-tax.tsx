@@ -21,11 +21,7 @@ import {
   useDeleteDraft,
   useSubmitFormFill,
 } from '@/hooks/useFormFill';
-import type {
-  AvailableFormMapping,
-  FormField,
-  FormDraft,
-} from '@/types/formMapping';
+import type { AvailableFormMapping, FormField, FormDraft } from '@/types/formMapping';
 import { FileUploadField, type FileUploadFieldValue } from '@/components/FileUploadField';
 
 interface ParsedStep {
@@ -48,7 +44,9 @@ function parseSchema(mapping: AvailableFormMapping): { steps: ParsedStep[] } {
   const orphans: FormField[] = [];
 
   for (const [key, raw] of Object.entries(properties)) {
-    if (uiOrder.includes(key)) continue; // step groups, not fields
+    if (uiOrder.includes(key)) {
+      continue;
+    } // step groups, not fields
     const p = raw as {
       title?: string;
       description?: string;
@@ -62,8 +60,7 @@ function parseSchema(mapping: AvailableFormMapping): { steps: ParsedStep[] } {
       type?: string;
     };
     const widget: FormField['widget'] =
-      p['x-qegos']?.widget ??
-      (p.enum ? 'select' : p.type === 'number' ? 'number' : 'text');
+      p['x-qegos']?.widget ?? (p.enum ? 'select' : p.type === 'number' ? 'number' : 'text');
     const field: FormField = {
       key,
       label: p.title ?? key,
@@ -72,8 +69,7 @@ function parseSchema(mapping: AvailableFormMapping): { steps: ParsedStep[] } {
       description: p.description,
       placeholder: p['x-qegos']?.placeholder,
       options:
-        p['x-qegos']?.options ??
-        (p.enum ? p.enum.map((v) => ({ label: v, value: v })) : undefined),
+        p['x-qegos']?.options ?? (p.enum ? p.enum.map((v) => ({ label: v, value: v })) : undefined),
       step: p['x-qegos']?.step,
     };
     if (field.step && uiOrder.includes(field.step)) {
@@ -86,7 +82,9 @@ function parseSchema(mapping: AvailableFormMapping): { steps: ParsedStep[] } {
   const steps: ParsedStep[] = uiOrder.map((stepId, idx) => {
     const stepMeta = properties[stepId] as { title?: string; description?: string } | undefined;
     const stepFields = fieldsByStep[stepId] ?? [];
-    if (idx === 0) stepFields.unshift(...orphans);
+    if (idx === 0) {
+      stepFields.unshift(...orphans);
+    }
     return {
       id: stepId,
       title: stepMeta?.title ?? stepId,
@@ -129,8 +127,12 @@ export default function FileTaxScreen(): React.ReactNode {
   const totalSteps = parsed.steps.length + 2; // + personal details + review
 
   function scheduleSave(nextAnswers?: Record<string, unknown>, nextStep?: number): void {
-    if (!mapping) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
+    if (!mapping) {
+      return;
+    }
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
     saveTimer.current = setTimeout(() => {
       saveDraft.mutate(
         {
@@ -156,7 +158,9 @@ export default function FileTaxScreen(): React.ReactNode {
 
   useEffect(() => {
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+      }
     };
   }, []);
 
@@ -207,7 +211,9 @@ export default function FileTaxScreen(): React.ReactNode {
   }
 
   function handleSubmit(): void {
-    if (!mapping) return;
+    if (!mapping) {
+      return;
+    }
     if (!personalDetails.firstName || !personalDetails.lastName) {
       setSnackbar('First and last name are required');
       return;
@@ -270,11 +276,7 @@ export default function FileTaxScreen(): React.ReactNode {
                         >
                           Continue
                         </Button>
-                        <Button
-                          mode="text"
-                          onPress={() => deleteDraft.mutate(d._id)}
-                          compact
-                        >
+                        <Button mode="text" onPress={() => deleteDraft.mutate(d._id)} compact>
                           Discard
                         </Button>
                       </View>
@@ -333,8 +335,7 @@ export default function FileTaxScreen(): React.ReactNode {
 
       <View style={styles.progressBar}>
         <Text variant="labelSmall" style={styles.dim}>
-          Step {currentStep + 1} of {totalSteps} · {pct}%
-          {lastSavedAt && '  · Auto-saved'}
+          Step {currentStep + 1} of {totalSteps} · {pct}%{lastSavedAt && '  · Auto-saved'}
         </Text>
         <ProgressBar progress={pct / 100} color={theme.colors.primary} />
       </View>

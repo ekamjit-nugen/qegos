@@ -1,4 +1,8 @@
-import type { INotificationChannelProvider, NotificationChannelContent, NotificationSendResult } from '../../types';
+import type {
+  INotificationChannelProvider,
+  NotificationChannelContent,
+  NotificationSendResult,
+} from '../../types';
 
 interface FCMConfig {
   serviceAccountJson: string;
@@ -43,9 +47,7 @@ export const fcmProvider: INotificationChannelProvider = {
           body: content.body,
         },
         data: content.data
-          ? Object.fromEntries(
-              Object.entries(content.data).map(([k, v]) => [k, String(v)]),
-            )
+          ? Object.fromEntries(Object.entries(content.data).map(([k, v]) => [k, String(v)]))
           : undefined,
         android: { priority: 'high' as const },
         apns: { headers: { 'apns-priority': '10' } },

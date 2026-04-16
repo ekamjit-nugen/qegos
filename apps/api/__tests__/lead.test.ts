@@ -170,7 +170,7 @@ describe('Lead Management', () => {
     });
 
     it('should reject floating point values for estimatedValue', () => {
-      expect(Number.isInteger(165.50)).toBe(false);
+      expect(Number.isInteger(165.5)).toBe(false);
       expect(Number.isInteger(99.99)).toBe(false);
     });
   });
@@ -256,8 +256,12 @@ describe('Lead Management', () => {
 
     it('should auto-set priority based on score thresholds', () => {
       function getPriority(score: number): string {
-        if (score >= 61) return 'hot';
-        if (score >= 31) return 'warm';
+        if (score >= 61) {
+          return 'hot';
+        }
+        if (score >= 31) {
+          return 'warm';
+        }
         return 'cold';
       }
 

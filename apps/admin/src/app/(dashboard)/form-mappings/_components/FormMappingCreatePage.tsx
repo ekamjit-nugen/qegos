@@ -2,18 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Form,
-  Input,
-  Row,
-  Select,
-  Typography,
-  message,
-} from 'antd';
+import { Alert, Button, Card, Col, Form, Input, Row, Select, Typography, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useCreateFormMapping } from '@/hooks/useFormMappings';
 import { useSalesList } from '@/hooks/useSales';
@@ -119,11 +108,9 @@ export function FormMappingCreatePage(): React.ReactNode {
   // FY options: current + next 2
   const now = new Date();
   const year = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-  const fyOptions = [
-    `${year}-${year + 1}`,
-    `${year + 1}-${year + 2}`,
-    `${year - 1}-${year}`,
-  ].map((v) => ({ value: v, label: v }));
+  const fyOptions = [`${year}-${year + 1}`, `${year + 1}-${year + 2}`, `${year - 1}-${year}`].map(
+    (v) => ({ value: v, label: v }),
+  );
 
   return (
     <div>
@@ -174,20 +161,11 @@ export function FormMappingCreatePage(): React.ReactNode {
                   },
                 ]}
               >
-                <Select
-                  placeholder="2025-2026"
-                  options={fyOptions}
-                  showSearch
-                  allowClear
-                />
+                <Select placeholder="2025-2026" options={fyOptions} showSearch allowClear />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item
-                label="Title"
-                name="title"
-                rules={[{ required: true, min: 3, max: 200 }]}
-              >
+              <Form.Item label="Title" name="title" rules={[{ required: true, min: 3, max: 200 }]}>
                 <Input placeholder="Student Tax Return Intake 2026" />
               </Form.Item>
             </Col>

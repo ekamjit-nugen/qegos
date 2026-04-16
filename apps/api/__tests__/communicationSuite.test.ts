@@ -75,13 +75,11 @@ import type {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Phase 7: Communication Suite', () => {
-
   // ═══════════════════════════════════════════════════════════════════════════
   // CHAT ENGINE
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Chat Engine', () => {
-
     // ── TFN Redaction (CHT-INV-01) ──────────────────────────────────────
 
     describe('TFN redaction (CHT-INV-01)', () => {
@@ -95,7 +93,7 @@ describe('Phase 7: Communication Suite', () => {
 
       it('does not flag non-TFN numbers', () => {
         expect(containsTfn('Phone: 0412345678')).toBe(false); // 10 digits
-        expect(containsTfn('Order #12345')).toBe(false);       // 5 digits
+        expect(containsTfn('Order #12345')).toBe(false); // 5 digits
       });
 
       it('redacts TFN in message content', () => {
@@ -179,15 +177,20 @@ describe('Phase 7: Communication Suite', () => {
     describe('Socket.io event types', () => {
       it('server-to-client events are typed', () => {
         const events: (keyof ServerToClientEvents)[] = [
-          'new_message', 'message_read', 'typing_indicator',
-          'conversation_resolved', 'staff_presence',
+          'new_message',
+          'message_read',
+          'typing_indicator',
+          'conversation_resolved',
+          'staff_presence',
         ];
         expect(events).toHaveLength(5);
       });
 
       it('client-to-server events are typed', () => {
         const events: (keyof ClientToServerEvents)[] = [
-          'typing_indicator', 'join_conversation', 'leave_conversation',
+          'typing_indicator',
+          'join_conversation',
+          'leave_conversation',
         ];
         expect(events).toHaveLength(3);
       });
@@ -213,7 +216,6 @@ describe('Phase 7: Communication Suite', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Support Tickets', () => {
-
     // ── Status Machine ──────────────────────────────────────────────────
 
     describe('Ticket status machine', () => {
@@ -266,9 +268,16 @@ describe('Phase 7: Communication Suite', () => {
 
       it('includes all expected categories', () => {
         const expected = [
-          'billing_query', 'refund_request', 'return_status',
-          'document_issue', 'staff_complaint', 'technical_issue',
-          'deadline_concern', 'ato_query', 'general_enquiry', 'amendment_request',
+          'billing_query',
+          'refund_request',
+          'return_status',
+          'document_issue',
+          'staff_complaint',
+          'technical_issue',
+          'deadline_concern',
+          'ato_query',
+          'general_enquiry',
+          'amendment_request',
         ];
         for (const cat of expected) {
           expect(TICKET_CATEGORIES).toContain(cat);
@@ -352,8 +361,8 @@ describe('Phase 7: Communication Suite', () => {
       it('isSlaImminent detects 80% threshold', () => {
         const created = new Date('2026-04-07T00:00:00Z');
         const deadline = new Date('2026-04-07T10:00:00Z'); // 10hr window
-        const at80pct = new Date('2026-04-07T08:00:00Z');  // 8hr elapsed = 80%
-        const at50pct = new Date('2026-04-07T05:00:00Z');  // 5hr elapsed = 50%
+        const at80pct = new Date('2026-04-07T08:00:00Z'); // 8hr elapsed = 80%
+        const at50pct = new Date('2026-04-07T05:00:00Z'); // 5hr elapsed = 50%
         expect(isSlaImminent(created, deadline, at80pct)).toBe(true);
         expect(isSlaImminent(created, deadline, at50pct)).toBe(false);
       });
@@ -432,7 +441,6 @@ describe('Phase 7: Communication Suite', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('WhatsApp Connector', () => {
-
     // ── Phone Number Formatting (WHA-INV-04) ────────────────────────────
 
     describe('Phone number formatting (WHA-INV-04)', () => {

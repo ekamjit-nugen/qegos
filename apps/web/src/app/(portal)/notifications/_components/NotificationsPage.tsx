@@ -1,16 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import {
-  Button,
-  Collapse,
-  Empty,
-  List,
-  Pagination,
-  Spin,
-  Switch,
-  Typography,
-} from 'antd';
+import { Button, Collapse, Empty, List, Pagination, Spin, Switch, Typography } from 'antd';
 import {
   BellOutlined,
   CheckOutlined,
@@ -67,7 +58,9 @@ export function NotificationsPage(): React.ReactNode {
 
   const handleToggleChannel = useCallback(
     (channel: string, enabled: boolean) => {
-      if (!preferences) { return; }
+      if (!preferences) {
+        return;
+      }
       updatePrefsMutation.mutate({
         channels: { ...preferences.channels, [channel]: enabled },
       });
@@ -128,9 +121,7 @@ export function NotificationsPage(): React.ReactNode {
                       {getTypeIcon(notif.type)}
                     </span>
                   }
-                  title={
-                    <Text strong={!notif.isRead}>{notif.title}</Text>
-                  }
+                  title={<Text strong={!notif.isRead}>{notif.title}</Text>}
                   description={
                     <>
                       <Paragraph
@@ -202,7 +193,9 @@ export function NotificationsPage(): React.ReactNode {
                     <Text style={{ textTransform: 'capitalize' }}>{channel}</Text>
                     <Switch
                       checked={enabled}
-                      onChange={(checked) => { handleToggleChannel(channel, checked); }}
+                      onChange={(checked) => {
+                        handleToggleChannel(channel, checked);
+                      }}
                       loading={updatePrefsMutation.isPending}
                     />
                   </div>

@@ -4,6 +4,7 @@ import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import type { check as CheckFn } from '@nugen/rbac';
 import type { authenticate as AuthFn, AuthenticatedRequest } from '@nugen/auth';
+import type { ICounterDocument } from '../../database/counter.model';
 import type {
   ITaxRuleConfigDocument,
   ITaxEstimateLogDocument,
@@ -11,7 +12,6 @@ import type {
   TaxEstimateInput,
   EstimateContext,
 } from './taxEngine.types';
-import type { ICounterDocument } from '../../database/counter.model';
 import { createTaxEngineService } from './taxEngine.service';
 import {
   createRuleDraftValidation,
@@ -151,10 +151,7 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
     check('system_config', 'update') as never,
     ...validate(updateRuleDraftValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const rule = await service.updateDraft(
-        req.params.id,
-        req.body as Record<string, unknown>,
-      );
+      const rule = await service.updateDraft(req.params.id, req.body as Record<string, unknown>);
       res.status(200).json({ status: 200, data: rule });
     }),
   );
@@ -251,21 +248,21 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
         dividendIncome: (body.dividendIncome as number) ?? 0,
         dividendFrankingCredits: (body.dividendFrankingCredits as number) ?? 0,
         capitalGains: {
-          shortTerm: ((body.capitalGains as Record<string, number>)?.shortTerm) ?? 0,
-          longTerm: ((body.capitalGains as Record<string, number>)?.longTerm) ?? 0,
+          shortTerm: (body.capitalGains as Record<string, number>)?.shortTerm ?? 0,
+          longTerm: (body.capitalGains as Record<string, number>)?.longTerm ?? 0,
         },
         foreignIncome: (body.foreignIncome as number) ?? 0,
         governmentPayments: (body.governmentPayments as number) ?? 0,
         superannuationIncome: (body.superannuationIncome as number) ?? 0,
         deductions: {
-          workRelated: ((body.deductions as Record<string, number>)?.workRelated) ?? 0,
-          selfEducation: ((body.deductions as Record<string, number>)?.selfEducation) ?? 0,
-          vehicleExpenses: ((body.deductions as Record<string, number>)?.vehicleExpenses) ?? 0,
-          homeOffice: ((body.deductions as Record<string, number>)?.homeOffice) ?? 0,
-          donations: ((body.deductions as Record<string, number>)?.donations) ?? 0,
-          incomeProtection: ((body.deductions as Record<string, number>)?.incomeProtection) ?? 0,
-          accountingFees: ((body.deductions as Record<string, number>)?.accountingFees) ?? 0,
-          other: ((body.deductions as Record<string, number>)?.other) ?? 0,
+          workRelated: (body.deductions as Record<string, number>)?.workRelated ?? 0,
+          selfEducation: (body.deductions as Record<string, number>)?.selfEducation ?? 0,
+          vehicleExpenses: (body.deductions as Record<string, number>)?.vehicleExpenses ?? 0,
+          homeOffice: (body.deductions as Record<string, number>)?.homeOffice ?? 0,
+          donations: (body.deductions as Record<string, number>)?.donations ?? 0,
+          incomeProtection: (body.deductions as Record<string, number>)?.incomeProtection ?? 0,
+          accountingFees: (body.deductions as Record<string, number>)?.accountingFees ?? 0,
+          other: (body.deductions as Record<string, number>)?.other ?? 0,
         },
         privateHealthInsurance: (body.privateHealthInsurance as boolean) ?? true,
         hasHecsDebt: (body.hasHecsDebt as boolean) ?? false,
@@ -295,7 +292,11 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
     auth() as never,
     ...validate(quickEstimateValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const { income, deductions = 0, residencyStatus = 'resident' } = req.body as {
+      const {
+        income,
+        deductions = 0,
+        residencyStatus = 'resident',
+      } = req.body as {
         income: number;
         deductions?: number;
         residencyStatus?: string;
@@ -324,21 +325,21 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
         dividendIncome: (body.dividendIncome as number) ?? 0,
         dividendFrankingCredits: (body.dividendFrankingCredits as number) ?? 0,
         capitalGains: {
-          shortTerm: ((body.capitalGains as Record<string, number>)?.shortTerm) ?? 0,
-          longTerm: ((body.capitalGains as Record<string, number>)?.longTerm) ?? 0,
+          shortTerm: (body.capitalGains as Record<string, number>)?.shortTerm ?? 0,
+          longTerm: (body.capitalGains as Record<string, number>)?.longTerm ?? 0,
         },
         foreignIncome: (body.foreignIncome as number) ?? 0,
         governmentPayments: (body.governmentPayments as number) ?? 0,
         superannuationIncome: (body.superannuationIncome as number) ?? 0,
         deductions: {
-          workRelated: ((body.deductions as Record<string, number>)?.workRelated) ?? 0,
-          selfEducation: ((body.deductions as Record<string, number>)?.selfEducation) ?? 0,
-          vehicleExpenses: ((body.deductions as Record<string, number>)?.vehicleExpenses) ?? 0,
-          homeOffice: ((body.deductions as Record<string, number>)?.homeOffice) ?? 0,
-          donations: ((body.deductions as Record<string, number>)?.donations) ?? 0,
-          incomeProtection: ((body.deductions as Record<string, number>)?.incomeProtection) ?? 0,
-          accountingFees: ((body.deductions as Record<string, number>)?.accountingFees) ?? 0,
-          other: ((body.deductions as Record<string, number>)?.other) ?? 0,
+          workRelated: (body.deductions as Record<string, number>)?.workRelated ?? 0,
+          selfEducation: (body.deductions as Record<string, number>)?.selfEducation ?? 0,
+          vehicleExpenses: (body.deductions as Record<string, number>)?.vehicleExpenses ?? 0,
+          homeOffice: (body.deductions as Record<string, number>)?.homeOffice ?? 0,
+          donations: (body.deductions as Record<string, number>)?.donations ?? 0,
+          incomeProtection: (body.deductions as Record<string, number>)?.incomeProtection ?? 0,
+          accountingFees: (body.deductions as Record<string, number>)?.accountingFees ?? 0,
+          other: (body.deductions as Record<string, number>)?.other ?? 0,
         },
         privateHealthInsurance: (body.privateHealthInsurance as boolean) ?? true,
         hasHecsDebt: (body.hasHecsDebt as boolean) ?? false,
@@ -399,10 +400,7 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
     ...validate(resultByOrderValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const result = await service.getResult(
-        req.params.orderId,
-        authReq.scopeFilter,
-      );
+      const result = await service.getResult(req.params.orderId, authReq.scopeFilter);
       res.status(200).json({ status: 200, data: result });
     }),
   );
@@ -432,10 +430,7 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
     ...validate(resultByOrderValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const result = await service.verifyResult(
-        req.params.orderId,
-        authReq.user.userId,
-      );
+      const result = await service.verifyResult(req.params.orderId, authReq.user.userId);
       res.status(200).json({ status: 200, data: result });
     }),
   );
@@ -448,10 +443,7 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
     ...validate(lockResultValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const result = await service.lockResult(
-        req.params.id,
-        authReq.user.userId,
-      );
+      const result = await service.lockResult(req.params.id, authReq.user.userId);
       res.status(200).json({ status: 200, data: result });
     }),
   );
@@ -481,10 +473,7 @@ export function createTaxEngineRoutes(deps: TaxEngineRouteDeps): Router {
     ...validate(resultByOrderValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const amendments = await service.getAmendments(
-        req.params.orderId,
-        authReq.scopeFilter,
-      );
+      const amendments = await service.getAmendments(req.params.orderId, authReq.scopeFilter);
       res.status(200).json({ status: 200, data: amendments });
     }),
   );

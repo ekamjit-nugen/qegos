@@ -164,11 +164,25 @@ describe('Lead Advanced Features', () => {
   describe('Lead merge — field allowlist (LM-INV-06)', () => {
     it('allowlist contains expected mergeable fields', () => {
       const MERGEABLE_FIELDS = new Set([
-        'firstName', 'lastName', 'email', 'mobile', 'preferredLanguage',
-        'preferredContact', 'suburb', 'state', 'postcode', 'financialYear',
-        'maritalStatus', 'hasSpouse', 'numberOfDependants', 'employmentType',
-        'hasRentalProperty', 'hasSharePortfolio', 'hasForeignIncome',
-        'tags', 'notes',
+        'firstName',
+        'lastName',
+        'email',
+        'mobile',
+        'preferredLanguage',
+        'preferredContact',
+        'suburb',
+        'state',
+        'postcode',
+        'financialYear',
+        'maritalStatus',
+        'hasSpouse',
+        'numberOfDependants',
+        'employmentType',
+        'hasRentalProperty',
+        'hasSharePortfolio',
+        'hasForeignIncome',
+        'tags',
+        'notes',
       ]);
 
       expect(MERGEABLE_FIELDS.size).toBe(19);
@@ -180,11 +194,25 @@ describe('Lead Advanced Features', () => {
 
     it('protected fields are NOT in the allowlist', () => {
       const MERGEABLE_FIELDS = new Set([
-        'firstName', 'lastName', 'email', 'mobile', 'preferredLanguage',
-        'preferredContact', 'suburb', 'state', 'postcode', 'financialYear',
-        'maritalStatus', 'hasSpouse', 'numberOfDependants', 'employmentType',
-        'hasRentalProperty', 'hasSharePortfolio', 'hasForeignIncome',
-        'tags', 'notes',
+        'firstName',
+        'lastName',
+        'email',
+        'mobile',
+        'preferredLanguage',
+        'preferredContact',
+        'suburb',
+        'state',
+        'postcode',
+        'financialYear',
+        'maritalStatus',
+        'hasSpouse',
+        'numberOfDependants',
+        'employmentType',
+        'hasRentalProperty',
+        'hasSharePortfolio',
+        'hasForeignIncome',
+        'tags',
+        'notes',
       ]);
 
       // These should NEVER be mergeable
@@ -237,11 +265,27 @@ describe('Lead Advanced Features', () => {
   describe('Lead export', () => {
     it('export fields match expected CSV columns', () => {
       const expectedColumns = [
-        'leadNumber', 'firstName', 'lastName', 'mobile', 'email',
-        'source', 'status', 'priority', 'score', 'state', 'postcode',
-        'suburb', 'financialYear', 'maritalStatus', 'employmentType',
-        'hasRentalProperty', 'hasSharePortfolio', 'hasForeignIncome',
-        'estimatedValue', 'assignedTo', 'createdAt',
+        'leadNumber',
+        'firstName',
+        'lastName',
+        'mobile',
+        'email',
+        'source',
+        'status',
+        'priority',
+        'score',
+        'state',
+        'postcode',
+        'suburb',
+        'financialYear',
+        'maritalStatus',
+        'employmentType',
+        'hasRentalProperty',
+        'hasSharePortfolio',
+        'hasForeignIncome',
+        'estimatedValue',
+        'assignedTo',
+        'createdAt',
       ];
       expect(expectedColumns).toHaveLength(21);
       // All expected columns are present

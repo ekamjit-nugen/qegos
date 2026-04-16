@@ -45,9 +45,13 @@ export function useXeroSyncLogs(filters: SyncLogListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
-      const res = await api.get<PaginatedResponse<XeroSyncLog>>(`/xero/sync-logs?${params.toString()}`);
+      const res = await api.get<PaginatedResponse<XeroSyncLog>>(
+        `/xero/sync-logs?${params.toString()}`,
+      );
       return res.data;
     },
     placeholderData: (prev) => prev,
@@ -71,7 +75,9 @@ export function useBulkSyncInvoices() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoiceIds: string[]) => {
-      const res = await api.post<ApiResponse<{ queued: number }>>('/xero/sync/invoices', { invoiceIds });
+      const res = await api.post<ApiResponse<{ queued: number }>>('/xero/sync/invoices', {
+        invoiceIds,
+      });
       return res.data.data;
     },
     onSuccess: () => {
@@ -84,7 +90,10 @@ export function useReconciliation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const res = await api.post<ApiResponse<{ reconciled: number; mismatches: number }>>('/xero/reconciliation', {});
+      const res = await api.post<ApiResponse<{ reconciled: number; mismatches: number }>>(
+        '/xero/reconciliation',
+        {},
+      );
       return res.data.data;
     },
     onSuccess: () => {

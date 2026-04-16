@@ -1,13 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import {
-  Text,
-  Card,
-  Button,
-  ActivityIndicator,
-  Appbar,
-  useTheme,
-} from 'react-native-paper';
+import { Text, Card, Button, ActivityIndicator, Appbar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import {
   useNotifications,
@@ -30,11 +23,7 @@ export default function NotificationsScreen(): React.ReactNode {
     await refetch();
   }, [refetch]);
 
-  function renderNotification({
-    item,
-  }: {
-    item: Notification;
-  }): React.ReactElement {
+  function renderNotification({ item }: { item: Notification }): React.ReactElement {
     return (
       <Card
         style={[styles.card, !item.isRead && styles.unreadCard]}
@@ -45,10 +34,7 @@ export default function NotificationsScreen(): React.ReactNode {
         }}
       >
         <Card.Content>
-          <Text
-            variant="titleSmall"
-            style={[!item.isRead && styles.unreadTitle]}
-          >
+          <Text variant="titleSmall" style={[!item.isRead && styles.unreadTitle]}>
             {item.title}
           </Text>
           <Text variant="bodySmall" style={styles.body}>

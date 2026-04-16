@@ -37,7 +37,8 @@ export const PERFORMANCE_INDEXES: IndexDefinition[] = [
     collection: 'payments',
     keys: { status: 1, createdAt: -1, amount: 1 },
     options: { name: 'idx_payment_status_date_amount' },
-    reason: 'Analytics: revenueService, forecastService, clvService filter by status+date and sum amount',
+    reason:
+      'Analytics: revenueService, forecastService, clvService filter by status+date and sum amount',
   },
   {
     collection: 'payments',
@@ -225,7 +226,9 @@ export async function ensurePerformanceIndexes(connection: Connection): Promise<
   const skipped: string[] = [];
   const errors: Array<{ index: string; error: string }> = [];
 
-  if (!connection.db) throw new Error('No active database connection');
+  if (!connection.db) {
+    throw new Error('No active database connection');
+  }
   const db = connection.db;
 
   for (const def of PERFORMANCE_INDEXES) {
@@ -235,9 +238,7 @@ export async function ensurePerformanceIndexes(connection: Connection): Promise<
 
       // Check if index already exists
       const existingIndexes = await collection.indexes();
-      const exists = existingIndexes.some(
-        (idx) => idx.name === indexName,
-      );
+      const exists = existingIndexes.some((idx) => idx.name === indexName);
 
       if (exists) {
         skipped.push(indexName);
@@ -264,10 +265,14 @@ export async function ensurePerformanceIndexes(connection: Connection): Promise<
  * List all indexes across all collections.
  * Useful for debugging and auditing.
  */
-export async function listAllIndexes(connection: Connection): Promise<
+export async function listAllIndexes(
+  connection: Connection,
+): Promise<
   Array<{ collection: string; indexes: Array<{ name: string; keys: Record<string, unknown> }> }>
 > {
-  if (!connection.db) throw new Error('No active database connection');
+  if (!connection.db) {
+    throw new Error('No active database connection');
+  }
   const db = connection.db;
   const collections = await db.listCollections().toArray();
   const results = [];

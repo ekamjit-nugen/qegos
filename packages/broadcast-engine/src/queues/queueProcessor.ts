@@ -8,7 +8,12 @@ import type {
   RateLimitConfig,
 } from '../types';
 import { DEFAULT_RATE_LIMITS } from '../types';
-import { getQueuedMessages, updateMessageStatus, isCampaignComplete, syncCampaignCounters } from '../services/messageService';
+import {
+  getQueuedMessages,
+  updateMessageStatus,
+  isCampaignComplete,
+  syncCampaignCounters,
+} from '../services/messageService';
 import { renderMessage } from '../services/templateService';
 
 // ─── Module State ────────────────────────────────────────────────────────────
@@ -33,11 +38,12 @@ export function initQueueProcessor(
 // ─── Rate-Limited Delay ──────────────────────────────────────────────────────
 
 function getDelayMs(channel: SingleChannel): number {
-  const perSecond = channel === 'sms'
-    ? rateLimits.smsPerSecond
-    : channel === 'email'
-      ? rateLimits.emailPerSecond
-      : rateLimits.whatsappPerSecond;
+  const perSecond =
+    channel === 'sms'
+      ? rateLimits.smsPerSecond
+      : channel === 'email'
+        ? rateLimits.emailPerSecond
+        : rateLimits.whatsappPerSecond;
 
   return Math.ceil(1000 / perSecond);
 }
@@ -66,10 +72,14 @@ export async function processChannelQueue(
   channel: SingleChannel,
 ): Promise<{ sent: number; failed: number }> {
   const provider = providers.get(channel);
-  if (!provider) return { sent: 0, failed: 0 };
+  if (!provider) {
+    return { sent: 0, failed: 0 };
+  }
 
   const campaign = await CampaignModel.findById(campaignId);
-  if (!campaign || campaign.status !== 'sending') return { sent: 0, failed: 0 };
+  if (!campaign || campaign.status !== 'sending') {
+    return { sent: 0, failed: 0 };
+  }
 
   const batchSize = getBatchSize(channel);
   const delayMs = getDelayMs(channel);
@@ -79,11 +89,12 @@ export async function processChannelQueue(
   let failed = 0;
 
   // Resolve body from campaign
-  const body = channel === 'email'
-    ? (campaign.emailBody ?? '')
-    : channel === 'sms'
-      ? (campaign.smsBody ?? '')
-      : '';
+  const body =
+    channel === 'email'
+      ? (campaign.emailBody ?? '')
+      : channel === 'sms'
+        ? (campaign.smsBody ?? '')
+        : '';
 
   const subject = channel === 'email' ? campaign.emailSubject : undefined;
 
@@ -91,9 +102,7 @@ export async function processChannelQueue(
     // Mark as sending
     await updateMessageStatus(msg._id, 'sending');
 
-    const recipient = channel === 'email'
-      ? msg.recipientEmail
-      : msg.recipientMobile;
+    const recipient = channel === 'email' ? msg.recipientEmail : msg.recipientMobile;
 
     if (!recipient) {
       await updateMessageStatus(msg._id, 'failed', { error: 'No recipient contact' });

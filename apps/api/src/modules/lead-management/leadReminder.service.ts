@@ -1,9 +1,6 @@
 import type { Model, FilterQuery } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
-import type {
-  ILeadDocument,
-  ILeadReminderDocument,
-} from './lead.types';
+import type { ILeadDocument, ILeadReminderDocument } from './lead.types';
 
 export interface LeadReminderServiceDeps {
   LeadModel: Model<ILeadDocument>;
@@ -17,21 +14,32 @@ export interface ReminderListResult {
 
 export interface LeadReminderServiceResult {
   createReminder: (data: Partial<ILeadReminderDocument>) => Promise<ILeadReminderDocument>;
-  getReminders: (leadId: string, scopeFilter?: Record<string, unknown>) => Promise<ReminderListResult>;
+  getReminders: (
+    leadId: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ReminderListResult>;
   getTodayReminders: (staffId: string) => Promise<ILeadReminderDocument[]>;
   getOverdueReminders: (staffId: string) => Promise<ILeadReminderDocument[]>;
   completeReminder: (id: string) => Promise<ILeadReminderDocument>;
   snoozeReminder: (id: string, newDate: string, newTime: string) => Promise<ILeadReminderDocument>;
 }
 
-export function createLeadReminderService(deps: LeadReminderServiceDeps): LeadReminderServiceResult {
+export function createLeadReminderService(
+  deps: LeadReminderServiceDeps,
+): LeadReminderServiceResult {
   const { LeadModel, LeadReminderModel } = deps;
 
-  async function createReminder(data: Partial<ILeadReminderDocument>): Promise<ILeadReminderDocument> {
-    if (!data.leadId) throw AppError.badRequest('Lead ID is required');
+  async function createReminder(
+    data: Partial<ILeadReminderDocument>,
+  ): Promise<ILeadReminderDocument> {
+    if (!data.leadId) {
+      throw AppError.badRequest('Lead ID is required');
+    }
 
     const lead = await LeadModel.findById(data.leadId);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     const reminder = await LeadReminderModel.create({
       ...data,
@@ -54,7 +62,9 @@ export function createLeadReminderService(deps: LeadReminderServiceDeps): LeadRe
       Object.assign(leadFilter, scopeFilter);
     }
     const lead = await LeadModel.findOne(leadFilter);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     const reminders = await LeadReminderModel.find({ leadId })
       .populate('assignedTo', 'firstName lastName')
@@ -104,7 +114,9 @@ export function createLeadReminderService(deps: LeadReminderServiceDeps): LeadRe
       },
       { new: true },
     );
-    if (!reminder) throw AppError.notFound('Reminder');
+    if (!reminder) {
+      throw AppError.notFound('Reminder');
+    }
     return reminder;
   }
 
@@ -124,7 +136,9 @@ export function createLeadReminderService(deps: LeadReminderServiceDeps): LeadRe
       },
       { new: true },
     );
-    if (!reminder) throw AppError.notFound('Reminder');
+    if (!reminder) {
+      throw AppError.notFound('Reminder');
+    }
     return reminder;
   }
 

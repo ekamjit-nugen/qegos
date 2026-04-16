@@ -11,9 +11,7 @@ import type {
 
 let PreferenceModel: Model<INotificationPreferenceDocument>;
 
-export function initPreferenceService(
-  model: Model<INotificationPreferenceDocument>,
-): void {
+export function initPreferenceService(model: Model<INotificationPreferenceDocument>): void {
   PreferenceModel = model;
 }
 
@@ -92,9 +90,7 @@ export async function isChannelEnabled(
 /**
  * Get quiet hours config for a user with defaults applied.
  */
-export async function getQuietHoursConfig(
-  userId: string,
-): Promise<{
+export async function getQuietHoursConfig(userId: string): Promise<{
   enabled: boolean;
   start: string;
   end: string;

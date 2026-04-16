@@ -22,7 +22,17 @@
     "mongoose": "^8.0.0",
     "twilio": "^4.0.0"
   },
-  "keywords": ["broadcast", "campaign", "sms", "email", "whatsapp", "twilio", "ses", "dnd", "spam-act"],
+  "keywords": [
+    "broadcast",
+    "campaign",
+    "sms",
+    "email",
+    "whatsapp",
+    "twilio",
+    "ses",
+    "dnd",
+    "spam-act"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

@@ -61,13 +61,15 @@ export async function getServiceMix(
 
   // Calculate total for percentage
   const totalRevenue = result.reduce(
-    (sum: number, r: { revenueCents: number }) => sum + r.revenueCents, 0,
+    (sum: number, r: { revenueCents: number }) => sum + r.revenueCents,
+    0,
   );
 
-  return result.map((r: { serviceTitle: string; orderCount: number; quantity: number; revenueCents: number }) => ({
-    ...r,
-    percentOfTotal: totalRevenue > 0
-      ? Math.round((r.revenueCents / totalRevenue) * 10000) / 100
-      : 0,
-  }));
+  return result.map(
+    (r: { serviceTitle: string; orderCount: number; quantity: number; revenueCents: number }) => ({
+      ...r,
+      percentOfTotal:
+        totalRevenue > 0 ? Math.round((r.revenueCents / totalRevenue) * 10000) / 100 : 0,
+    }),
+  );
 }

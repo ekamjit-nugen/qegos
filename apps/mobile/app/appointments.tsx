@@ -1,14 +1,6 @@
 import React from 'react';
 import { FlatList, StyleSheet, View, Linking } from 'react-native';
-import {
-  Text,
-  Card,
-  Chip,
-  Button,
-  ActivityIndicator,
-  Appbar,
-  useTheme,
-} from 'react-native-paper';
+import { Text, Card, Chip, Button, ActivityIndicator, Appbar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useUpcomingAppointments } from '@/hooks/useAppointments';
 import type { Appointment } from '@/types/appointment';
@@ -34,11 +26,7 @@ export default function AppointmentsScreen(): React.ReactNode {
 
   const appointments = data?.data ?? [];
 
-  function renderAppointment({
-    item,
-  }: {
-    item: Appointment;
-  }): React.ReactElement {
+  function renderAppointment({ item }: { item: Appointment }): React.ReactElement {
     const dateStr = new Date(item.scheduledAt).toLocaleDateString('en-AU', {
       weekday: 'long',
       day: 'numeric',
@@ -70,8 +58,7 @@ export default function AppointmentsScreen(): React.ReactNode {
               compact
               textStyle={styles.chipText}
               style={{
-                backgroundColor:
-                  STATUS_COLORS[item.status] ?? '#9E9E9E',
+                backgroundColor: STATUS_COLORS[item.status] ?? '#9E9E9E',
               }}
             >
               {item.status}

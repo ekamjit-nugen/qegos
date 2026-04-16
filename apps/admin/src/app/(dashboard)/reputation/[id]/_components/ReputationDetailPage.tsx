@@ -14,8 +14,12 @@ export function ReputationDetailPage({ id }: { id: string }): React.ReactNode {
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!review) { return <Empty description="Review not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!review) {
+    return <Empty description="Review not found" />;
+  }
 
   const handleRespond = async (): Promise<void> => {
     const values = await form.validateFields();
@@ -37,7 +41,9 @@ export function ReputationDetailPage({ id }: { id: string }): React.ReactNode {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <h2 style={{ margin: 0 }}>Review</h2>
-        <span style={{ fontSize: 18 }}>{'★'} {review.rating}</span>
+        <span style={{ fontSize: 18 }}>
+          {'★'} {review.rating}
+        </span>
         <Tag color={REVIEW_STATUS_COLORS_REP[review.status]}>
           {REVIEW_STATUS_LABELS_REP[review.status] ?? review.status}
         </Tag>
@@ -49,8 +55,14 @@ export function ReputationDetailPage({ id }: { id: string }): React.ReactNode {
           <Card title="Review" style={{ marginBottom: 16 }}>
             <Descriptions column={{ xs: 1, sm: 2 }} size="small">
               <Descriptions.Item label="Rating">{review.rating} / 5</Descriptions.Item>
-              <Descriptions.Item label="NPS Score">{review.npsScore !== null && review.npsScore !== undefined ? `${review.npsScore} / 10` : '-'}</Descriptions.Item>
-              <Descriptions.Item label="Comment" span={2}>{review.comment ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="NPS Score">
+                {review.npsScore !== null && review.npsScore !== undefined
+                  ? `${review.npsScore} / 10`
+                  : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Comment" span={2}>
+                {review.comment ?? '-'}
+              </Descriptions.Item>
               <Descriptions.Item label="Tags" span={2}>
                 {review.tags.length > 0
                   ? review.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
@@ -71,7 +83,9 @@ export function ReputationDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Admin Response" style={{ marginBottom: 16 }}>
             {review.adminResponse && (
-              <div style={{ marginBottom: 16, padding: 12, background: '#f6ffed', borderRadius: 6 }}>
+              <div
+                style={{ marginBottom: 16, padding: 12, background: '#f6ffed', borderRadius: 6 }}
+              >
                 <strong>Current Response:</strong>
                 <p style={{ margin: '8px 0 0' }}>{review.adminResponse}</p>
               </div>
@@ -85,7 +99,12 @@ export function ReputationDetailPage({ id }: { id: string }): React.ReactNode {
                 >
                   <Input.TextArea rows={4} placeholder="Type your response to this review..." />
                 </Form.Item>
-                <Button type="primary" htmlType="submit" icon={<SendOutlined />} loading={submitting}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<SendOutlined />}
+                  loading={submitting}
+                >
                   Submit Response
                 </Button>
               </Form>
@@ -119,8 +138,12 @@ export function ReputationDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Timeline" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(review.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Updated">{formatDateTime(review.updatedAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(review.createdAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(review.updatedAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

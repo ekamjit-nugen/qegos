@@ -20,7 +20,17 @@ const broadcastMessageSchema = new Schema<IBroadcastMessageDocument>(
     status: {
       type: String,
       required: true,
-      enum: ['queued', 'sending', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked', 'opted_out'],
+      enum: [
+        'queued',
+        'sending',
+        'sent',
+        'delivered',
+        'failed',
+        'bounced',
+        'opened',
+        'clicked',
+        'opted_out',
+      ],
       default: 'queued',
     },
     gatewayId: { type: String },

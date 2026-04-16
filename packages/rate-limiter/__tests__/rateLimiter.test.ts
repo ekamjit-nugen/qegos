@@ -13,16 +13,11 @@ import {
   createApiLimiter,
 } from '../src';
 
-import type {
-  RateLimiterConfig,
-  AuthLimiters,
-  ApiLimiterConfig,
-} from '../src/types';
+import type { RateLimiterConfig, AuthLimiters, ApiLimiterConfig } from '../src/types';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('@nugen/rate-limiter', () => {
-
   // ─── Module Exports ────────────────────────────────────────────────────────
 
   describe('Module Exports', () => {
@@ -178,7 +173,11 @@ describe('@nugen/rate-limiter', () => {
 
     it('AuthLimiters interface has exactly 5 limiters', () => {
       const keys: (keyof AuthLimiters)[] = [
-        'otpSend', 'otpVerify', 'signin', 'forgotPassword', 'mfaVerify',
+        'otpSend',
+        'otpVerify',
+        'signin',
+        'forgotPassword',
+        'mfaVerify',
       ];
       expect(keys).toHaveLength(5);
     });

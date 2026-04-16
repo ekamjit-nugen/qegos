@@ -68,12 +68,11 @@ const deadlineReminderSchema = new Schema<IDeadlineReminderDocument>(
 );
 
 // CAL-INV-03: Max 1 reminder per {userId, deadlineId, daysBefore}
-deadlineReminderSchema.index(
-  { userId: 1, deadlineId: 1, daysBefore: 1 },
-  { unique: true },
-);
+deadlineReminderSchema.index({ userId: 1, deadlineId: 1, daysBefore: 1 }, { unique: true });
 
-export function createDeadlineReminderModel(connection: Connection): Model<IDeadlineReminderDocument> {
+export function createDeadlineReminderModel(
+  connection: Connection,
+): Model<IDeadlineReminderDocument> {
   if (connection.models.DeadlineReminder) {
     return connection.models.DeadlineReminder as Model<IDeadlineReminderDocument>;
   }

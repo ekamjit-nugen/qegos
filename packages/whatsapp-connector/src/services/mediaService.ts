@@ -30,21 +30,25 @@ export interface MediaDownloadResult {
   mediaUrl?: string;
 }
 
-export async function processMediaDownload(
-  messageId: string,
-): Promise<MediaDownloadResult> {
+export async function processMediaDownload(messageId: string): Promise<MediaDownloadResult> {
   if (!deps) {
     throw new Error('whatsapp-connector: initMediaService() not called');
   }
 
   const msg = await deps.MessageModel.findById(messageId);
-  if (!msg) return { status: 'not_found' };
-  if (msg.mediaUrl) return { status: 'already_downloaded', mediaUrl: msg.mediaUrl };
+  if (!msg) {
+    return { status: 'not_found' };
+  }
+  if (msg.mediaUrl) {
+    return { status: 'already_downloaded', mediaUrl: msg.mediaUrl };
+  }
 
   // `mediaOriginalUrl` currently stores the Meta media ID (see webhook
   // handler). That's what downloadMedia() expects.
   const mediaId = msg.mediaOriginalUrl;
-  if (!mediaId) return { status: 'no_media' };
+  if (!mediaId) {
+    return { status: 'no_media' };
+  }
 
   const { buffer, mimeType } = await downloadMedia(mediaId);
 

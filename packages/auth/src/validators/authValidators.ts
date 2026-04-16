@@ -58,11 +58,7 @@ export function verifyOtpValidation(): ValidationChain[] {
 
 export function refreshTokenValidation(): ValidationChain[] {
   return [
-    body('refreshToken')
-      .optional()
-      .trim()
-      .notEmpty()
-      .withMessage('Refresh token is required'),
+    body('refreshToken').optional().trim().notEmpty().withMessage('Refresh token is required'),
     body('deviceId').optional().isString().isLength({ max: 128 }).trim(),
   ];
 }
@@ -113,9 +109,7 @@ export function mfaVerifyValidation(): ValidationChain[] {
 }
 
 export function mfaEnrollValidation(): ValidationChain[] {
-  return [
-    body('token').trim().notEmpty().withMessage('TOTP token is required for verification'),
-  ];
+  return [body('token').trim().notEmpty().withMessage('TOTP token is required for verification')];
 }
 
 export function mfaBackupValidation(): ValidationChain[] {
@@ -128,7 +122,5 @@ export function mfaBackupValidation(): ValidationChain[] {
 }
 
 export function mfaDisableValidation(): ValidationChain[] {
-  return [
-    body('password').notEmpty().withMessage('Password is required to disable MFA'),
-  ];
+  return [body('password').notEmpty().withMessage('Password is required to disable MFA')];
 }

@@ -18,7 +18,10 @@ export default function TaxSummaryLoading(): React.ReactNode {
           <Card style={{ marginBottom: 16 }}>
             <Skeleton.Input active size="default" style={{ width: 140, marginBottom: 16 }} />
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div
+                key={i}
+                style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}
+              >
                 <Skeleton.Input active size="small" style={{ width: '40%' }} />
                 <Skeleton.Input active size="small" style={{ width: '20%' }} />
               </div>

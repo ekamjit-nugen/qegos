@@ -1,13 +1,9 @@
-import { Router, type Request, type Response, type RequestHandler } from 'express';
 import { randomBytes } from 'crypto';
+import { Router, type Request, type Response, type RequestHandler } from 'express';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import type { XeroRouteDeps } from '../types';
-import {
-  initTokenService,
-  storeTokens,
-  clearTokens,
-} from '../services/tokenService';
+import { initTokenService, storeTokens, clearTokens } from '../services/tokenService';
 import {
   initXeroClient,
   getAuthorizeUrl,
@@ -62,8 +58,16 @@ interface AuthenticatedRequest extends Request {
 export function createXeroRoutes(deps: XeroRouteDeps): Router {
   const router = Router();
   const {
-    XeroConfigModel, XeroSyncLogModel, OrderModel, UserModel, PaymentModel,
-    redisClient, authenticate, checkPermission, auditLog, config,
+    XeroConfigModel,
+    XeroSyncLogModel,
+    OrderModel,
+    UserModel,
+    PaymentModel,
+    redisClient,
+    authenticate,
+    checkPermission,
+    auditLog,
+    config,
   } = deps;
 
   // Initialize all services
@@ -77,9 +81,15 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
   initRetrySyncService(XeroSyncLogModel, XeroConfigModel);
 
   // Register sync executors for retry service
-  registerSyncExecutor('contact', async (entityId) => { await syncContact(entityId); });
-  registerSyncExecutor('invoice', async (entityId) => { await createInvoice(entityId); });
-  registerSyncExecutor('payment', async (entityId) => { await recordPayment(entityId); });
+  registerSyncExecutor('contact', async (entityId) => {
+    await syncContact(entityId);
+  });
+  registerSyncExecutor('invoice', async (entityId) => {
+    await createInvoice(entityId);
+  });
+  registerSyncExecutor('payment', async (entityId) => {
+    await recordPayment(entityId);
+  });
 
   // Initialize webhook handler
   initWebhookHandler({
@@ -331,10 +341,12 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
   router.post(
     '/create-invoice',
     authenticate() as RequestHandler,
-    ...validate(validateOrderId().map((c) => {
-      // Remap param to body for this endpoint
-      return c;
-    })),
+    ...validate(
+      validateOrderId().map((c) => {
+        // Remap param to body for this endpoint
+        return c;
+      }),
+    ),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { orderId } = req.body as { orderId: string };
       const result = await createInvoice(orderId);
@@ -442,7 +454,9 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
     ...validate(validateCreditNote()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { orderId, refundAmountCents, reference } = req.body as {
-        orderId: string; refundAmountCents: number; reference: string;
+        orderId: string;
+        refundAmountCents: number;
+        reference: string;
       };
 
       const result = await createCreditNote(orderId, refundAmountCents, reference);
@@ -466,18 +480,37 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
     checkPermission('xero_config', 'read') as RequestHandler,
     ...validate(validateSyncLogList()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const { page = 1, limit = 20, entityType, status, dateFrom, dateTo } = req.query as {
-        page?: number; limit?: number; entityType?: string;
-        status?: string; dateFrom?: string; dateTo?: string;
+      const {
+        page = 1,
+        limit = 20,
+        entityType,
+        status,
+        dateFrom,
+        dateTo,
+      } = req.query as {
+        page?: number;
+        limit?: number;
+        entityType?: string;
+        status?: string;
+        dateFrom?: string;
+        dateTo?: string;
       };
 
       const filter: Record<string, unknown> = {};
-      if (entityType) filter.entityType = entityType;
-      if (status) filter.status = status;
+      if (entityType) {
+        filter.entityType = entityType;
+      }
+      if (status) {
+        filter.status = status;
+      }
       if (dateFrom || dateTo) {
         filter.createdAt = {};
-        if (dateFrom) (filter.createdAt as Record<string, Date>).$gte = new Date(dateFrom);
-        if (dateTo) (filter.createdAt as Record<string, Date>).$lte = new Date(dateTo);
+        if (dateFrom) {
+          (filter.createdAt as Record<string, Date>).$gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          (filter.createdAt as Record<string, Date>).$lte = new Date(dateTo);
+        }
       }
 
       const pageNum = Number(page);
@@ -485,11 +518,7 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
       const skip = (pageNum - 1) * limitNum;
 
       const [logs, total] = await Promise.all([
-        XeroSyncLogModel.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limitNum)
-          .lean(),
+        XeroSyncLogModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
         XeroSyncLogModel.countDocuments(filter),
       ]);
 
@@ -497,7 +526,9 @@ export function createXeroRoutes(deps: XeroRouteDeps): Router {
         status: 200,
         data: logs,
         pagination: {
-          page: pageNum, limit: limitNum, total,
+          page: pageNum,
+          limit: limitNum,
+          total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,

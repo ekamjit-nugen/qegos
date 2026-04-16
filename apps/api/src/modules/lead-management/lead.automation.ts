@@ -1,9 +1,5 @@
 import type { Model } from 'mongoose';
-import type {
-  ILeadDocument,
-  ILeadActivityDocument,
-  ILeadReminderDocument,
-} from './lead.types';
+import type { ILeadDocument, ILeadActivityDocument, ILeadReminderDocument } from './lead.types';
 import { LeadStatus } from './lead.types';
 
 /**
@@ -26,7 +22,10 @@ export interface AutomationDeps {
   LeadReminderModel: Model<ILeadReminderDocument>;
   recalculateScore: (leadId: string) => Promise<{ score: number; priority: string }>;
   /** Optional: smart workload-based assignment (falls back to round-robin if not provided) */
-  smartAssignBulk?: (count: number, request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] }) => Promise<Array<{ staffId: string }>>;
+  smartAssignBulk?: (
+    count: number,
+    request: { context: string; excludeStaffIds?: string[]; requiredUserTypes?: number[] },
+  ) => Promise<Array<{ staffId: string }>>;
 }
 
 export interface AutomationHandlers {
@@ -51,9 +50,13 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
     const unassigned = await LeadModel.find({
       status: LeadStatus.New,
       assignedTo: { $exists: false },
-    }).select('_id').lean<Array<{ _id: string }>>();
+    })
+      .select('_id')
+      .lean<Array<{ _id: string }>>();
 
-    if (unassigned.length === 0) return { processed: 0 };
+    if (unassigned.length === 0) {
+      return { processed: 0 };
+    }
 
     // Try smart workload-based assignment first
     if (deps.smartAssignBulk) {
@@ -80,12 +83,16 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
       status: true,
       isDeleted: { $ne: true },
       userType: { $in: [1, 3, 5, 6] }, // admin, staff, office_manager, senior_staff
-    }).select('_id').lean<Array<{ _id: string }>>();
+    })
+      .select('_id')
+      .lean<Array<{ _id: string }>>();
 
-    if (staffMembers.length === 0) return { processed: 0 };
+    if (staffMembers.length === 0) {
+      return { processed: 0 };
+    }
 
     // Count current assignments per staff
-    const assignmentCounts = await LeadModel.aggregate([
+    const assignmentCounts = (await LeadModel.aggregate([
       {
         $match: {
           assignedTo: { $in: staffMembers.map((s) => s._id) },
@@ -93,7 +100,7 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
         },
       },
       { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
-    ]) as Array<{ _id: string; count: number }>;
+    ])) as Array<{ _id: string; count: number }>;
 
     const countMap = new Map(assignmentCounts.map((a) => [a._id.toString(), a.count]));
     const maxCapacity = 50;
@@ -103,7 +110,9 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
       (s) => (countMap.get(s._id.toString()) ?? 0) < maxCapacity,
     );
 
-    if (eligible.length === 0) return { processed: 0 };
+    if (eligible.length === 0) {
+      return { processed: 0 };
+    }
 
     // Fix for B-3.17: Use bulkWrite instead of N+1 individual updates
     const bulkOps = unassigned.map((lead, i) => ({
@@ -126,7 +135,11 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     // Single aggregation to find stale leads with zero non-system activities
-    const staleLeads = await LeadModel.aggregate<{ _id: string; assignedTo?: string; leadNumber: string }>([
+    const staleLeads = await LeadModel.aggregate<{
+      _id: string;
+      assignedTo?: string;
+      leadNumber: string;
+    }>([
       {
         $match: {
           status: LeadStatus.New,
@@ -149,7 +162,9 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
       { $project: { _id: 1, assignedTo: 1, leadNumber: 1 } },
     ]);
 
-    if (staleLeads.length === 0) return { alerted: 0 };
+    if (staleLeads.length === 0) {
+      return { alerted: 0 };
+    }
 
     // Batch insert alert activities
     const alertActivities = staleLeads.map((lead) => ({
@@ -175,9 +190,13 @@ export function createAutomationHandlers(deps: AutomationDeps): AutomationHandle
     const candidates = await LeadModel.find({
       status: LeadStatus.Contacted,
       lastContactedAt: { $lte: fourteenDaysAgo },
-    }).select('_id').lean<Array<{ _id: string }>>();
+    })
+      .select('_id')
+      .lean<Array<{ _id: string }>>();
 
-    if (candidates.length === 0) return { transitioned: 0 };
+    if (candidates.length === 0) {
+      return { transitioned: 0 };
+    }
 
     // Fix for B-3.17, B-3.18: Use bulkWrite + insertMany instead of N+1 loop
     // Fix for B-3.18: Use null performedBy with isSystemGenerated: true

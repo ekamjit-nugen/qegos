@@ -36,9 +36,7 @@ export function ReputationListPage(): React.ReactNode {
       dataIndex: 'tags',
       width: 180,
       render: (val: string[]) =>
-        val && val.length > 0
-          ? val.map((tag) => <Tag key={tag}>{tag}</Tag>)
-          : '-',
+        val && val.length > 0 ? val.map((tag) => <Tag key={tag}>{tag}</Tag>) : '-',
     },
     {
       title: 'Status',

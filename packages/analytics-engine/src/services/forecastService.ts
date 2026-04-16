@@ -31,7 +31,7 @@ export async function getRevenueForecast(
   const benchmarkMonths = config.benchmarkMonthsThreshold ?? DEFAULT_BENCHMARK_MONTHS;
 
   // Get monthly revenue history
-  const historical = await PaymentModel.aggregate([
+  const historical = (await PaymentModel.aggregate([
     {
       $match: {
         status: { $in: [...REVENUE_PAYMENT_STATUSES] },
@@ -49,7 +49,7 @@ export async function getRevenueForecast(
     {
       $project: { _id: 0, period: '$_id', totalCents: 1, count: 1 },
     },
-  ]) as RevenueBucket[];
+  ])) as RevenueBucket[];
 
   const dataMonths = historical.length;
   const isEstimated = dataMonths < benchmarkMonths;
@@ -69,12 +69,7 @@ export async function getRevenueForecast(
     const { slope, intercept } = linearRegression(values);
 
     const nextMonthIndex = values.length;
-    forecast = generateQuarterlyFromRegression(
-      dateRange.dateTo,
-      slope,
-      intercept,
-      nextMonthIndex,
-    );
+    forecast = generateQuarterlyFromRegression(dateRange.dateTo, slope, intercept, nextMonthIndex);
   }
 
   return { historical, forecast, isEstimated, dataMonths };
@@ -85,9 +80,14 @@ export async function getRevenueForecast(
  */
 function linearRegression(values: number[]): { slope: number; intercept: number } {
   const n = values.length;
-  if (n < 2) return { slope: 0, intercept: values[0] ?? 0 };
+  if (n < 2) {
+    return { slope: 0, intercept: values[0] ?? 0 };
+  }
 
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  let sumX = 0,
+    sumY = 0,
+    sumXY = 0,
+    sumX2 = 0;
   for (let i = 0; i < n; i++) {
     sumX += i;
     sumY += values[i];

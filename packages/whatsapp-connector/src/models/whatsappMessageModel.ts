@@ -1,5 +1,10 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { IWhatsAppMessageDocument, WhatsAppDirection, WhatsAppContactType, WhatsAppMessageStatus } from '../types';
+import type {
+  IWhatsAppMessageDocument,
+  WhatsAppDirection,
+  WhatsAppContactType,
+  WhatsAppMessageStatus,
+} from '../types';
 import { WHATSAPP_MESSAGE_TYPES } from '../types';
 
 const whatsappMessageSchema = new Schema<IWhatsAppMessageDocument>(

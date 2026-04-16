@@ -23,18 +23,18 @@ const VALID_RULES: ITaxRuleConfig = {
   brackets: [
     { min: 0, max: 1820000, rate: 0, baseTax: 0 },
     { min: 1820000, max: 4500000, rate: 0.16, baseTax: 0 },
-    { min: 4500000, max: 13500000, rate: 0.30, baseTax: 428800 },
+    { min: 4500000, max: 13500000, rate: 0.3, baseTax: 428800 },
     { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3128800 },
     { min: 19000000, max: null, rate: 0.45, baseTax: 5163800 },
   ],
   nonResidentBrackets: [
-    { min: 0, max: 13500000, rate: 0.30, baseTax: 0 },
+    { min: 0, max: 13500000, rate: 0.3, baseTax: 0 },
     { min: 13500000, max: 19000000, rate: 0.37, baseTax: 4050000 },
     { min: 19000000, max: null, rate: 0.45, baseTax: 6085000 },
   ],
   workingHolidayBrackets: [
     { min: 0, max: 4500000, rate: 0.15, baseTax: 0 },
-    { min: 4500000, max: 13500000, rate: 0.30, baseTax: 675000 },
+    { min: 4500000, max: 13500000, rate: 0.3, baseTax: 675000 },
     { min: 13500000, max: 19000000, rate: 0.37, baseTax: 3375000 },
     { min: 19000000, max: null, rate: 0.45, baseTax: 5410000 },
   ],
@@ -71,7 +71,7 @@ const VALID_RULES: ITaxRuleConfig = {
     { min: 16645600, max: 18103999, rate: 0.085 },
     { min: 18104000, max: 19720999, rate: 0.09 },
     { min: 19721000, max: 21518599, rate: 0.095 },
-    { min: 21518600, max: null, rate: 0.10 },
+    { min: 21518600, max: null, rate: 0.1 },
   ],
   lito: {
     maxOffset: 70000,
@@ -85,10 +85,10 @@ const VALID_RULES: ITaxRuleConfig = {
     thresholdSingle: 3290000,
     phaseOutRate: 0.125,
   },
-  cgtDiscount: 0.50,
+  cgtDiscount: 0.5,
   instantAssetWriteOff: 2000000,
   superannuationRate: 0.115,
-  gstRate: 0.10,
+  gstRate: 0.1,
   changeLog: [],
   usageCount: 0,
   isFrozen: false,
@@ -108,7 +108,14 @@ describe('Tax Engine — Integration', () => {
       if (failed.length > 0) {
         // Log failures for debugging
         for (const f of failed) {
-          console.warn(`FAILED: ${f.name}`, f.details || '', 'expected:', f.expected, 'actual:', f.actual); // eslint-disable-line no-console
+          console.warn(
+            `FAILED: ${f.name}`,
+            f.details || '',
+            'expected:',
+            f.expected,
+            'actual:',
+            f.actual,
+          ); // eslint-disable-line no-console
         }
       }
       expect(failed).toHaveLength(0);
@@ -125,10 +132,14 @@ describe('Tax Engine — Integration', () => {
       expect(names).toContain('High income ($100K) without PHI — Medicare Levy Surcharge applied');
       expect(names).toContain('Senior low income ($32,000) — SAPTO offset applied');
       expect(names).toContain('Non-resident ($50K) — 30% flat, no LITO, no Medicare');
-      expect(names).toContain('Negative gearing ($80K employ, -$10K rental) — taxable income = $70K');
+      expect(names).toContain(
+        'Negative gearing ($80K employ, -$10K rental) — taxable income = $70K',
+      );
       expect(names).toContain('CGT 50% discount (resident, $20K long-term) — $10K included');
       expect(names).toContain('HECS minimum tier ($54,880) — 1% compulsory repayment');
-      expect(names).toContain('Franking credit excess ($10K income, $5K franking) — excess refunded');
+      expect(names).toContain(
+        'Franking credit excess ($10K income, $5K franking) — excess refunded',
+      );
       expect(names).toContain('Standard deduction ($250 work-related only) — warning shown');
     });
 
@@ -137,8 +148,8 @@ describe('Tax Engine — Integration', () => {
         ...VALID_RULES,
         brackets: [
           // Broken: non-zero baseTax for first bracket
-          { min: 0, max: 1800000, rate: 0.10, baseTax: 500000 },
-          { min: 1800000, max: null, rate: 0.50, baseTax: 0 },
+          { min: 0, max: 1800000, rate: 0.1, baseTax: 500000 },
+          { min: 1800000, max: null, rate: 0.5, baseTax: 0 },
         ],
       } as unknown as ITaxRuleConfig;
 
@@ -167,8 +178,14 @@ describe('Tax Engine — Integration', () => {
         governmentPayments: 0,
         superannuationIncome: 0,
         deductions: {
-          workRelated: 0, selfEducation: 0, vehicleExpenses: 0, homeOffice: 0,
-          donations: 0, incomeProtection: 0, accountingFees: 0, other: 0,
+          workRelated: 0,
+          selfEducation: 0,
+          vehicleExpenses: 0,
+          homeOffice: 0,
+          donations: 0,
+          incomeProtection: 0,
+          accountingFees: 0,
+          other: 0,
         },
         privateHealthInsurance: true,
         hasHecsDebt: false,
@@ -203,8 +220,14 @@ describe('Tax Engine — Integration', () => {
         governmentPayments: 0,
         superannuationIncome: 0,
         deductions: {
-          workRelated: 50000, selfEducation: 0, vehicleExpenses: 0, homeOffice: 0,
-          donations: 0, incomeProtection: 0, accountingFees: 0, other: 0,
+          workRelated: 50000,
+          selfEducation: 0,
+          vehicleExpenses: 0,
+          homeOffice: 0,
+          donations: 0,
+          incomeProtection: 0,
+          accountingFees: 0,
+          other: 0,
         },
         privateHealthInsurance: true,
         hasHecsDebt: false,
@@ -251,8 +274,14 @@ describe('Tax Engine — Integration', () => {
         governmentPayments: 0,
         superannuationIncome: 0,
         deductions: {
-          workRelated: 0, selfEducation: 0, vehicleExpenses: 0, homeOffice: 0,
-          donations: 0, incomeProtection: 0, accountingFees: 0, other: 0,
+          workRelated: 0,
+          selfEducation: 0,
+          vehicleExpenses: 0,
+          homeOffice: 0,
+          donations: 0,
+          incomeProtection: 0,
+          accountingFees: 0,
+          other: 0,
         },
         privateHealthInsurance: true,
         hasHecsDebt: false,

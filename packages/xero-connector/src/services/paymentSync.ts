@@ -28,7 +28,9 @@ export async function recordPayment(paymentId: string): Promise<{
   xeroPaymentId: string;
 }> {
   const payment = await PaymentModel.findById(paymentId);
-  if (!payment) throw AppError.notFound('Payment');
+  if (!payment) {
+    throw AppError.notFound('Payment');
+  }
 
   // Idempotency: already synced
   if (payment.xeroPaymentId) {
@@ -37,7 +39,9 @@ export async function recordPayment(paymentId: string): Promise<{
 
   // Must have a completed order with Xero invoice
   const order = await OrderModel.findById(payment.orderId);
-  if (!order) throw AppError.notFound('Order');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
 
   if (!order.xeroInvoiceId) {
     throw new Error('Order has no Xero invoice — invoice must be synced first');
@@ -89,7 +93,7 @@ export async function recordPayment(paymentId: string): Promise<{
         throw new Error(`Xero payment recording failed: ${res.status} ${errBody}`);
       }
 
-      const data = await res.json() as {
+      const data = (await res.json()) as {
         Payments: Array<{ PaymentID: string }>;
       };
       return { paymentId: data.Payments[0].PaymentID };
@@ -110,7 +114,7 @@ export async function recordPayment(paymentId: string): Promise<{
 
     return { xeroPaymentId: result.paymentId };
   } catch (err: unknown) {
-    syncLog.status = (err instanceof XeroOfflineError) ? 'queued' : 'failed';
+    syncLog.status = err instanceof XeroOfflineError ? 'queued' : 'failed';
     syncLog.error = (err as Error).message;
     await syncLog.save();
     throw err;

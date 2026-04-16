@@ -73,7 +73,10 @@ export function phone(field = 'mobile', countryCode = '+61'): ValidationChain {
     );
 }
 
-export function objectId(field = 'id', location: 'param' | 'body' | 'query' = 'param'): ValidationChain {
+export function objectId(
+  field = 'id',
+  location: 'param' | 'body' | 'query' = 'param',
+): ValidationChain {
   const chainFn = location === 'param' ? param : location === 'body' ? body : query;
   return chainFn(field)
     .trim()
@@ -103,19 +106,13 @@ export function pagination(): ValidationChain[] {
   ];
 }
 
-export function dateRange(
-  fromField = 'dateFrom',
-  toField = 'dateTo',
-): ValidationChain[] {
+export function dateRange(fromField = 'dateFrom', toField = 'dateTo'): ValidationChain[] {
   return [
     query(fromField)
       .optional()
       .isISO8601()
       .withMessage(`${fromField} must be a valid ISO 8601 date`),
-    query(toField)
-      .optional()
-      .isISO8601()
-      .withMessage(`${toField} must be a valid ISO 8601 date`),
+    query(toField).optional().isISO8601().withMessage(`${toField} must be a valid ISO 8601 date`),
   ];
 }
 
@@ -177,7 +174,10 @@ export function integerCents(field: string): ValidationChain {
     });
 }
 
-export function requiredString(field: string, location: 'body' | 'query' | 'param' = 'body'): ValidationChain {
+export function requiredString(
+  field: string,
+  location: 'body' | 'query' | 'param' = 'body',
+): ValidationChain {
   const chainFn = location === 'body' ? body : location === 'query' ? query : param;
   return chainFn(field)
     .trim()

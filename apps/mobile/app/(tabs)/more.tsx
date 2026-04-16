@@ -15,9 +15,7 @@ export default function MoreScreen(): React.ReactNode {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <List.Section>
         <List.Subheader>Account</List.Subheader>
         <List.Item
@@ -61,9 +59,7 @@ export default function MoreScreen(): React.ReactNode {
         <List.Item
           title="Logout"
           description="Sign out of your account"
-          left={(props) => (
-            <List.Icon {...props} icon="logout" color={theme.colors.error} />
-          )}
+          left={(props) => <List.Icon {...props} icon="logout" color={theme.colors.error} />}
           titleStyle={{ color: theme.colors.error }}
           onPress={handleLogout}
         />

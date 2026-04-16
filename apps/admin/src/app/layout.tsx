@@ -10,11 +10,7 @@ export const metadata: Metadata = {
   description: 'QEGOS Tax Preparation Admin Dashboard',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}): ReactNode {
+export default function RootLayout({ children }: { children: ReactNode }): ReactNode {
   return (
     <html lang="en-AU">
       <body>

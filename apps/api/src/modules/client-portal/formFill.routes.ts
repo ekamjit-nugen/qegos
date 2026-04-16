@@ -21,7 +21,10 @@ const auditLog = {
   },
 };
 import type { Model, Types } from 'mongoose';
-import type { IFormMappingDocument, IFormMappingVersionDocument } from '../form-mapping/formMapping.types';
+import type {
+  IFormMappingDocument,
+  IFormMappingVersionDocument,
+} from '../form-mapping/formMapping.types';
 import { validateAnswers } from '../form-mapping/formMapping.schema';
 import type { FormMappingSchema } from '../form-mapping/formMapping.types';
 import type { IOrderDocument2, ISalesDocument } from '../order-management/order.types';
@@ -34,7 +37,15 @@ import type { IFormDraftDocument } from './formDraft.model';
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface AuthRequest extends Request {
-  user?: { _id: string; userId: string; userType?: number; firstName?: string; lastName?: string; email?: string; mobile?: string };
+  user?: {
+    _id: string;
+    userId: string;
+    userType?: number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    mobile?: string;
+  };
 }
 
 export interface FormFillRouteDeps {
@@ -59,8 +70,16 @@ const submitFormValidation = [
     .matches(/^\d{4}-\d{4}$/)
     .withMessage('Financial year must be YYYY-YYYY format'),
   body('personalDetails').isObject().withMessage('Personal details are required'),
-  body('personalDetails.firstName').isString().trim().notEmpty().withMessage('First name is required'),
-  body('personalDetails.lastName').isString().trim().notEmpty().withMessage('Last name is required'),
+  body('personalDetails.firstName')
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage('First name is required'),
+  body('personalDetails.lastName')
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage('Last name is required'),
   body('personalDetails.email').optional().isEmail().withMessage('Valid email required'),
   body('personalDetails.mobile').optional().isString(),
   body('answers').isObject().withMessage('Form answers are required'),
@@ -71,7 +90,9 @@ const submitFormValidation = [
 
 const validatePromoValidation = [
   body('code').isString().trim().notEmpty().withMessage('Promo code is required'),
-  body('orderAmount').isInt({ min: 0 }).withMessage('Order amount must be non-negative integer (cents)'),
+  body('orderAmount')
+    .isInt({ min: 0 })
+    .withMessage('Order amount must be non-negative integer (cents)'),
   body('salesItemId').optional().isMongoId(),
 ];
 
@@ -106,9 +127,10 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
   } = deps;
 
   // All routes require authentication
-  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
-    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
-    : deps.authenticate;
+  const authMiddleware =
+    typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+      ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+      : deps.authenticate;
   router.use(authMiddleware);
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -153,7 +175,9 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
         .map((m) => {
           const version = versionMap.get(String(m._id));
           const salesItem = salesMap.get(String(m.salesItemId));
-          if (!version || !salesItem) return null;
+          if (!version || !salesItem) {
+            return null;
+          }
           return {
             mappingId: String(m._id),
             salesItemId: String(m.salesItemId),
@@ -452,8 +476,14 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
 
       try {
         const {
-          mappingId, versionNumber, financialYear, personalDetails, answers,
-          promoCode: promoCodeInput, useCredits, draftId,
+          mappingId,
+          versionNumber,
+          financialYear,
+          personalDetails,
+          answers,
+          promoCode: promoCodeInput,
+          useCredits,
+          draftId,
         } = req.body as {
           mappingId: string;
           versionNumber: number;
@@ -524,18 +554,20 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
         const orderNumber = await generateOrderNumber(OrderModel, CounterModel);
 
         // 4. Create line items
-        const lineItems = [{
-          salesId: salesItem._id as Types.ObjectId,
-          title: salesItem.title,
-          price: salesItem.price,
-          quantity: 1,
-          priceAtCreation: salesItem.price,
-          completionStatus: 'not_started' as const,
-        }];
+        const lineItems = [
+          {
+            salesId: salesItem._id as Types.ObjectId,
+            title: salesItem.title,
+            price: salesItem.price,
+            quantity: 1,
+            priceAtCreation: salesItem.price,
+            completionStatus: 'not_started' as const,
+          },
+        ];
 
         const totalAmount = salesItem.price;
         let discountAmount = 0;
-        let discountPercent = 0;
+        const discountPercent = 0;
         let discountSource: string | undefined;
         let promoCodeId: Types.ObjectId | undefined;
         let promoCodeStr: string | undefined;
@@ -578,7 +610,9 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
             lastName: personalDetails.lastName,
             email: personalDetails.email,
             mobile: personalDetails.mobile,
-            ...(personalDetails.dateOfBirth ? { dateOfBirth: new Date(personalDetails.dateOfBirth) } : {}),
+            ...(personalDetails.dateOfBirth
+              ? { dateOfBirth: new Date(personalDetails.dateOfBirth) }
+              : {}),
           },
           lineItems,
           totalAmount,
@@ -601,7 +635,12 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
 
         // 8. Record promo code usage
         if (promoCodeStr && promoCodeService && discountAmount > 0) {
-          await promoCodeService.applyPromoCode(promoCodeStr, userId, String(order._id), totalAmount);
+          await promoCodeService.applyPromoCode(
+            promoCodeStr,
+            userId,
+            String(order._id),
+            totalAmount,
+          );
         }
 
         // 9. Deduct credits if applied
@@ -682,7 +721,12 @@ export function createFormFillRoutes(deps: FormFillRouteDeps): Router {
           salesItemId?: string;
         };
 
-        const result = await promoCodeService.validatePromoCode(code, userId, orderAmount, salesItemId);
+        const result = await promoCodeService.validatePromoCode(
+          code,
+          userId,
+          orderAmount,
+          salesItemId,
+        );
         res.status(200).json({ status: 200, data: result });
       } catch (err) {
         const error = err as Error & { statusCode?: number; code?: string };

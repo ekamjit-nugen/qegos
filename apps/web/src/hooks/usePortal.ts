@@ -3,12 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { Order } from '@/types/order';
-import type {
-  VaultDocument,
-  VaultYear,
-  StorageUsage,
-  VaultDocumentListQuery,
-} from '@/types/vault';
+import type { VaultDocument, VaultYear, StorageUsage, VaultDocumentListQuery } from '@/types/vault';
 import type { TaxYearSummary, YearComparison, AtoStatus } from '@/types/taxSummary';
 import type { Conversation, ChatMessage } from '@/types/chat';
 import type { Notification, NotificationPreferences } from '@/types/notification';
@@ -22,7 +17,7 @@ export function useMyOrders(): ReturnType<typeof useQuery<Order[]>> {
     queryKey: ['portal', 'orders'],
     queryFn: async () => {
       const res = await api.get<ApiResponse<{ orders: Order[]; total: number }>>('/orders');
-      return res.data.data.orders ?? res.data.data as unknown as Order[];
+      return res.data.data.orders ?? (res.data.data as unknown as Order[]);
     },
   });
 }
@@ -52,9 +47,10 @@ export function useVaultDocuments(
           params.set(key, String(value));
         }
       }
-      const res = await api.get<{ status: number; data: { documents: VaultDocument[]; total: number; page: number; pages: number } }>(
-        `/portal/vault/documents?${params.toString()}`,
-      );
+      const res = await api.get<{
+        status: number;
+        data: { documents: VaultDocument[]; total: number; page: number; pages: number };
+      }>(`/portal/vault/documents?${params.toString()}`);
       const { documents, total, page, pages } = res.data.data;
       return {
         status: res.data.status,
@@ -80,7 +76,10 @@ export function useStorageUsage(): ReturnType<typeof useQuery<StorageUsage>> {
   return useQuery({
     queryKey: ['portal', 'vault', 'storage'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ used: number; quota: number; breakdown: unknown[] }>>('/portal/vault/storage');
+      const res =
+        await api.get<ApiResponse<{ used: number; quota: number; breakdown: unknown[] }>>(
+          '/portal/vault/storage',
+        );
       const { used, quota } = res.data.data;
       return {
         used,
@@ -96,11 +95,9 @@ export function useUploadDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await api.post<ApiResponse<VaultDocument>>(
-        '/portal/vault/upload',
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
-      );
+      const res = await api.post<ApiResponse<VaultDocument>>('/portal/vault/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       return res.data.data;
     },
     onSuccess: () => {
@@ -152,7 +149,8 @@ export function useTaxSummaries(): ReturnType<typeof useQuery<TaxYearSummary[]>>
   return useQuery({
     queryKey: ['portal', 'tax-summaries'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ summaries: TaxYearSummary[] }>>('/portal/tax-summaries');
+      const res =
+        await api.get<ApiResponse<{ summaries: TaxYearSummary[] }>>('/portal/tax-summaries');
       return res.data.data.summaries;
     },
   });
@@ -173,15 +171,11 @@ export function useYearComparison(
   });
 }
 
-export function useAtoStatus(
-  year: string | undefined,
-): ReturnType<typeof useQuery<AtoStatus>> {
+export function useAtoStatus(year: string | undefined): ReturnType<typeof useQuery<AtoStatus>> {
   return useQuery({
     queryKey: ['portal', 'tax-summaries', 'ato', year],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<AtoStatus>>(
-        `/portal/tax-summaries/${year}/ato-status`,
-      );
+      const res = await api.get<ApiResponse<AtoStatus>>(`/portal/tax-summaries/${year}/ato-status`);
       return res.data.data;
     },
     enabled: !!year,
@@ -194,7 +188,10 @@ export function useConversations(): ReturnType<typeof useQuery<Conversation[]>> 
   return useQuery({
     queryKey: ['portal', 'conversations'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ conversations: Conversation[]; total: number }>>('/chat/conversations');
+      const res =
+        await api.get<ApiResponse<{ conversations: Conversation[]; total: number }>>(
+          '/chat/conversations',
+        );
       return res.data.data.conversations;
     },
     // Real-time updates via Socket.io; fall back to 30s polling as safety net
@@ -260,10 +257,7 @@ export function useCreateConversation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (subject: string) => {
-      const res = await api.post<ApiResponse<Conversation>>(
-        '/chat/conversations',
-        { subject },
-      );
+      const res = await api.post<ApiResponse<Conversation>>('/chat/conversations', { subject });
       return res.data.data;
     },
     onSuccess: () => {
@@ -274,15 +268,16 @@ export function useCreateConversation() {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-export function useNotifications(page: number = 1): ReturnType<
-  typeof useQuery<PaginatedResponse<Notification>>
-> {
+export function useNotifications(
+  page: number = 1,
+): ReturnType<typeof useQuery<PaginatedResponse<Notification>>> {
   return useQuery({
     queryKey: ['portal', 'notifications', page],
     queryFn: async () => {
-      const res = await api.get<{ status: number; data: { notifications: Notification[]; total: number } }>(
-        `/notifications?page=${page}&limit=20`,
-      );
+      const res = await api.get<{
+        status: number;
+        data: { notifications: Notification[]; total: number };
+      }>(`/notifications?page=${page}&limit=20`);
       const { notifications, total } = res.data.data;
       return {
         status: res.data.status,
@@ -298,9 +293,7 @@ export function useUnreadNotificationCount(): ReturnType<typeof useQuery<number>
     queryKey: ['portal', 'notifications', 'unread-count'],
     queryFn: async () => {
       try {
-        const res = await api.get<ApiResponse<{ count: number }>>(
-          '/notifications/unread-count',
-        );
+        const res = await api.get<ApiResponse<{ count: number }>>('/notifications/unread-count');
         return res.data.data.count;
       } catch {
         return 0;
@@ -334,15 +327,11 @@ export function useMarkAllRead() {
   });
 }
 
-export function useNotificationPreferences(): ReturnType<
-  typeof useQuery<NotificationPreferences>
-> {
+export function useNotificationPreferences(): ReturnType<typeof useQuery<NotificationPreferences>> {
   return useQuery({
     queryKey: ['portal', 'notification-preferences'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<NotificationPreferences>>(
-        '/notifications/preferences',
-      );
+      const res = await api.get<ApiResponse<NotificationPreferences>>('/notifications/preferences');
       return res.data.data;
     },
   });
@@ -386,7 +375,9 @@ export function useAvailableSlots(
   dateFrom: string | undefined,
   dateTo: string | undefined,
   staffId?: string,
-): ReturnType<typeof useQuery<Array<{ date: string; startTime: string; endTime: string; staffId: string }>>> {
+): ReturnType<
+  typeof useQuery<Array<{ date: string; startTime: string; endTime: string; staffId: string }>>
+> {
   return useQuery({
     queryKey: ['portal', 'appointments', 'available-slots', dateFrom, dateTo, staffId],
     queryFn: async () => {
@@ -394,9 +385,11 @@ export function useAvailableSlots(
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
       if (staffId) params.set('staffId', staffId);
-      const res = await api.get<ApiResponse<{ slots: Array<{ date: string; startTime: string; endTime: string; staffId: string }> }>>(
-        `/portal/appointments/available-slots?${params.toString()}`,
-      );
+      const res = await api.get<
+        ApiResponse<{
+          slots: Array<{ date: string; startTime: string; endTime: string; staffId: string }>;
+        }>
+      >(`/portal/appointments/available-slots?${params.toString()}`);
       return res.data.data.slots;
     },
     enabled: !!dateFrom && !!dateTo,
@@ -413,14 +406,16 @@ export function useBookAppointment() {
       startTime: string;
       type: 'in_person' | 'phone' | 'video';
     }) => {
-      const res = await api.post<ApiResponse<{
-        appointmentId: string;
-        date: string;
-        startTime: string;
-        endTime: string;
-        type: string;
-        status: string;
-      }>>('/portal/appointments/book', data);
+      const res = await api.post<
+        ApiResponse<{
+          appointmentId: string;
+          date: string;
+          startTime: string;
+          endTime: string;
+          type: string;
+          status: string;
+        }>
+      >('/portal/appointments/book', data);
       return res.data.data;
     },
     onSuccess: () => {
@@ -440,14 +435,16 @@ export function useRescheduleAppointment() {
       type?: 'in_person' | 'phone' | 'video';
     }) => {
       const { appointmentId, ...body } = data;
-      const res = await api.patch<ApiResponse<{
-        appointmentId: string;
-        date: string;
-        startTime: string;
-        endTime: string;
-        type: string;
-        status: string;
-      }>>(`/portal/appointments/${appointmentId}/reschedule`, body);
+      const res = await api.patch<
+        ApiResponse<{
+          appointmentId: string;
+          date: string;
+          startTime: string;
+          endTime: string;
+          type: string;
+          status: string;
+        }>
+      >(`/portal/appointments/${appointmentId}/reschedule`, body);
       return res.data.data;
     },
     onSuccess: () => {
@@ -461,11 +458,13 @@ export function useCancelAppointment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (appointmentId: string) => {
-      const res = await api.patch<ApiResponse<{
-        appointmentId: string;
-        status: string;
-        message: string;
-      }>>(`/portal/appointments/${appointmentId}/cancel`);
+      const res = await api.patch<
+        ApiResponse<{
+          appointmentId: string;
+          status: string;
+          message: string;
+        }>
+      >(`/portal/appointments/${appointmentId}/cancel`);
       return res.data.data;
     },
     onSuccess: () => {

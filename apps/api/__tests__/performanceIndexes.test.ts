@@ -8,7 +8,6 @@
 import { PERFORMANCE_INDEXES, type IndexDefinition } from '../src/database/ensureIndexes';
 
 describe('Performance Indexes', () => {
-
   // ─── Structure ──────────────────────────────────────────────────────
 
   describe('Index Definitions Structure', () => {
@@ -104,50 +103,65 @@ describe('Performance Indexes', () => {
     const leadIndexes = PERFORMANCE_INDEXES.filter((d) => d.collection === 'leads');
 
     it('payment indexes cover status+createdAt+amount (revenue aggregation)', () => {
-      const covering = paymentIndexes.find((idx) =>
-        idx.keys.status !== undefined && idx.keys.createdAt !== undefined && idx.keys.amount !== undefined,
+      const covering = paymentIndexes.find(
+        (idx) =>
+          idx.keys.status !== undefined &&
+          idx.keys.createdAt !== undefined &&
+          idx.keys.amount !== undefined,
       );
       expect(covering).toBeDefined();
     });
 
     it('payment indexes cover userId+status+amount (CLV aggregation)', () => {
-      const covering = paymentIndexes.find((idx) =>
-        idx.keys.userId !== undefined && idx.keys.status !== undefined && idx.keys.amount !== undefined,
+      const covering = paymentIndexes.find(
+        (idx) =>
+          idx.keys.userId !== undefined &&
+          idx.keys.status !== undefined &&
+          idx.keys.amount !== undefined,
       );
       expect(covering).toBeDefined();
     });
 
     it('payment indexes cover orderId+status+amount (channel ROI)', () => {
-      const covering = paymentIndexes.find((idx) =>
-        idx.keys.orderId !== undefined && idx.keys.status !== undefined && idx.keys.amount !== undefined,
+      const covering = paymentIndexes.find(
+        (idx) =>
+          idx.keys.orderId !== undefined &&
+          idx.keys.status !== undefined &&
+          idx.keys.amount !== undefined,
       );
       expect(covering).toBeDefined();
     });
 
     it('order indexes cover status+isDeleted+createdAt (service mix, seasonal)', () => {
-      const covering = orderIndexes.find((idx) =>
-        idx.keys.status !== undefined && idx.keys.isDeleted !== undefined && idx.keys.createdAt !== undefined,
+      const covering = orderIndexes.find(
+        (idx) =>
+          idx.keys.status !== undefined &&
+          idx.keys.isDeleted !== undefined &&
+          idx.keys.createdAt !== undefined,
       );
       expect(covering).toBeDefined();
     });
 
     it('order indexes cover processingBy+status (staff benchmark)', () => {
-      const covering = orderIndexes.find((idx) =>
-        idx.keys.processingBy !== undefined && idx.keys.status !== undefined,
+      const covering = orderIndexes.find(
+        (idx) => idx.keys.processingBy !== undefined && idx.keys.status !== undefined,
       );
       expect(covering).toBeDefined();
     });
 
     it('lead indexes cover status+isDeleted+createdAt (pipeline health)', () => {
-      const covering = leadIndexes.find((idx) =>
-        idx.keys.status !== undefined && idx.keys.isDeleted !== undefined && idx.keys.createdAt !== undefined,
+      const covering = leadIndexes.find(
+        (idx) =>
+          idx.keys.status !== undefined &&
+          idx.keys.isDeleted !== undefined &&
+          idx.keys.createdAt !== undefined,
       );
       expect(covering).toBeDefined();
     });
 
     it('lead indexes cover campaignId+isConverted (channel ROI)', () => {
-      const covering = leadIndexes.find((idx) =>
-        idx.keys.campaignId !== undefined && idx.keys.isConverted !== undefined,
+      const covering = leadIndexes.find(
+        (idx) => idx.keys.campaignId !== undefined && idx.keys.isConverted !== undefined,
       );
       expect(covering).toBeDefined();
     });
@@ -166,7 +180,9 @@ describe('Performance Indexes', () => {
       const seen = new Map<string, string[]>();
       for (const def of PERFORMANCE_INDEXES) {
         const keyStr = JSON.stringify(def.keys);
-        if (!seen.has(def.collection)) seen.set(def.collection, []);
+        if (!seen.has(def.collection)) {
+          seen.set(def.collection, []);
+        }
         const existing = seen.get(def.collection)!;
         const isDuplicate = existing.includes(keyStr);
         if (isDuplicate) {
@@ -189,9 +205,7 @@ describe('Performance Indexes', () => {
     });
 
     it('partial indexes have partialFilterExpression', () => {
-      const partials = PERFORMANCE_INDEXES.filter(
-        (d) => d.options?.partialFilterExpression,
-      );
+      const partials = PERFORMANCE_INDEXES.filter((d) => d.options?.partialFilterExpression);
       for (const def of partials) {
         expect(Object.keys(def.options!.partialFilterExpression!).length).toBeGreaterThan(0);
       }

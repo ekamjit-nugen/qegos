@@ -46,7 +46,9 @@ export async function getClv(
     { $limit: topN },
   ]);
 
-  if (clvData.length === 0) return [];
+  if (clvData.length === 0) {
+    return [];
+  }
 
   // Enrich with user display names
   const userIds = clvData.map((c: { _id: unknown }) => c._id);
@@ -62,19 +64,21 @@ export async function getClv(
     ]),
   );
 
-  return clvData.map((c: {
-    _id: { toString: () => string };
-    totalSpentCents: number;
-    paymentCount: number;
-    firstPayment: Date;
-    lastPayment: Date;
-  }) => ({
-    userId: c._id.toString(),
-    displayName: userMap.get(c._id.toString()) ?? 'Unknown',
-    totalSpentCents: c.totalSpentCents,
-    paymentCount: c.paymentCount,
-    firstPayment: c.firstPayment,
-    lastPayment: c.lastPayment,
-    segment: params.segment,
-  }));
+  return clvData.map(
+    (c: {
+      _id: { toString: () => string };
+      totalSpentCents: number;
+      paymentCount: number;
+      firstPayment: Date;
+      lastPayment: Date;
+    }) => ({
+      userId: c._id.toString(),
+      displayName: userMap.get(c._id.toString()) ?? 'Unknown',
+      totalSpentCents: c.totalSpentCents,
+      paymentCount: c.paymentCount,
+      firstPayment: c.firstPayment,
+      lastPayment: c.lastPayment,
+      segment: params.segment,
+    }),
+  );
 }

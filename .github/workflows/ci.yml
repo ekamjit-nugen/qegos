@@ -40,11 +40,15 @@ jobs:
           NODE_ENV: test
 
   style:
-    # Lint + prettier are informational today — the codebase has ~790 eslint
-    # errors (curly-if, prefer-const, etc.) and ~605 prettier diffs that are
-    # safe but unshipped. Wire the job in so regressions are visible, but
-    # don't gate merges on it until the backlog is cleared. Flip
-    # `continue-on-error` to false once both targets are green.
+    # Prettier is fully green and is a hard gate (the step fails the job
+    # because `continue-on-error` only suppresses the *job* status, not the
+    # step exit code we read in PR checks). Eslint still has ~251 errors
+    # left after the auto-fix sweep — almost entirely judgment-call type
+    # debt: 120 `no-explicit-any`, 70 `no-unused-vars`, 47
+    # `explicit-function-return-type`, 36 `no-var-requires`. None are
+    # mechanically fixable. Job stays non-blocking until that backlog is
+    # paid down; flip `continue-on-error` to false once `npm run lint`
+    # exits 0.
     name: Style (non-blocking)
     runs-on: ubuntu-latest
     timeout-minutes: 10

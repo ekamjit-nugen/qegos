@@ -13,7 +13,12 @@ import {
 } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useOrder } from '@/hooks/useOrders';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, PAYMENT_STATUS_LABELS, EFILE_STATUS_LABELS } from '@/types/order';
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+  PAYMENT_STATUS_LABELS,
+  EFILE_STATUS_LABELS,
+} from '@/types/order';
 import type { OrderLineItem, OrderDocument } from '@/types/order';
 import { DetailSkeleton } from '@/components/ScreenSkeleton';
 
@@ -32,7 +37,9 @@ export default function OrderDetailScreen(): React.ReactNode {
   if (isError || !order) {
     return (
       <View style={styles.center}>
-        <Text variant="titleMedium" style={{ marginBottom: 8 }}>Failed to load order</Text>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+          Failed to load order
+        </Text>
         <Text variant="bodyMedium" style={{ opacity: 0.6, marginBottom: 16, textAlign: 'center' }}>
           This order may not exist or you may not have access.
         </Text>
@@ -69,11 +76,7 @@ export default function OrderDetailScreen(): React.ReactNode {
           <Card.Content>
             <View style={styles.statusRow}>
               <Text variant="titleMedium">Status</Text>
-              <Chip
-                compact
-                textStyle={styles.chipText}
-                style={{ backgroundColor: statusColor }}
-              >
+              <Chip compact textStyle={styles.chipText} style={{ backgroundColor: statusColor }}>
                 {statusLabel}
               </Chip>
             </View>
@@ -117,13 +120,21 @@ export default function OrderDetailScreen(): React.ReactNode {
                 <List.Item
                   title={order.refundOrOwing > 0 ? 'Your Refund' : 'Amount Owing'}
                   description={`$${(Math.abs(order.refundOrOwing) / 100).toFixed(2)}`}
-                  left={(props) => <List.Icon {...props} icon="cash" color={order.refundOrOwing! > 0 ? '#52c41a' : '#ff4d4f'} />}
+                  left={(props) => (
+                    <List.Icon
+                      {...props}
+                      icon="cash"
+                      color={order.refundOrOwing! > 0 ? '#52c41a' : '#ff4d4f'}
+                    />
+                  )}
                 />
               )}
               {order.noaReceived && (
                 <List.Item
                   title="Notice of Assessment"
-                  description={order.noaDate ? new Date(order.noaDate).toLocaleDateString('en-AU') : 'Received'}
+                  description={
+                    order.noaDate ? new Date(order.noaDate).toLocaleDateString('en-AU') : 'Received'
+                  }
                   left={(props) => <List.Icon {...props} icon="check-decagram" color="#52c41a" />}
                 />
               )}
@@ -160,9 +171,7 @@ export default function OrderDetailScreen(): React.ReactNode {
                       {item.completionStatus.replace('_', ' ')}
                     </Chip>
                   </View>
-                  <Text variant="bodyMedium">
-                    ${(item.subtotal / 100).toFixed(2)}
-                  </Text>
+                  <Text variant="bodyMedium">${(item.subtotal / 100).toFixed(2)}</Text>
                 </View>
                 <Divider style={styles.divider} />
               </View>
@@ -177,15 +186,11 @@ export default function OrderDetailScreen(): React.ReactNode {
             </Text>
             <View style={styles.summaryRow}>
               <Text variant="bodyMedium">Subtotal</Text>
-              <Text variant="bodyMedium">
-                ${(order.totalAmount / 100).toFixed(2)}
-              </Text>
+              <Text variant="bodyMedium">${(order.totalAmount / 100).toFixed(2)}</Text>
             </View>
             {order.discountAmount > 0 && (
               <View style={styles.summaryRow}>
-                <Text variant="bodyMedium">
-                  Discount ({order.discountPercent}%)
-                </Text>
+                <Text variant="bodyMedium">Discount ({order.discountPercent}%)</Text>
                 <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
                   -${(order.discountAmount / 100).toFixed(2)}
                 </Text>
@@ -243,9 +248,7 @@ export default function OrderDetailScreen(): React.ReactNode {
                   key={doc.documentId}
                   title={doc.fileName}
                   description={doc.status}
-                  left={(props) => (
-                    <List.Icon {...props} icon="file-document-outline" />
-                  )}
+                  left={(props) => <List.Icon {...props} icon="file-document-outline" />}
                 />
               ))}
             </Card.Content>
@@ -266,28 +269,20 @@ export default function OrderDetailScreen(): React.ReactNode {
             )}
             <List.Item
               title="Created"
-              description={new Date(order.createdAt).toLocaleDateString(
-                'en-AU',
-                {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                },
-              )}
-              left={(props) => (
-                <List.Icon {...props} icon="calendar-outline" />
-              )}
+              description={new Date(order.createdAt).toLocaleDateString('en-AU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+              left={(props) => <List.Icon {...props} icon="calendar-outline" />}
             />
             <List.Item
               title="Last Updated"
-              description={new Date(order.updatedAt).toLocaleDateString(
-                'en-AU',
-                {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                },
-              )}
+              description={new Date(order.updatedAt).toLocaleDateString('en-AU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
               left={(props) => <List.Icon {...props} icon="update" />}
             />
           </Card.Content>

@@ -1,5 +1,10 @@
 import type { Connection, Model } from 'mongoose';
-import type { IChatConversationDocument, IChatMessageDocument, ICannedResponseDocument, ChatEngineConfig } from './types';
+import type {
+  IChatConversationDocument,
+  IChatMessageDocument,
+  ICannedResponseDocument,
+  ChatEngineConfig,
+} from './types';
 import { createChatConversationModel } from './models/conversationModel';
 import { createChatMessageModel } from './models/messageModel';
 import { createCannedResponseModel } from './models/cannedResponseModel';
@@ -16,10 +21,7 @@ export interface ChatEngineInitResult {
 
 // ─── Init ───────────────────────────────────────────────────────────────────
 
-export function init(
-  connection: Connection,
-  config: ChatEngineConfig,
-): ChatEngineInitResult {
+export function init(connection: Connection, config: ChatEngineConfig): ChatEngineInitResult {
   const ConversationModel = createChatConversationModel(connection);
   const MessageModel = createChatMessageModel(connection);
   const CannedResponseModel = createCannedResponseModel(connection);

@@ -90,10 +90,7 @@ export {
   getPresignedUrl,
 } from './services/s3Service';
 
-export {
-  initVirusScanService,
-  scanBuffer,
-} from './services/virusScanService';
+export { initVirusScanService, scanBuffer } from './services/virusScanService';
 
 export {
   initStorageQuotaService,
@@ -104,11 +101,7 @@ export {
   reconcileStorageUsage,
 } from './services/storageQuotaService';
 
-export {
-  initDedupService,
-  computeContentHash,
-  checkDuplicate,
-} from './services/dedupService';
+export { initDedupService, computeContentHash, checkDuplicate } from './services/dedupService';
 
 // Validators
 export {

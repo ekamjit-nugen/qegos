@@ -34,7 +34,8 @@ export function TicketListPage(): React.ReactNode {
       title: 'Category',
       dataIndex: 'category',
       width: 120,
-      render: (val: string) => TICKET_CATEGORY_LABELS[val as keyof typeof TICKET_CATEGORY_LABELS] ?? val,
+      render: (val: string) =>
+        TICKET_CATEGORY_LABELS[val as keyof typeof TICKET_CATEGORY_LABELS] ?? val,
     },
     {
       title: 'Priority',

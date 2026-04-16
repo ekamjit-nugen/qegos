@@ -25,7 +25,15 @@
   "devDependencies": {
     "@types/uuid": "^9.0.8"
   },
-  "keywords": ["payment", "stripe", "payzoo", "gateway", "webhooks", "idempotency", "gst"],
+  "keywords": [
+    "payment",
+    "stripe",
+    "payzoo",
+    "gateway",
+    "webhooks",
+    "idempotency",
+    "gst"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

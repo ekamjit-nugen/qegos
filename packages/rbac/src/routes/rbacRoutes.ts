@@ -27,10 +27,7 @@ const SENSITIVE_RESOURCES = ['payments', 'system_config', 'audit_logs', 'payment
  * Validate that proposed permissions do not reduce below baseline for system roles.
  * FIX for Vegeta B-13: Actual implementation of RBAC-INV-05.
  */
-function validateBaselinePermissions(
-  roleName: string,
-  proposed: IPermission[],
-): string | null {
+function validateBaselinePermissions(roleName: string, proposed: IPermission[]): string | null {
   const baseline = getBaselinePermissions(roleName);
   if (!baseline) {
     return null; // Not a system role
@@ -82,7 +79,9 @@ export function createRbacRoutes(deps: RbacRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRbacRequest;
       const { name, displayName, permissions } = req.body as {
-        name: string; displayName: string; permissions: IPermission[];
+        name: string;
+        displayName: string;
+        permissions: IPermission[];
       };
 
       // Only super_admin can create roles
@@ -111,7 +110,8 @@ export function createRbacRoutes(deps: RbacRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRbacRequest;
       const { permissions, reason } = req.body as {
-        permissions: IPermission[]; reason: string;
+        permissions: IPermission[];
+        reason: string;
       };
 
       const role = await RoleModel.findById(req.params.id);
@@ -212,11 +212,12 @@ export function createRbacRoutes(deps: RbacRouteDeps): Router {
       const { roleId } = req.body as { roleId: string };
 
       // FIX for Vegeta B-14: Check user exists and is not soft-deleted
-      const user = await (UserModel as Model<{ roleId: string; isDeleted?: boolean; userType: number }>)
-        .findOne({
-          _id: req.params.userId,
-          isDeleted: { $ne: true },
-        });
+      const user = await (
+        UserModel as Model<{ roleId: string; isDeleted?: boolean; userType: number }>
+      ).findOne({
+        _id: req.params.userId,
+        isDeleted: { $ne: true },
+      });
 
       if (!user) {
         throw AppError.notFound('User');
@@ -268,11 +269,7 @@ export function createRbacRoutes(deps: RbacRouteDeps): Router {
       }
 
       const [snapshots, total] = await Promise.all([
-        PermissionSnapshotModel.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        PermissionSnapshotModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
         PermissionSnapshotModel.countDocuments(filter),
       ]);
 
@@ -297,7 +294,8 @@ export function createRbacRoutes(deps: RbacRouteDeps): Router {
     ...validate([objectId('roleId', 'body')]),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const { roleId, proposedPermissions } = req.body as {
-        roleId: string; proposedPermissions: IPermission[];
+        roleId: string;
+        proposedPermissions: IPermission[];
       };
 
       const role = await RoleModel.findById(roleId).lean();

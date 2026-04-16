@@ -31,7 +31,12 @@ export function ChannelRoiWidget(): React.ReactNode {
 
   return (
     <WidgetCard
-      title={<span><FundOutlined /><span style={{ marginLeft: 8 }}>Channel ROI</span></span>}
+      title={
+        <span>
+          <FundOutlined />
+          <span style={{ marginLeft: 8 }}>Channel ROI</span>
+        </span>
+      }
       loading={isLoading}
       error={error as Error | null}
       onRetry={() => void refetch()}
@@ -45,7 +50,7 @@ export function ChannelRoiWidget(): React.ReactNode {
           <XAxis
             type="number"
             fontSize={11}
-            tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+            tickFormatter={(v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`)}
           />
           <YAxis type="category" dataKey="channel" fontSize={11} width={100} />
           <Tooltip

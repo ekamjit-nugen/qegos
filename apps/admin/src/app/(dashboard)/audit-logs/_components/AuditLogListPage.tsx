@@ -2,11 +2,24 @@
 
 import { useState } from 'react';
 import {
-  Table, Tag, Select, Card, Row, Col, Input, DatePicker, Typography,
-  Tooltip, Space, Statistic, Badge,
+  Table,
+  Tag,
+  Select,
+  Card,
+  Row,
+  Col,
+  Input,
+  DatePicker,
+  Typography,
+  Tooltip,
+  Space,
+  Statistic,
+  Badge,
 } from 'antd';
 import {
-  SearchOutlined, WarningOutlined, ExclamationCircleOutlined,
+  SearchOutlined,
+  WarningOutlined,
+  ExclamationCircleOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -37,7 +50,7 @@ function getActorName(actor: AuditLog['actor']): string {
   const parts: string[] = [];
   if (actor.firstName) parts.push(actor.firstName);
   if (actor.lastName) parts.push(actor.lastName);
-  return parts.length > 0 ? parts.join(' ') : actor.email ?? actor._id;
+  return parts.length > 0 ? parts.join(' ') : (actor.email ?? actor._id);
 }
 
 export function AuditLogListPage(): React.ReactNode {
@@ -64,10 +77,7 @@ export function AuditLogListPage(): React.ReactNode {
       width: 90,
       align: 'center',
       render: (val: AuditSeverity) => (
-        <Tag
-          color={AUDIT_SEVERITY_COLORS[val] ?? 'default'}
-          icon={SEVERITY_ICONS[val]}
-        >
+        <Tag color={AUDIT_SEVERITY_COLORS[val] ?? 'default'} icon={SEVERITY_ICONS[val]}>
           {val.toUpperCase()}
         </Tag>
       ),
@@ -88,17 +98,20 @@ export function AuditLogListPage(): React.ReactNode {
       title: 'Action',
       dataIndex: 'action',
       width: 130,
-      render: (val: string) => (
-        <Tag>{AUDIT_ACTION_LABELS[val] ?? val}</Tag>
-      ),
+      render: (val: string) => <Tag>{AUDIT_ACTION_LABELS[val] ?? val}</Tag>,
     },
     {
       title: 'Resource',
       dataIndex: 'resource',
       width: 140,
       render: (val: string, record: AuditLog) => (
-        <Tooltip title={`ID: ${record.resourceId}${record.resourceNumber ? ` (${record.resourceNumber})` : ''}`}>
-          <Text>{val}{record.resourceNumber ? ` #${record.resourceNumber}` : ''}</Text>
+        <Tooltip
+          title={`ID: ${record.resourceId}${record.resourceNumber ? ` (${record.resourceNumber})` : ''}`}
+        >
+          <Text>
+            {val}
+            {record.resourceNumber ? ` #${record.resourceNumber}` : ''}
+          </Text>
         </Tooltip>
       ),
     },
@@ -116,7 +129,9 @@ export function AuditLogListPage(): React.ReactNode {
       render: (_: unknown, record: AuditLog) => {
         if (!record.metadata) return '-';
         return (
-          <Tooltip title={`${record.metadata.requestMethod ?? ''} ${record.metadata.requestPath ?? ''}`}>
+          <Tooltip
+            title={`${record.metadata.requestMethod ?? ''} ${record.metadata.requestPath ?? ''}`}
+          >
             <Text type="secondary" style={{ fontSize: 12 }}>
               {record.metadata.ipAddress ?? '-'}
             </Text>
@@ -144,8 +159,17 @@ export function AuditLogListPage(): React.ReactNode {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={3} style={{ margin: 0 }}>Audit Logs</Title>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Title level={3} style={{ margin: 0 }}>
+          Audit Logs
+        </Title>
       </div>
 
       {/* Stats Cards */}
@@ -182,10 +206,7 @@ export function AuditLogListPage(): React.ReactNode {
           </Col>
           <Col xs={12} sm={6}>
             <Card size="small">
-              <Statistic
-                title="Total Logs"
-                value={data?.meta?.total ?? 0}
-              />
+              <Statistic title="Total Logs" value={data?.meta?.total ?? 0} />
             </Card>
           </Col>
         </Row>
@@ -199,7 +220,9 @@ export function AuditLogListPage(): React.ReactNode {
               placeholder="Search descriptions..."
               prefix={<SearchOutlined />}
               allowClear
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined, page: 1 }))}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, search: e.target.value || undefined, page: 1 }))
+              }
             />
           </Col>
           <Col xs={12} sm={4}>
@@ -298,7 +321,9 @@ export function AuditLogListPage(): React.ReactNode {
                 {record.metadata?.userAgent && (
                   <div>
                     <Text strong>User Agent: </Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{record.metadata.userAgent}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {record.metadata.userAgent}
+                    </Text>
                   </div>
                 )}
                 {record.changes && Object.keys(record.changes).length > 0 && (
@@ -308,7 +333,9 @@ export function AuditLogListPage(): React.ReactNode {
                       {Object.entries(record.changes).map(([field, change]) => (
                         <div key={field} style={{ marginLeft: 16, marginBottom: 2 }}>
                           <Text code>{field}</Text>:{' '}
-                          <Text delete type="danger">{String(change.from ?? 'null')}</Text>
+                          <Text delete type="danger">
+                            {String(change.from ?? 'null')}
+                          </Text>
                           {' → '}
                           <Text type="success">{String(change.to ?? 'null')}</Text>
                         </div>

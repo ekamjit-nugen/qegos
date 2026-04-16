@@ -1,7 +1,7 @@
 import type { Connection } from 'mongoose';
 import type { Redis } from 'ioredis';
-import type { XeroConnectorConfig, IXeroConfigDocument, IXeroSyncLogDocument } from './types';
 import type { Model } from 'mongoose';
+import type { XeroConnectorConfig, IXeroConfigDocument, IXeroSyncLogDocument } from './types';
 import { createXeroConfigModel } from './models/xeroConfigModel';
 import { createXeroSyncLogModel } from './models/xeroSyncLogModel';
 import { initTokenService } from './services/tokenService';
@@ -86,7 +86,12 @@ export {
 
 // Sync services (for event-driven triggering)
 export { syncContact, bulkSyncContacts } from './services/contactSync';
-export { createInvoice, voidInvoice, adjustInvoice, bulkSyncInvoices } from './services/invoiceSync';
+export {
+  createInvoice,
+  voidInvoice,
+  adjustInvoice,
+  bulkSyncInvoices,
+} from './services/invoiceSync';
 export { recordPayment } from './services/paymentSync';
 export { createCreditNote } from './services/creditNoteSync';
 export { runReconciliation } from './services/reconciliation';

@@ -27,7 +27,10 @@ export default function ChatLoading(): React.ReactNode {
       </Card>
 
       {/* Message area */}
-      <Card style={{ flex: 1 }} bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Card
+        style={{ flex: 1 }}
+        bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
+      >
         {/* Header */}
         <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0' }}>
           <Space>
@@ -50,7 +53,7 @@ export default function ChatLoading(): React.ReactNode {
               <Skeleton.Button
                 active
                 style={{
-                  width: 200 + (i * 30),
+                  width: 200 + i * 30,
                   height: 40,
                   borderRadius: 12,
                 }}

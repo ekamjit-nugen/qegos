@@ -32,10 +32,7 @@ import type {
   XeroSyncStatus,
 } from '../src/types';
 
-import {
-  encryptToken,
-  decryptToken,
-} from '../src/services/tokenService';
+import { encryptToken, decryptToken } from '../src/services/tokenService';
 
 // Initialize tokenService with a test key before encrypt/decrypt tests
 import { initTokenService } from '../src/services/tokenService';
@@ -104,10 +101,10 @@ describe('@nugen/xero-connector — Rate Limiting Constants', () => {
 describe('@nugen/xero-connector — Retry & Backoff', () => {
   test('XRO-INV-05: retry delays are 1min, 5min, 30min, 2hr', () => {
     expect(RETRY_DELAYS_MS).toHaveLength(4);
-    expect(RETRY_DELAYS_MS[0]).toBe(60_000);      // 1 minute
-    expect(RETRY_DELAYS_MS[1]).toBe(300_000);     // 5 minutes
-    expect(RETRY_DELAYS_MS[2]).toBe(1_800_000);   // 30 minutes
-    expect(RETRY_DELAYS_MS[3]).toBe(7_200_000);   // 2 hours
+    expect(RETRY_DELAYS_MS[0]).toBe(60_000); // 1 minute
+    expect(RETRY_DELAYS_MS[1]).toBe(300_000); // 5 minutes
+    expect(RETRY_DELAYS_MS[2]).toBe(1_800_000); // 30 minutes
+    expect(RETRY_DELAYS_MS[3]).toBe(7_200_000); // 2 hours
   });
 
   test('XRO-INV-05: max retries is 4', () => {

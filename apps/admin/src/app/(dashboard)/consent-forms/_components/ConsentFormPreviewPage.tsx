@@ -25,11 +25,7 @@ import {
   Space,
   Typography,
 } from 'antd';
-import {
-  ArrowLeftOutlined,
-  EyeOutlined,
-  LockOutlined,
-} from '@ant-design/icons';
+import { ArrowLeftOutlined, EyeOutlined, LockOutlined } from '@ant-design/icons';
 import {
   AU_STATES,
   WORK_TYPES,
@@ -60,9 +56,8 @@ export function ConsentFormPreviewPage(): React.ReactNode {
           Consent Form — Preview
         </Title>
         <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-          This is the exact layout your clients see in the portal at{' '}
-          <Text code>/consent-form</Text>. All inputs are disabled — this page
-          is a visual reference only.
+          This is the exact layout your clients see in the portal at <Text code>/consent-form</Text>
+          . All inputs are disabled — this page is a visual reference only.
         </Paragraph>
       </div>
 
@@ -177,10 +172,9 @@ export function ConsentFormPreviewPage(): React.ReactNode {
           {/* ─── Section 4: Primary ID ───────────────────────── */}
           <Title level={4}>4. Primary ID</Title>
           <Paragraph type="secondary">
-            Accepted documents: Australian full birth certificate, Australian
-            passport, Australian citizenship certificate, Register of
-            Citizenship by Descent extract, foreign passport, or driver&apos;s
-            licence.
+            Accepted documents: Australian full birth certificate, Australian passport, Australian
+            citizenship certificate, Register of Citizenship by Descent extract, foreign passport,
+            or driver&apos;s licence.
           </Paragraph>
           <Form.Item label="Document type" required>
             <Select
@@ -204,9 +198,8 @@ export function ConsentFormPreviewPage(): React.ReactNode {
           {/* ─── Section 5: Secondary ID ─────────────────────── */}
           <Title level={4}>5. Secondary ID</Title>
           <Paragraph type="secondary">
-            Accepted documents: National photo ID, foreign government ID,
-            marriage certificate, driver&apos;s licence, or current bank
-            statement / card.
+            Accepted documents: National photo ID, foreign government ID, marriage certificate,
+            driver&apos;s licence, or current bank statement / card.
           </Paragraph>
           <Form.Item label="Document type" required>
             <Select
@@ -228,10 +221,9 @@ export function ConsentFormPreviewPage(): React.ReactNode {
           <Form.Item required>
             <Checkbox>
               I agree to share my financial information with{' '}
-              <strong>Quintessential Accounting &amp; Taxation</strong>. I
-              authorise Jasmine Kaur and Quintessential Accounting &amp;
-              Taxation to access my ATO account, file returns, and act on my
-              behalf.
+              <strong>Quintessential Accounting &amp; Taxation</strong>. I authorise Jasmine Kaur
+              and Quintessential Accounting &amp; Taxation to access my ATO account, file returns,
+              and act on my behalf.
             </Checkbox>
           </Form.Item>
 

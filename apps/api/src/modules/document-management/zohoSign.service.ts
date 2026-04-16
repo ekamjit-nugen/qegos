@@ -160,10 +160,7 @@ export async function generateEmbeddedSigningUri(
 /**
  * Download a signed document PDF from Zoho Sign.
  */
-export async function getSignedDocument(
-  requestId: string,
-  documentId: string,
-): Promise<Buffer> {
+export async function getSignedDocument(requestId: string, documentId: string): Promise<Buffer> {
   const token = await getAccessToken();
 
   const response = await fetch(
@@ -187,13 +184,14 @@ export async function getSignedDocument(
  * Verify Zoho Sign webhook signature using HMAC-SHA256.
  */
 export function verifyWebhookSignature(payload: string, signature: string): boolean {
-  if (!config.webhookSecret) return false;
-  const expected = crypto
-    .createHmac('sha256', config.webhookSecret)
-    .update(payload)
-    .digest('hex');
+  if (!config.webhookSecret) {
+    return false;
+  }
+  const expected = crypto.createHmac('sha256', config.webhookSecret).update(payload).digest('hex');
   const sigBuf = Buffer.from(signature);
   const expBuf = Buffer.from(expected);
-  if (sigBuf.length !== expBuf.length) return false;
+  if (sigBuf.length !== expBuf.length) {
+    return false;
+  }
   return crypto.timingSafeEqual(expBuf, sigBuf);
 }

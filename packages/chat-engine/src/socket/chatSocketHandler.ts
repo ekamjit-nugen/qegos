@@ -1,10 +1,6 @@
 import type { Server as HttpServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
-import type {
-  ServerToClientEvents,
-  ClientToServerEvents,
-  IChatMessage,
-} from '../types';
+import type { ServerToClientEvents, ClientToServerEvents, IChatMessage } from '../types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -37,10 +33,7 @@ let io: ChatSocketServer | null = null;
  * Attach Socket.io to an HTTP server for real-time chat.
  * Authenticates via JWT in `auth.token` handshake query or `Authorization` header.
  */
-export function initChatSocket(
-  httpServer: HttpServer,
-  config: ChatSocketConfig,
-): ChatSocketServer {
+export function initChatSocket(httpServer: HttpServer, config: ChatSocketConfig): ChatSocketServer {
   io = new SocketServer<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -132,11 +125,10 @@ export function initChatSocket(
 /**
  * Broadcast a new message to all participants in a conversation.
  */
-export function emitNewMessage(
-  conversationId: string,
-  message: IChatMessage,
-): void {
-  if (!io) { return; }
+export function emitNewMessage(conversationId: string, message: IChatMessage): void {
+  if (!io) {
+    return;
+  }
   io.to(`conversation:${conversationId}`).emit('new_message', {
     conversationId,
     message,
@@ -146,12 +138,10 @@ export function emitNewMessage(
 /**
  * Notify that a message has been read.
  */
-export function emitMessageRead(
-  conversationId: string,
-  messageId: string,
-  readAt: Date,
-): void {
-  if (!io) { return; }
+export function emitMessageRead(conversationId: string, messageId: string, readAt: Date): void {
+  if (!io) {
+    return;
+  }
   io.to(`conversation:${conversationId}`).emit('message_read', {
     conversationId,
     messageId,
@@ -163,7 +153,9 @@ export function emitMessageRead(
  * Notify that a conversation was resolved.
  */
 export function emitConversationResolved(conversationId: string): void {
-  if (!io) { return; }
+  if (!io) {
+    return;
+  }
   io.to(`conversation:${conversationId}`).emit('conversation_resolved', {
     conversationId,
   });
@@ -183,7 +175,9 @@ export function getSocketServer(): ChatSocketServer | null {
  * (e.g. in tests) — callers should treat that as "offline, please notify".
  */
 export async function isUserOnline(userId: string): Promise<boolean> {
-  if (!io) return false;
+  if (!io) {
+    return false;
+  }
   const sockets = await io.in(`user:${userId}`).fetchSockets();
   return sockets.length > 0;
 }

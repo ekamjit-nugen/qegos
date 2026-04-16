@@ -19,9 +19,22 @@ export type DocumentStatus = 'pending' | 'signed' | 'verified';
 
 export const DOCUMENT_STATUSES: DocumentStatus[] = ['pending', 'signed', 'verified'];
 
-export type SigningStatus = 'not_started' | 'awaiting_client' | 'client_signed' | 'awaiting_admin' | 'completed' | 'declined';
+export type SigningStatus =
+  | 'not_started'
+  | 'awaiting_client'
+  | 'client_signed'
+  | 'awaiting_admin'
+  | 'completed'
+  | 'declined';
 
-export const SIGNING_STATUSES: SigningStatus[] = ['not_started', 'awaiting_client', 'client_signed', 'awaiting_admin', 'completed', 'declined'];
+export const SIGNING_STATUSES: SigningStatus[] = [
+  'not_started',
+  'awaiting_client',
+  'client_signed',
+  'awaiting_admin',
+  'completed',
+  'declined',
+];
 
 // ─── Allowed File Types (DOC-INV-02: magic bytes validated) ────────────────
 

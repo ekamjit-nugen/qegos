@@ -50,13 +50,26 @@ export type VaultDocumentCategory =
   | 'other';
 
 export const VAULT_DOCUMENT_CATEGORIES: VaultDocumentCategory[] = [
-  'payg_summary', 'interest_statement', 'dividend_statement',
-  'managed_fund_statement', 'rental_income', 'self_employment',
-  'private_health_insurance', 'donation_receipt', 'work_expense_receipt',
-  'self_education', 'vehicle_logbook', 'home_office',
-  'notice_of_assessment', 'tax_return_copy', 'bas_statement',
-  'id_document', 'superannuation_statement', 'foreign_income',
-  'capital_gains_record', 'other',
+  'payg_summary',
+  'interest_statement',
+  'dividend_statement',
+  'managed_fund_statement',
+  'rental_income',
+  'self_employment',
+  'private_health_insurance',
+  'donation_receipt',
+  'work_expense_receipt',
+  'self_education',
+  'vehicle_logbook',
+  'home_office',
+  'notice_of_assessment',
+  'tax_return_copy',
+  'bas_statement',
+  'id_document',
+  'superannuation_statement',
+  'foreign_income',
+  'capital_gains_record',
+  'other',
 ];
 
 export type VirusScanStatus = 'pending' | 'clean' | 'infected' | 'error';
@@ -74,7 +87,12 @@ export type AtoRefundStatus =
   | 'payment_due';
 
 export const ATO_REFUND_STATUSES: AtoRefundStatus[] = [
-  'not_filed', 'filed', 'processing', 'assessed', 'refund_issued', 'payment_due',
+  'not_filed',
+  'filed',
+  'processing',
+  'assessed',
+  'refund_issued',
+  'payment_due',
 ];
 
 // ─── Allowed MIME types (CPV-INV-04) ────────────────────────────────────────
@@ -192,7 +210,10 @@ export interface PrefillResponse {
 export interface YoYComparison {
   current: ITaxYearSummary;
   previous: ITaxYearSummary | null;
-  changes: Record<string, { current: number; previous: number; delta: number; percentChange: number }>;
+  changes: Record<
+    string,
+    { current: number; previous: number; delta: number; percentChange: number }
+  >;
 }
 
 // ─── Route Dependencies ─────────────────────────────────────────────────────
@@ -220,7 +241,11 @@ export interface FileStorageRouteDeps {
     getUsage: (userId: Types.ObjectId) => Promise<StorageUsage>;
   };
   dedupService: {
-    check: (userId: Types.ObjectId, financialYear: string, contentHash: string) => Promise<DuplicateCheckResult>;
+    check: (
+      userId: Types.ObjectId,
+      financialYear: string,
+      contentHash: string,
+    ) => Promise<DuplicateCheckResult>;
   };
   config: FileStorageConfig;
 }

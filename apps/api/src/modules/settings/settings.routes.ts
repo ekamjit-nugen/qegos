@@ -85,11 +85,7 @@ export function createSettingsRoutes(deps: SettingsRouteDeps): Router {
       try {
         const { value } = req.body as { value: unknown };
         const userId = req.user?._id ?? '';
-        const setting = await service.setSetting(
-          req.params.key as string,
-          value,
-          userId,
-        );
+        const setting = await service.setSetting(req.params.key as string, value, userId);
 
         auditLog.log({
           actor: userId,

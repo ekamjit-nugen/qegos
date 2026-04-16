@@ -162,7 +162,12 @@ function RegisterForm(): ReactNode {
           </Form.Item>
 
           <div style={{ textAlign: 'center' }}>
-            <Button type="link" onClick={() => { router.push('/login'); }}>
+            <Button
+              type="link"
+              onClick={() => {
+                router.push('/login');
+              }}
+            >
               Already have an account? Sign in
             </Button>
           </div>

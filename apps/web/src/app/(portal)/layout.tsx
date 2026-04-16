@@ -50,11 +50,7 @@ function buildNavItems(unreadCount: number): NavItem[] {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           Notifications
           {unreadCount > 0 && (
-            <Badge
-              count={unreadCount}
-              size="small"
-              style={{ backgroundColor: '#ff4d4f' }}
-            />
+            <Badge count={unreadCount} size="small" style={{ backgroundColor: '#ff4d4f' }} />
           )}
         </span>
       ),
@@ -83,9 +79,9 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
     router.replace('/login');
   }, [logout, router]);
 
-  const selectedKey = navItems.find((item) =>
-    item.key === '/' ? pathname === '/' : pathname.startsWith(item.key),
-  )?.key ?? '/';
+  const selectedKey =
+    navItems.find((item) => (item.key === '/' ? pathname === '/' : pathname.startsWith(item.key)))
+      ?.key ?? '/';
 
   return (
     <Layout style={{ minHeight: '100vh', background: '#f7f8fa' }}>
@@ -135,7 +131,9 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
-          onClick={({ key }) => { router.push(key); }}
+          onClick={({ key }) => {
+            router.push(key);
+          }}
           items={navItems}
           style={{
             border: 'none',
@@ -200,7 +198,9 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => { setCollapsed(!collapsed); }}
+            onClick={() => {
+              setCollapsed(!collapsed);
+            }}
             style={{ fontSize: 16 }}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -208,41 +208,35 @@ function PortalShell({ children }: { children: ReactNode }): ReactNode {
               <Button
                 type="text"
                 icon={<BellOutlined style={{ fontSize: 18 }} />}
-                onClick={() => { router.push('/notifications'); }}
+                onClick={() => {
+                  router.push('/notifications');
+                }}
                 aria-label="Notifications"
               />
             </Badge>
             <Button
               type="text"
               icon={<LockOutlined />}
-              onClick={() => { router.push('/change-password'); }}
+              onClick={() => {
+                router.push('/change-password');
+              }}
             >
               Change Password
             </Button>
-            <Button
-              type="text"
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-            >
+            <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
               Logout
             </Button>
           </div>
         </Header>
 
         {/* Content */}
-        <Content style={{ margin: 20, minHeight: 'calc(100vh - 96px)' }}>
-          {children}
-        </Content>
+        <Content style={{ margin: 20, minHeight: 'calc(100vh - 96px)' }}>{children}</Content>
       </Layout>
     </Layout>
   );
 }
 
-export default function PortalLayout({
-  children,
-}: {
-  children: ReactNode;
-}): ReactNode {
+export default function PortalLayout({ children }: { children: ReactNode }): ReactNode {
   return (
     <ProtectedRoute>
       <PortalShell>{children}</PortalShell>

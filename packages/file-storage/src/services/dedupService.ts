@@ -6,9 +6,7 @@ import type { IVaultDocumentDocument, DuplicateCheckResult } from '../types';
 
 let VaultDocumentModel: Model<IVaultDocumentDocument>;
 
-export function initDedupService(
-  vaultDocModel: Model<IVaultDocumentDocument>,
-): void {
+export function initDedupService(vaultDocModel: Model<IVaultDocumentDocument>): void {
   VaultDocumentModel = vaultDocModel;
 }
 
@@ -37,7 +35,9 @@ export async function checkDuplicate(
     financialYear,
     contentHash,
     isArchived: false,
-  }).select('_id fileName createdAt').lean();
+  })
+    .select('_id fileName createdAt')
+    .lean();
 
   if (!existing) {
     return { isDuplicate: false };

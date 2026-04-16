@@ -48,30 +48,35 @@ referralSchema.pre('save', function (next) {
 
 // Snapshot original status after hydration so the pre-save hook can detect
 // invalid transitions (REF-INV status machine). In-memory only.
-referralSchema.post('init', function (this: IReferralDocument & { _originalStatus?: ReferralStatus }) {
-  this._originalStatus = this.status;
-});
+referralSchema.post(
+  'init',
+  function (this: IReferralDocument & { _originalStatus?: ReferralStatus }) {
+    this._originalStatus = this.status;
+  },
+);
 
 // Enforce referral state machine on save(). `updateMany` / `findOneAndUpdate`
 // bypass this hook by design — those callers (processReward atomic claim,
 // expire crons) are the ones that legitimately need the escape hatch.
-referralSchema.pre('save', function (
-  this: IReferralDocument & { _originalStatus?: ReferralStatus },
-  next,
-) {
-  if (this.isNew || !this.isModified('status')) {
-    return next();
-  }
-  const from = this._originalStatus ?? this.status;
-  const to = this.status;
-  if (from === to) return next();
-  const allowed = REFERRAL_STATUS_TRANSITIONS[from] ?? [];
-  if (!allowed.includes(to)) {
-    return next(new Error(`Invalid referral status transition: ${from} -> ${to}`));
-  }
-  this._originalStatus = to;
-  next();
-});
+referralSchema.pre(
+  'save',
+  function (this: IReferralDocument & { _originalStatus?: ReferralStatus }, next) {
+    if (this.isNew || !this.isModified('status')) {
+      return next();
+    }
+    const from = this._originalStatus ?? this.status;
+    const to = this.status;
+    if (from === to) {
+      return next();
+    }
+    const allowed = REFERRAL_STATUS_TRANSITIONS[from] ?? [];
+    if (!allowed.includes(to)) {
+      return next(new Error(`Invalid referral status transition: ${from} -> ${to}`));
+    }
+    this._originalStatus = to;
+    next();
+  },
+);
 
 // Indexes
 referralSchema.index({ referralCode: 1 });
@@ -97,11 +102,31 @@ const referralConfigSchema = new Schema<IReferralConfigDocument>(
       enum: REFERRAL_REWARD_TYPES,
       default: DEFAULT_REFERRAL_CONFIG.rewardType,
     },
-    referrerRewardValue: { type: Number, required: true, default: DEFAULT_REFERRAL_CONFIG.referrerRewardValue },
-    refereeRewardValue: { type: Number, required: true, default: DEFAULT_REFERRAL_CONFIG.refereeRewardValue },
-    maxReferralsPerClient: { type: Number, required: true, default: DEFAULT_REFERRAL_CONFIG.maxReferralsPerClient },
-    referralExpiryDays: { type: Number, required: true, default: DEFAULT_REFERRAL_CONFIG.referralExpiryDays },
-    minimumOrderValueForReward: { type: Number, required: true, default: DEFAULT_REFERRAL_CONFIG.minimumOrderValueForReward },
+    referrerRewardValue: {
+      type: Number,
+      required: true,
+      default: DEFAULT_REFERRAL_CONFIG.referrerRewardValue,
+    },
+    refereeRewardValue: {
+      type: Number,
+      required: true,
+      default: DEFAULT_REFERRAL_CONFIG.refereeRewardValue,
+    },
+    maxReferralsPerClient: {
+      type: Number,
+      required: true,
+      default: DEFAULT_REFERRAL_CONFIG.maxReferralsPerClient,
+    },
+    referralExpiryDays: {
+      type: Number,
+      required: true,
+      default: DEFAULT_REFERRAL_CONFIG.referralExpiryDays,
+    },
+    minimumOrderValueForReward: {
+      type: Number,
+      required: true,
+      default: DEFAULT_REFERRAL_CONFIG.minimumOrderValueForReward,
+    },
   },
   {
     timestamps: true,

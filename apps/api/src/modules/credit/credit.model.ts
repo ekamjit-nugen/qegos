@@ -22,8 +22,5 @@ creditTransactionSchema.index({ expiresAt: 1 }, { sparse: true });
 export function createCreditTransactionModel(
   connection: Connection,
 ): Model<ICreditTransactionDocument> {
-  return connection.model<ICreditTransactionDocument>(
-    'CreditTransaction',
-    creditTransactionSchema,
-  );
+  return connection.model<ICreditTransactionDocument>('CreditTransaction', creditTransactionSchema);
 }

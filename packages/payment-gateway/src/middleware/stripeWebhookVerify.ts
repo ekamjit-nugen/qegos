@@ -46,17 +46,17 @@ export function stripeWebhookVerify(): RequestHandler {
       const stripe = new Stripe(_webhookSecret, {
         apiVersion: '2024-04-10' as Stripe.LatestApiVersion,
       });
-      const event = stripe.webhooks.constructEvent(
-        rawBody,
-        sig as string,
-        _webhookSecret,
-      );
+      const event = stripe.webhooks.constructEvent(rawBody, sig as string, _webhookSecret);
 
       // Attach the verified event to the request for the handler
       (req as Request & { stripeEvent: Stripe.Event }).stripeEvent = event;
       next();
     } catch (err) {
-      next(AppError.badRequest(`Stripe webhook signature verification failed: ${(err as Error).message}`));
+      next(
+        AppError.badRequest(
+          `Stripe webhook signature verification failed: ${(err as Error).message}`,
+        ),
+      );
     }
   };
 }

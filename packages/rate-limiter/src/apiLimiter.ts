@@ -12,7 +12,9 @@ export function createApiLimiter(config?: ApiLimiterConfig): RequestHandler {
     max: config?.max ?? 100,
     message: 'Too many requests. Please slow down.',
     keyGenerator: (req: Request): string => {
-      const user = (req as unknown as Record<string, unknown>).user as { userId?: string } | undefined;
+      const user = (req as unknown as Record<string, unknown>).user as
+        | { userId?: string }
+        | undefined;
       return `api:${user?.userId ?? req.ip}`;
     },
   });

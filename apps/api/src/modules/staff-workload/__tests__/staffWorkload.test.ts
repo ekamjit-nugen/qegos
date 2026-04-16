@@ -56,26 +56,34 @@ describe('Staff Workload — Types & Constants', () => {
 describe('Staff Workload — Score Calculation', () => {
   test('workload score is weighted sum of all factors', () => {
     // Manually compute expected score
-    const leads = 10, orders = 5, reviews = 3, tickets = 8, appointments = 2;
-    const expected = Math.round((
-      leads * DEFAULT_WEIGHTS.activeLeads +
-      orders * DEFAULT_WEIGHTS.ordersInProgress +
-      reviews * DEFAULT_WEIGHTS.pendingReviews +
-      tickets * DEFAULT_WEIGHTS.openTickets +
-      appointments * DEFAULT_WEIGHTS.upcomingAppointments
-    ) * 100) / 100;
+    const leads = 10,
+      orders = 5,
+      reviews = 3,
+      tickets = 8,
+      appointments = 2;
+    const expected =
+      Math.round(
+        (leads * DEFAULT_WEIGHTS.activeLeads +
+          orders * DEFAULT_WEIGHTS.ordersInProgress +
+          reviews * DEFAULT_WEIGHTS.pendingReviews +
+          tickets * DEFAULT_WEIGHTS.openTickets +
+          appointments * DEFAULT_WEIGHTS.upcomingAppointments) *
+          100,
+      ) / 100;
     // 10*1.0 + 5*2.0 + 3*1.5 + 8*0.8 + 2*1.2 = 10 + 10 + 4.5 + 6.4 + 2.4 = 33.3
     expect(expected).toBe(33.3);
   });
 
   test('zero workload produces score of 0', () => {
-    const score = Math.round((
-      0 * DEFAULT_WEIGHTS.activeLeads +
-      0 * DEFAULT_WEIGHTS.ordersInProgress +
-      0 * DEFAULT_WEIGHTS.pendingReviews +
-      0 * DEFAULT_WEIGHTS.openTickets +
-      0 * DEFAULT_WEIGHTS.upcomingAppointments
-    ) * 100) / 100;
+    const score =
+      Math.round(
+        (0 * DEFAULT_WEIGHTS.activeLeads +
+          0 * DEFAULT_WEIGHTS.ordersInProgress +
+          0 * DEFAULT_WEIGHTS.pendingReviews +
+          0 * DEFAULT_WEIGHTS.openTickets +
+          0 * DEFAULT_WEIGHTS.upcomingAppointments) *
+          100,
+      ) / 100;
     expect(score).toBe(0);
   });
 });
@@ -91,19 +99,35 @@ describe('Staff Workload — Capacity Checks', () => {
 
   test('staff below all limits is not at capacity', () => {
     const breaches: string[] = [];
-    if (10 >= DEFAULT_CAPACITY.maxLeads) breaches.push('leads');
-    if (5 >= DEFAULT_CAPACITY.maxOrders) breaches.push('orders');
-    if (2 >= DEFAULT_CAPACITY.maxReviews) breaches.push('reviews');
-    if (3 >= DEFAULT_CAPACITY.maxTickets) breaches.push('tickets');
-    if (1 >= DEFAULT_CAPACITY.maxAppointmentsPerDay) breaches.push('appointments');
+    if (10 >= DEFAULT_CAPACITY.maxLeads) {
+      breaches.push('leads');
+    }
+    if (5 >= DEFAULT_CAPACITY.maxOrders) {
+      breaches.push('orders');
+    }
+    if (2 >= DEFAULT_CAPACITY.maxReviews) {
+      breaches.push('reviews');
+    }
+    if (3 >= DEFAULT_CAPACITY.maxTickets) {
+      breaches.push('tickets');
+    }
+    if (1 >= DEFAULT_CAPACITY.maxAppointmentsPerDay) {
+      breaches.push('appointments');
+    }
     expect(breaches).toHaveLength(0);
   });
 
   test('multiple capacity breaches are tracked', () => {
     const breaches: string[] = [];
-    if (50 >= DEFAULT_CAPACITY.maxLeads) breaches.push('leads');
-    if (30 >= DEFAULT_CAPACITY.maxOrders) breaches.push('orders');
-    if (5 >= DEFAULT_CAPACITY.maxReviews) breaches.push('reviews');
+    if (50 >= DEFAULT_CAPACITY.maxLeads) {
+      breaches.push('leads');
+    }
+    if (30 >= DEFAULT_CAPACITY.maxOrders) {
+      breaches.push('orders');
+    }
+    if (5 >= DEFAULT_CAPACITY.maxReviews) {
+      breaches.push('reviews');
+    }
     expect(breaches).toEqual(['leads', 'orders']);
   });
 });
@@ -122,7 +146,15 @@ describe('Staff Workload — Service', () => {
     };
   }
 
-  function createMockDeps(staffList?: Array<{ _id: string; firstName: string; lastName: string; email: string; userType: number }>): Record<string, unknown> {
+  function createMockDeps(
+    staffList?: Array<{
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      userType: number;
+    }>,
+  ): Record<string, unknown> {
     const userFind = jest.fn().mockReturnValue({
       select: jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue(staffList ?? []),

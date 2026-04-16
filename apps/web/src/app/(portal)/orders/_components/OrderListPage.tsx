@@ -48,7 +48,8 @@ function groupByFY(orders: Order[], summaries: TaxYearSummary[]): FYGroup[] {
     map.get(fy)!.orders.push(o);
   }
   for (const s of summaries) {
-    if (!map.has(s.financialYear)) map.set(s.financialYear, { financialYear: s.financialYear, orders: [] });
+    if (!map.has(s.financialYear))
+      map.set(s.financialYear, { financialYear: s.financialYear, orders: [] });
     map.get(s.financialYear)!.summary = s;
   }
   return Array.from(map.values()).sort((a, b) => b.financialYear.localeCompare(a.financialYear));
@@ -60,10 +61,7 @@ export function OrderListPage(): React.ReactNode {
   const { data: summaries } = useTaxSummaries();
   const [view, setView] = useState<'grouped' | 'flat'>('grouped');
 
-  const groups = useMemo(
-    () => groupByFY(orders ?? [], summaries ?? []),
-    [orders, summaries],
-  );
+  const groups = useMemo(() => groupByFY(orders ?? [], summaries ?? []), [orders, summaries]);
 
   if (isLoading) {
     return (
@@ -79,14 +77,20 @@ export function OrderListPage(): React.ReactNode {
     <div>
       <Row align="middle" justify="space-between" style={{ marginBottom: 16 }}>
         <Col>
-          <Title level={3} style={{ margin: 0 }}>My Tax Filings</Title>
-          <Text type="secondary">Everything you&apos;ve filed with us — grouped by financial year</Text>
+          <Title level={3} style={{ margin: 0 }}>
+            My Tax Filings
+          </Title>
+          <Text type="secondary">
+            Everything you&apos;ve filed with us — grouped by financial year
+          </Text>
         </Col>
         <Col>
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => { router.push('/file-tax'); }}
+            onClick={() => {
+              router.push('/file-tax');
+            }}
           >
             File New Return
           </Button>
@@ -95,7 +99,9 @@ export function OrderListPage(): React.ReactNode {
 
       <Segmented
         value={view}
-        onChange={(v) => { setView(v as 'grouped' | 'flat'); }}
+        onChange={(v) => {
+          setView(v as 'grouped' | 'flat');
+        }}
         options={[
           { label: 'By Year', value: 'grouped' },
           { label: 'All Orders', value: 'flat' },
@@ -104,11 +110,13 @@ export function OrderListPage(): React.ReactNode {
       />
 
       {!hasData ? (
-        <Empty
-          description="No tax filings yet"
-          style={{ padding: 60 }}
-        >
-          <Button type="primary" onClick={() => { router.push('/file-tax'); }}>
+        <Empty description="No tax filings yet" style={{ padding: 60 }}>
+          <Button
+            type="primary"
+            onClick={() => {
+              router.push('/file-tax');
+            }}
+          >
             Start Your First Return
           </Button>
         </Empty>
@@ -127,7 +135,9 @@ export function OrderListPage(): React.ReactNode {
                   <Button
                     type="link"
                     icon={<FileTextOutlined />}
-                    onClick={() => { router.push(`/tax-summary?fy=${g.financialYear}`); }}
+                    onClick={() => {
+                      router.push(`/tax-summary?fy=${g.financialYear}`);
+                    }}
                   >
                     View Tax Summary
                   </Button>
@@ -190,7 +200,12 @@ export function OrderListPage(): React.ReactNode {
                 <Row gutter={[16, 16]}>
                   {g.orders.map((order) => (
                     <Col xs={24} sm={12} lg={8} key={order._id}>
-                      <OrderCard order={order} onView={() => { router.push(`/orders/${order._id}`); }} />
+                      <OrderCard
+                        order={order}
+                        onView={() => {
+                          router.push(`/orders/${order._id}`);
+                        }}
+                      />
                     </Col>
                   ))}
                 </Row>
@@ -202,7 +217,12 @@ export function OrderListPage(): React.ReactNode {
         <Row gutter={[16, 16]}>
           {(orders ?? []).map((order) => (
             <Col xs={24} sm={12} lg={8} key={order._id}>
-              <OrderCard order={order} onView={() => { router.push(`/orders/${order._id}`); }} />
+              <OrderCard
+                order={order}
+                onView={() => {
+                  router.push(`/orders/${order._id}`);
+                }}
+              />
             </Col>
           ))}
         </Row>
@@ -241,8 +261,17 @@ function OrderCard({ order, onView }: { order: Order; onView: () => void }): Rea
         FY {order.financialYear}
       </Text>
       <Progress percent={order.completionPercent} size="small" style={{ marginTop: 8 }} />
-      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text strong><DollarCircleOutlined /> {formatCurrency(order.finalAmount)}</Text>
+      <div
+        style={{
+          marginTop: 8,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Text strong>
+          <DollarCircleOutlined /> {formatCurrency(order.finalAmount)}
+        </Text>
         {order.eFileStatus && order.eFileStatus !== 'not_filed' && (
           <Tag color="blue">{order.eFileStatus}</Tag>
         )}

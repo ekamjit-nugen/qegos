@@ -10,9 +10,7 @@ import { MAX_DATE_RANGE_DAYS, ANALYTICS_VIEWS } from '../constants';
  */
 export function validateDateRange(): ReturnType<typeof query>[] {
   return [
-    query('dateFrom')
-      .isISO8601()
-      .withMessage('dateFrom must be ISO 8601'),
+    query('dateFrom').isISO8601().withMessage('dateFrom must be ISO 8601'),
     query('dateTo')
       .isISO8601()
       .withMessage('dateTo must be ISO 8601')
@@ -36,21 +34,10 @@ export function validateDateRange(): ReturnType<typeof query>[] {
  */
 export function validateClv(): ReturnType<typeof body>[] {
   return [
-    body('topN')
-      .optional()
-      .isInt({ min: 1, max: 100 })
-      .withMessage('topN must be integer 1-100'),
-    body('segment')
-      .optional()
-      .isString()
-      .trim()
-      .isLength({ min: 1, max: 50 }),
-    body('dateFrom')
-      .optional()
-      .isISO8601(),
-    body('dateTo')
-      .optional()
-      .isISO8601(),
+    body('topN').optional().isInt({ min: 1, max: 100 }).withMessage('topN must be integer 1-100'),
+    body('segment').optional().isString().trim().isLength({ min: 1, max: 50 }),
+    body('dateFrom').optional().isISO8601(),
+    body('dateTo').optional().isISO8601(),
   ];
 }
 
@@ -59,20 +46,10 @@ export function validateClv(): ReturnType<typeof body>[] {
  */
 export function validateChannelRoi(): ReturnType<typeof body>[] {
   return [
-    body('dateFrom')
-      .isISO8601()
-      .withMessage('dateFrom must be ISO 8601'),
-    body('dateTo')
-      .isISO8601()
-      .withMessage('dateTo must be ISO 8601'),
-    body('channels')
-      .optional()
-      .isArray()
-      .withMessage('channels must be an array'),
-    body('channels.*')
-      .optional()
-      .isString()
-      .trim(),
+    body('dateFrom').isISO8601().withMessage('dateFrom must be ISO 8601'),
+    body('dateTo').isISO8601().withMessage('dateTo must be ISO 8601'),
+    body('channels').optional().isArray().withMessage('channels must be an array'),
+    body('channels.*').optional().isString().trim(),
   ];
 }
 
@@ -81,21 +58,13 @@ export function validateChannelRoi(): ReturnType<typeof body>[] {
  */
 export function validateExport(): ReturnType<typeof body>[] {
   return [
-    body('format')
-      .isIn(['pdf', 'xlsx'])
-      .withMessage('format must be pdf or xlsx'),
-    body('widgets')
-      .isArray({ min: 1 })
-      .withMessage('widgets must be a non-empty array'),
+    body('format').isIn(['pdf', 'xlsx']).withMessage('format must be pdf or xlsx'),
+    body('widgets').isArray({ min: 1 }).withMessage('widgets must be a non-empty array'),
     body('widgets.*')
       .isIn([...ANALYTICS_VIEWS])
       .withMessage(`widget must be one of: ${ANALYTICS_VIEWS.join(', ')}`),
-    body('dateFrom')
-      .optional()
-      .isISO8601(),
-    body('dateTo')
-      .optional()
-      .isISO8601(),
+    body('dateFrom').optional().isISO8601(),
+    body('dateTo').optional().isISO8601(),
   ];
 }
 

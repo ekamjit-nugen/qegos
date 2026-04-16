@@ -55,21 +55,28 @@ const ORDER_STATUS = {
 } as const;
 
 const STATUS_LABELS: Record<number, string> = {
-  1: 'Draft', 2: 'Confirmed', 3: 'Documents Pending', 4: 'In Progress',
-  5: 'Review', 6: 'Lodged', 7: 'ATO Processing', 8: 'Completed', 9: 'Cancelled',
+  1: 'Draft',
+  2: 'Confirmed',
+  3: 'Documents Pending',
+  4: 'In Progress',
+  5: 'Review',
+  6: 'Lodged',
+  7: 'ATO Processing',
+  8: 'Completed',
+  9: 'Cancelled',
 };
 
 // Valid forward transitions
 const VALID_TRANSITIONS: Record<number, number[]> = {
-  1: [2, 9],       // Draft → Confirmed or Cancelled
-  2: [3, 9],       // Confirmed → Documents Pending or Cancelled
-  3: [4, 9],       // Documents Pending → In Progress or Cancelled
-  4: [5, 9],       // In Progress → Review or Cancelled
-  5: [4, 6, 9],    // Review → In Progress (rejection) or Lodged or Cancelled
-  6: [7, 9],       // Lodged → ATO Processing or Cancelled
-  7: [8, 9],       // ATO Processing → Completed or Cancelled
-  8: [],           // Completed — terminal
-  9: [],           // Cancelled — terminal
+  1: [2, 9], // Draft → Confirmed or Cancelled
+  2: [3, 9], // Confirmed → Documents Pending or Cancelled
+  3: [4, 9], // Documents Pending → In Progress or Cancelled
+  4: [5, 9], // In Progress → Review or Cancelled
+  5: [4, 6, 9], // Review → In Progress (rejection) or Lodged or Cancelled
+  6: [7, 9], // Lodged → ATO Processing or Cancelled
+  7: [8, 9], // ATO Processing → Completed or Cancelled
+  8: [], // Completed — terminal
+  9: [], // Cancelled — terminal
 };
 
 // ─── Simulated Order API ────────────────────────────────────────────────────
@@ -94,12 +101,17 @@ function createOrderApp(): express.Express {
   // POST /orders — create
   app.post('/api/v1/orders', auth, (req: Request, res: Response): void => {
     const { clientId, financialYear, lineItems } = req.body as {
-      clientId?: string; financialYear?: string;
+      clientId?: string;
+      financialYear?: string;
       lineItems?: Array<{ title: string; priceCents: number; quantity: number }>;
     };
 
     if (!clientId || !financialYear) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'clientId and financialYear required' });
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'clientId and financialYear required',
+      });
       return;
     }
 
@@ -144,7 +156,9 @@ function createOrderApp(): express.Express {
 
     const { status: newStatus } = req.body as { status?: number };
     if (!newStatus) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'status is required' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'status is required' });
       return;
     }
 
@@ -177,7 +191,11 @@ function createOrderApp(): express.Express {
 
     const { amountCents, gateway } = req.body as { amountCents?: number; gateway?: string };
     if (!amountCents || !Number.isInteger(amountCents) || amountCents <= 0) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'amountCents must be a positive integer' });
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'amountCents must be a positive integer',
+      });
       return;
     }
 
@@ -249,9 +267,7 @@ describe('E2E: Order Lifecycle', () => {
     });
 
     test('create order without clientId returns 400', async () => {
-      const res = await request(app)
-        .post('/api/v1/orders')
-        .send({ financialYear: '2025-2026' });
+      const res = await request(app).post('/api/v1/orders').send({ financialYear: '2025-2026' });
 
       expect(res.status).toBe(400);
     });
@@ -413,7 +429,7 @@ describe('E2E: Order Lifecycle', () => {
 
       const res = await request(app)
         .post(`/api/v1/orders/${create.body.data._id}/payment`)
-        .send({ amountCents: 99.50 });
+        .send({ amountCents: 99.5 });
 
       expect(res.status).toBe(400);
     });
@@ -446,8 +462,7 @@ describe('E2E: Order Lifecycle', () => {
         .post(`/api/v1/orders/${create.body.data._id}/payment`)
         .send({ amountCents: 11000, gateway: 'payzoo' });
 
-      const res = await request(app)
-        .get(`/api/v1/orders/${create.body.data._id}/payments`);
+      const res = await request(app).get(`/api/v1/orders/${create.body.data._id}/payments`);
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);

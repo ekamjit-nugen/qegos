@@ -16,7 +16,11 @@
   "peerDependencies": {
     "ioredis": "^5.0.0"
   },
-  "keywords": ["rate-limiter", "redis", "express"],
+  "keywords": [
+    "rate-limiter",
+    "redis",
+    "express"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

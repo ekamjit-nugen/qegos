@@ -44,7 +44,6 @@ function createEvent(overrides: Record<string, unknown> = {}): Record<string, un
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('@nugen/xero-connector — Webhook Handler', () => {
-
   // ─── Signature Verification ─────────────────────────────────────────────
 
   describe('HMAC-SHA256 Signature Verification', () => {
@@ -213,9 +212,7 @@ describe('@nugen/xero-connector — Webhook Handler', () => {
 
   describe('Batch Processing', () => {
     test('payload can contain multiple events', () => {
-      const events = Array.from({ length: 10 }, (_, i) =>
-        createEvent({ resourceId: `res-${i}` }),
-      );
+      const events = Array.from({ length: 10 }, (_, i) => createEvent({ resourceId: `res-${i}` }));
       const payload = createWebhookPayload(events);
       expect((payload.events as unknown[]).length).toBe(10);
     });

@@ -15,9 +15,21 @@ export interface PromoCodeServiceDeps {
 
 export interface PromoCodeServiceResult {
   createPromoCode: (data: CreatePromoCodeInput, createdBy: string) => Promise<IPromoCodeDocument>;
-  validatePromoCode: (code: string, userId: string, orderAmount: number, salesItemId?: string) => Promise<PromoCodeValidationResult>;
-  applyPromoCode: (code: string, userId: string, orderId: string, orderAmount: number) => Promise<{ discountApplied: number }>;
-  listPromoCodes: (query: PromoCodeListQuery) => Promise<{ promoCodes: IPromoCodeDocument[]; total: number; page: number; limit: number }>;
+  validatePromoCode: (
+    code: string,
+    userId: string,
+    orderAmount: number,
+    salesItemId?: string,
+  ) => Promise<PromoCodeValidationResult>;
+  applyPromoCode: (
+    code: string,
+    userId: string,
+    orderId: string,
+    orderAmount: number,
+  ) => Promise<{ discountApplied: number }>;
+  listPromoCodes: (
+    query: PromoCodeListQuery,
+  ) => Promise<{ promoCodes: IPromoCodeDocument[]; total: number; page: number; limit: number }>;
   getPromoCode: (id: string) => Promise<IPromoCodeDocument>;
   updatePromoCode: (id: string, data: Partial<CreatePromoCodeInput>) => Promise<IPromoCodeDocument>;
   deactivatePromoCode: (id: string) => Promise<IPromoCodeDocument>;
@@ -74,10 +86,7 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
 
   // ─── Validate ──────────────────────────────────────────────────────────
 
-  function calculateDiscount(
-    promo: IPromoCodeDocument,
-    orderAmount: number,
-  ): number {
+  function calculateDiscount(promo: IPromoCodeDocument, orderAmount: number): number {
     let discount: number;
     if (promo.discountType === 'percent') {
       discount = Math.round(orderAmount * (promo.discountValue / 100));
@@ -101,24 +110,59 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
     const promo = await PromoCodeModel.findOne({ code: code.toUpperCase().trim() });
 
     if (!promo) {
-      return { valid: false, code, discountType: 'flat', discountValue: 0, calculatedDiscount: 0, message: 'Invalid promo code' };
+      return {
+        valid: false,
+        code,
+        discountType: 'flat',
+        discountValue: 0,
+        calculatedDiscount: 0,
+        message: 'Invalid promo code',
+      };
     }
 
     if (!promo.isActive) {
-      return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: 'This promo code is no longer active' };
+      return {
+        valid: false,
+        code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        calculatedDiscount: 0,
+        message: 'This promo code is no longer active',
+      };
     }
 
     const now = new Date();
     if (now < promo.validFrom) {
-      return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: 'This promo code is not yet valid' };
+      return {
+        valid: false,
+        code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        calculatedDiscount: 0,
+        message: 'This promo code is not yet valid',
+      };
     }
     if (now > promo.validUntil) {
-      return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: 'This promo code has expired' };
+      return {
+        valid: false,
+        code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        calculatedDiscount: 0,
+        message: 'This promo code has expired',
+      };
     }
 
     // Check global usage limit
     if (promo.maxUsageTotal && promo.usageCount >= promo.maxUsageTotal) {
-      return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: 'This promo code has reached its usage limit' };
+      return {
+        valid: false,
+        code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        calculatedDiscount: 0,
+        message: 'This promo code has reached its usage limit',
+      };
     }
 
     // Check per-user usage limit
@@ -127,21 +171,40 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
       userId,
     });
     if (userUsageCount >= promo.maxUsagePerUser) {
-      return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: 'You have already used this promo code' };
+      return {
+        valid: false,
+        code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        calculatedDiscount: 0,
+        message: 'You have already used this promo code',
+      };
     }
 
     // Check minimum order amount
     if (orderAmount < promo.minOrderAmount) {
-      return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: `Minimum order amount is $${(promo.minOrderAmount / 100).toFixed(2)}` };
+      return {
+        valid: false,
+        code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        calculatedDiscount: 0,
+        message: `Minimum order amount is $${(promo.minOrderAmount / 100).toFixed(2)}`,
+      };
     }
 
     // Check applicable sales items
     if (promo.applicableSalesItemIds.length > 0 && salesItemId) {
-      const isApplicable = promo.applicableSalesItemIds.some(
-        (id) => String(id) === salesItemId,
-      );
+      const isApplicable = promo.applicableSalesItemIds.some((id) => String(id) === salesItemId);
       if (!isApplicable) {
-        return { valid: false, code, discountType: promo.discountType, discountValue: promo.discountValue, calculatedDiscount: 0, message: 'This promo code is not valid for this service' };
+        return {
+          valid: false,
+          code,
+          discountType: promo.discountType,
+          discountValue: promo.discountValue,
+          calculatedDiscount: 0,
+          message: 'This promo code is not valid for this service',
+        };
       }
     }
 
@@ -214,7 +277,11 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
     }
 
     const [promoCodes, total] = await Promise.all([
-      PromoCodeModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean<IPromoCodeDocument[]>(),
+      PromoCodeModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean<IPromoCodeDocument[]>(),
       PromoCodeModel.countDocuments(filter),
     ]);
 
@@ -225,7 +292,9 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
 
   async function getPromoCode(id: string): Promise<IPromoCodeDocument> {
     const promo = await PromoCodeModel.findById(id).lean<IPromoCodeDocument>();
-    if (!promo) throw AppError.notFound('Promo code not found');
+    if (!promo) {
+      throw AppError.notFound('Promo code not found');
+    }
     return promo;
   }
 
@@ -236,18 +305,38 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
     data: Partial<CreatePromoCodeInput>,
   ): Promise<IPromoCodeDocument> {
     const update: Record<string, unknown> = {};
-    if (data.description !== undefined) update.description = data.description;
-    if (data.discountType !== undefined) update.discountType = data.discountType;
-    if (data.discountValue !== undefined) update.discountValue = data.discountValue;
-    if (data.minOrderAmount !== undefined) update.minOrderAmount = data.minOrderAmount;
-    if (data.maxDiscountAmount !== undefined) update.maxDiscountAmount = data.maxDiscountAmount;
-    if (data.maxUsageTotal !== undefined) update.maxUsageTotal = data.maxUsageTotal;
-    if (data.maxUsagePerUser !== undefined) update.maxUsagePerUser = data.maxUsagePerUser;
-    if (data.validFrom !== undefined) update.validFrom = new Date(data.validFrom);
-    if (data.validUntil !== undefined) update.validUntil = new Date(data.validUntil);
+    if (data.description !== undefined) {
+      update.description = data.description;
+    }
+    if (data.discountType !== undefined) {
+      update.discountType = data.discountType;
+    }
+    if (data.discountValue !== undefined) {
+      update.discountValue = data.discountValue;
+    }
+    if (data.minOrderAmount !== undefined) {
+      update.minOrderAmount = data.minOrderAmount;
+    }
+    if (data.maxDiscountAmount !== undefined) {
+      update.maxDiscountAmount = data.maxDiscountAmount;
+    }
+    if (data.maxUsageTotal !== undefined) {
+      update.maxUsageTotal = data.maxUsageTotal;
+    }
+    if (data.maxUsagePerUser !== undefined) {
+      update.maxUsagePerUser = data.maxUsagePerUser;
+    }
+    if (data.validFrom !== undefined) {
+      update.validFrom = new Date(data.validFrom);
+    }
+    if (data.validUntil !== undefined) {
+      update.validUntil = new Date(data.validUntil);
+    }
 
     const promo = await PromoCodeModel.findByIdAndUpdate(id, { $set: update }, { new: true });
-    if (!promo) throw AppError.notFound('Promo code not found');
+    if (!promo) {
+      throw AppError.notFound('Promo code not found');
+    }
     return promo;
   }
 
@@ -259,7 +348,9 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
       { $set: { isActive: false } },
       { new: true },
     );
-    if (!promo) throw AppError.notFound('Promo code not found');
+    if (!promo) {
+      throw AppError.notFound('Promo code not found');
+    }
     return promo;
   }
 

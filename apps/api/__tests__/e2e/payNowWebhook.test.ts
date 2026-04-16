@@ -27,16 +27,9 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const express = require('express') as typeof import('express').default;
 
+import { initWebhookProcessor, processStripeWebhook, paymentEvents } from '@nugen/payment-gateway';
+import type { IPaymentProvider, PaymentIntentResult } from '@nugen/payment-gateway';
 import { createPayOrderRoutes } from '../../src/modules/client-portal/payOrder.routes';
-import {
-  initWebhookProcessor,
-  processStripeWebhook,
-  paymentEvents,
-} from '@nugen/payment-gateway';
-import type {
-  IPaymentProvider,
-  PaymentIntentResult,
-} from '@nugen/payment-gateway';
 
 // ─── In-memory stores ──────────────────────────────────────────────────────
 
@@ -93,15 +86,19 @@ function makeStores(): {
 
 // ─── Mock Mongoose models ──────────────────────────────────────────────────
 
-function buildOrderModel(
-  orders: Map<string, StoredOrder>,
-): unknown {
+function buildOrderModel(orders: Map<string, StoredOrder>): unknown {
   return {
     findOne: async (filter: Record<string, unknown>): Promise<StoredOrder | null> => {
       for (const o of orders.values()) {
-        if (filter._id && o._id !== filter._id) continue;
-        if (filter.userId && o.userId !== filter.userId) continue;
-        if (o.isDeleted) continue;
+        if (filter._id && o._id !== filter._id) {
+          continue;
+        }
+        if (filter.userId && o.userId !== filter.userId) {
+          continue;
+        }
+        if (o.isDeleted) {
+          continue;
+        }
         return o;
       }
       return null;
@@ -109,19 +106,20 @@ function buildOrderModel(
   };
 }
 
-function buildPaymentModel(
-  payments: Map<string, StoredPayment>,
-): unknown {
+function buildPaymentModel(payments: Map<string, StoredPayment>): unknown {
   let idCounter = 1;
-  const makeId = (): string =>
-    `507f1f77bcf86cd79943${String(idCounter++).padStart(4, '0')}`;
+  const makeId = (): string => `507f1f77bcf86cd79943${String(idCounter++).padStart(4, '0')}`;
 
   return {
     findOne: (filter?: Record<string, unknown>, _projection?: unknown) => {
       const run = (): StoredPayment | null => {
         for (const p of payments.values()) {
-          if (filter?.idempotencyKey && p.idempotencyKey !== filter.idempotencyKey) continue;
-          if (filter?.gatewayTxnId && p.gatewayTxnId !== filter.gatewayTxnId) continue;
+          if (filter?.idempotencyKey && p.idempotencyKey !== filter.idempotencyKey) {
+            continue;
+          }
+          if (filter?.gatewayTxnId && p.gatewayTxnId !== filter.gatewayTxnId) {
+            continue;
+          }
           return p;
         }
         return null;
@@ -182,9 +180,7 @@ function buildGatewayConfigModel(): unknown {
   };
 }
 
-function buildWebhookEventModel(
-  webhookEvents: Map<string, StoredWebhookEvent>,
-): unknown {
+function buildWebhookEventModel(webhookEvents: Map<string, StoredWebhookEvent>): unknown {
   return {
     findOne: (filter: { eventId: string }) => ({
       lean: async (): Promise<StoredWebhookEvent | null> =>
@@ -283,10 +279,7 @@ function createApp(): {
 
   // Wire the webhook processor to the SAME in-memory stores so a webhook
   // POST actually mutates the Payment the /pay route just created.
-  initWebhookProcessor(
-    WebhookEventModel as never,
-    PaymentModel as never,
-  );
+  initWebhookProcessor(WebhookEventModel as never, PaymentModel as never);
 
   const app = express();
   app.use(express.json());
@@ -418,7 +411,9 @@ describe('E2E: Pay Now → webhook → order paymentStatus', () => {
   it('rejects /pay when order is already paid (409)', async () => {
     const { app, orders } = createApp();
     const order = orders.get(ORDER_ID);
-    if (order) order.paymentStatus = 'succeeded';
+    if (order) {
+      order.paymentStatus = 'succeeded';
+    }
 
     const res = await request(app)
       .post(`/portal/orders/${ORDER_ID}/pay`)
@@ -430,7 +425,9 @@ describe('E2E: Pay Now → webhook → order paymentStatus', () => {
   it('rejects /pay for an order owned by a different user (404)', async () => {
     const { app, orders } = createApp();
     const order = orders.get(ORDER_ID);
-    if (order) order.userId = 'some_other_user_id_000000';
+    if (order) {
+      order.userId = 'some_other_user_id_000000';
+    }
 
     const res = await request(app)
       .post(`/portal/orders/${ORDER_ID}/pay`)

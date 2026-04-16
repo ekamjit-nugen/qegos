@@ -4,7 +4,12 @@ import { MESSAGE_TYPES } from '../types';
 
 const chatMessageSchema = new Schema<IChatMessageDocument>(
   {
-    conversationId: { type: Schema.Types.ObjectId, ref: 'ChatConversation', required: true, index: true },
+    conversationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChatConversation',
+      required: true,
+      index: true,
+    },
     senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     senderType: {
       type: String,
@@ -43,9 +48,7 @@ chatMessageSchema.index({ content: 'text' }, { name: 'content_text' });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 
-export function createChatMessageModel(
-  connection: Connection,
-): Model<IChatMessageDocument> {
+export function createChatMessageModel(connection: Connection): Model<IChatMessageDocument> {
   if (connection.models.ChatMessage) {
     return connection.models.ChatMessage as Model<IChatMessageDocument>;
   }

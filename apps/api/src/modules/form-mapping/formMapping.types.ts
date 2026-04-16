@@ -139,7 +139,9 @@ export interface ForkVersionInput {
  */
 export function isValidFinancialYear(fy: string): boolean {
   const match = /^(\d{4})-(\d{4})$/.exec(fy);
-  if (!match) return false;
+  if (!match) {
+    return false;
+  }
   const start = parseInt(match[1] ?? '0', 10);
   const end = parseInt(match[2] ?? '0', 10);
   return end === start + 1;

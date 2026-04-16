@@ -36,13 +36,17 @@ export async function retryFailedSyncs(): Promise<number> {
     status: 'failed',
     retryCount: { $lt: MAX_RETRIES },
     nextRetryAt: { $lte: now },
-  }).sort({ nextRetryAt: 1 }).limit(50);
+  })
+    .sort({ nextRetryAt: 1 })
+    .limit(50);
 
   let retried = 0;
 
   for (const log of failedLogs) {
     const executor = syncExecutors.get(log.entityType);
-    if (!executor) continue;
+    if (!executor) {
+      continue;
+    }
 
     try {
       log.status = 'processing';
@@ -66,7 +70,8 @@ export async function retryFailedSyncs(): Promise<number> {
         log.nextRetryAt = undefined;
       } else {
         // Schedule next retry with exponential backoff
-        const delayMs = RETRY_DELAYS_MS[log.retryCount - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
+        const delayMs =
+          RETRY_DELAYS_MS[log.retryCount - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
         log.nextRetryAt = new Date(Date.now() + delayMs);
       }
 
@@ -81,11 +86,17 @@ export async function retryFailedSyncs(): Promise<number> {
 
 export async function retrySingleSync(syncLogId: string): Promise<boolean> {
   const log = await XeroSyncLogModel.findById(syncLogId);
-  if (!log) return false;
-  if (log.status !== 'failed') return false;
+  if (!log) {
+    return false;
+  }
+  if (log.status !== 'failed') {
+    return false;
+  }
 
   const executor = syncExecutors.get(log.entityType);
-  if (!executor) return false;
+  if (!executor) {
+    return false;
+  }
 
   try {
     log.status = 'processing';
@@ -114,7 +125,9 @@ export async function retrySingleSync(syncLogId: string): Promise<boolean> {
 export async function flushOfflineQueue(): Promise<number> {
   // Check if Xero is connected
   const config = await XeroConfigModel.findOne().lean();
-  if (!config?.xeroConnected) return 0;
+  if (!config?.xeroConnected) {
+    return 0;
+  }
 
   const queuedLogs = await XeroSyncLogModel.find({ status: 'queued' })
     .sort({ createdAt: 1 })
@@ -124,7 +137,9 @@ export async function flushOfflineQueue(): Promise<number> {
 
   for (const log of queuedLogs) {
     const executor = syncExecutors.get(log.entityType);
-    if (!executor) continue;
+    if (!executor) {
+      continue;
+    }
 
     try {
       log.status = 'processing';
@@ -142,7 +157,8 @@ export async function flushOfflineQueue(): Promise<number> {
       log.retryCount += 1;
 
       if (log.retryCount < MAX_RETRIES) {
-        const delayMs = RETRY_DELAYS_MS[log.retryCount - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
+        const delayMs =
+          RETRY_DELAYS_MS[log.retryCount - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
         log.nextRetryAt = new Date(Date.now() + delayMs);
       }
 

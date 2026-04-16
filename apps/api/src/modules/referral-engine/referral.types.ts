@@ -11,7 +11,12 @@ export type ReferralStatus =
   | 'expired';
 
 export const REFERRAL_STATUSES: ReferralStatus[] = [
-  'pending', 'signed_up', 'order_created', 'completed', 'rewarded', 'expired',
+  'pending',
+  'signed_up',
+  'order_created',
+  'completed',
+  'rewarded',
+  'expired',
 ];
 
 export const REFERRAL_STATUS_TRANSITIONS: Record<ReferralStatus, ReferralStatus[]> = {
@@ -29,13 +34,20 @@ export const REFERRAL_STATUS_TRANSITIONS: Record<ReferralStatus, ReferralStatus[
 export type ReferralRewardType = 'discount_percent' | 'flat_discount' | 'credit_balance';
 
 export const REFERRAL_REWARD_TYPES: ReferralRewardType[] = [
-  'discount_percent', 'flat_discount', 'credit_balance',
+  'discount_percent',
+  'flat_discount',
+  'credit_balance',
 ];
 
 export type ReferralChannel = 'sms' | 'email' | 'social' | 'direct_link' | 'qr_code' | 'in_person';
 
 export const REFERRAL_CHANNELS: ReferralChannel[] = [
-  'sms', 'email', 'social', 'direct_link', 'qr_code', 'in_person',
+  'sms',
+  'email',
+  'social',
+  'direct_link',
+  'qr_code',
+  'in_person',
 ];
 
 // ─── Referral Interface ────────────────────────────────────────────────────

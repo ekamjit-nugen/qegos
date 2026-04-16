@@ -65,11 +65,7 @@ export function ExportModal({ open, onClose }: ExportModalProps): React.ReactNod
           widgets: WIDGET_OPTIONS.map((w) => w.value),
         }}
       >
-        <Form.Item
-          name="format"
-          label="Format"
-          rules={[{ required: true }]}
-        >
+        <Form.Item name="format" label="Format" rules={[{ required: true }]}>
           <Select
             options={[
               { label: 'PDF Report', value: 'pdf' },
@@ -83,7 +79,10 @@ export function ExportModal({ open, onClose }: ExportModalProps): React.ReactNod
           label="Include Widgets"
           rules={[{ required: true, message: 'Select at least one widget' }]}
         >
-          <Checkbox.Group options={WIDGET_OPTIONS} style={{ display: 'flex', flexDirection: 'column', gap: 8 }} />
+          <Checkbox.Group
+            options={WIDGET_OPTIONS}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          />
         </Form.Item>
 
         <div style={{ fontSize: 12, color: '#8c8c8c' }}>

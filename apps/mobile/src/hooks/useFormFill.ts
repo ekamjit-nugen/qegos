@@ -41,9 +41,7 @@ export function useFormDrafts(): ReturnType<typeof useQuery<FormDraft[]>> {
   return useQuery({
     queryKey: ['portal', 'form-fill', 'drafts'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ drafts: FormDraft[] }>>(
-        '/portal/form-fill/drafts',
-      );
+      const res = await api.get<ApiResponse<{ drafts: FormDraft[] }>>('/portal/form-fill/drafts');
       return res.data.data.drafts;
     },
   });

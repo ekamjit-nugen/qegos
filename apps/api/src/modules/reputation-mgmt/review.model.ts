@@ -10,10 +10,12 @@ const reviewSchema = new Schema<IReviewDocument>(
     rating: { type: Number, min: 1, max: 5 },
     npsScore: { type: Number, min: 0, max: 10 },
     comment: { type: String, maxlength: 2000 },
-    tags: [{
-      type: String,
-      enum: REVIEW_TAGS,
-    }],
+    tags: [
+      {
+        type: String,
+        enum: REVIEW_TAGS,
+      },
+    ],
     googleReviewPrompted: { type: Boolean, default: false },
     googleReviewClicked: { type: Boolean, default: false },
     isPublic: { type: Boolean, default: false },

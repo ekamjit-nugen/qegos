@@ -11,9 +11,13 @@ export function useAppointmentList(filters: AppointmentListQuery) {
     queryFn: async () => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== '') { params.set(key, String(value)); }
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value));
+        }
       }
-      const res = await api.get<PaginatedResponse<Appointment>>(`/appointments?${params.toString()}`);
+      const res = await api.get<PaginatedResponse<Appointment>>(
+        `/appointments?${params.toString()}`,
+      );
       return res.data;
     },
     placeholderData: (prev) => prev,
@@ -62,7 +66,9 @@ export function useTransitionAppointmentStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await api.patch<ApiResponse<Appointment>>(`/appointments/${id}/status`, { status });
+      const res = await api.patch<ApiResponse<Appointment>>(`/appointments/${id}/status`, {
+        status,
+      });
       return res.data.data;
     },
     onSuccess: (_data, vars) => {

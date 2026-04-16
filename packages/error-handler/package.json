@@ -9,7 +9,11 @@
     "build:clean": "rm -rf dist && tsc",
     "test": "jest"
   },
-  "keywords": ["error-handler", "express", "middleware"],
+  "keywords": [
+    "error-handler",
+    "express",
+    "middleware"
+  ],
   "author": "Nugen IT Services",
   "license": "UNLICENSED"
 }

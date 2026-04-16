@@ -1,8 +1,5 @@
 import type { Model, Types } from 'mongoose';
-import type {
-  IErasureRequestDocument,
-  ModelFieldConfig,
-} from '../types';
+import type { IErasureRequestDocument, ModelFieldConfig } from '../types';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
@@ -32,7 +29,8 @@ export async function createErasureRequest(
 
   if (existing) {
     const err = new Error('An erasure request is already in progress for this user') as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 409;
     err.code = 'ERASURE_ALREADY_PENDING';
@@ -49,12 +47,16 @@ export async function createErasureRequest(
 
 // ─── List Erasure Requests ─────────────────────────────────────────────────
 
-export async function listErasureRequests(
-  filters: { status?: string; page?: number; limit?: number },
-): Promise<{ requests: IErasureRequestDocument[]; total: number }> {
+export async function listErasureRequests(filters: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ requests: IErasureRequestDocument[]; total: number }> {
   const { status, page = 1, limit = 20 } = filters;
   const query: Record<string, unknown> = {};
-  if (status) query.status = status;
+  if (status) {
+    query.status = status;
+  }
 
   const [requests, total] = await Promise.all([
     ErasureRequestModel.find(query)
@@ -112,9 +114,7 @@ export async function rejectErasureRequest(
  * - Models with hardDelete=true → records removed entirely
  * - Tracks progress in erasure request document
  */
-export async function executeErasure(
-  requestId: Types.ObjectId,
-): Promise<IErasureRequestDocument> {
+export async function executeErasure(requestId: Types.ObjectId): Promise<IErasureRequestDocument> {
   const request = await ErasureRequestModel.findOneAndUpdate(
     { _id: requestId, status: 'approved' },
     { $set: { status: 'in_progress' } },
@@ -123,7 +123,8 @@ export async function executeErasure(
 
   if (!request) {
     const err = new Error('Erasure request not found or not in approved state') as Error & {
-      statusCode: number; code: string;
+      statusCode: number;
+      code: string;
     };
     err.statusCode = 404;
     err.code = 'ERASURE_NOT_FOUND';

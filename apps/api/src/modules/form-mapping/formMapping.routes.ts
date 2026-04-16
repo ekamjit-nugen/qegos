@@ -10,14 +10,11 @@ import type { Model } from 'mongoose';
 import { asyncHandler } from '@nugen/error-handler';
 import { validate } from '@nugen/validator';
 import * as _auditLog from '@nugen/audit-log';
-import { getRequestId } from '../../lib/requestContext';
 import type { AuditAction, AuditActorType } from '@nugen/audit-log';
 import type { CheckPermissionFn } from '@nugen/rbac';
+import { getRequestId } from '../../lib/requestContext';
 
-import type {
-  IFormMappingDocument,
-  IFormMappingVersionDocument,
-} from './formMapping.types';
+import type { IFormMappingDocument, IFormMappingVersionDocument } from './formMapping.types';
 import { createFormMappingService } from './formMapping.service';
 import { validateAuthoredSchema } from './formMapping.schema';
 import {
@@ -73,10 +70,13 @@ function renameSchemaToJsonSchema<T extends Record<string, unknown>>(body: T): T
 function renameJsonSchemaToSchema(
   v: IFormMappingVersionDocument | null | undefined,
 ): Record<string, unknown> | null {
-  if (!v) return null;
-  const obj = typeof (v as { toObject?: () => unknown }).toObject === 'function'
-    ? ((v as { toObject: () => Record<string, unknown> }).toObject())
-    : ({ ...(v as unknown as Record<string, unknown>) });
+  if (!v) {
+    return null;
+  }
+  const obj =
+    typeof (v as { toObject?: () => unknown }).toObject === 'function'
+      ? (v as { toObject: () => Record<string, unknown> }).toObject()
+      : { ...(v as unknown as Record<string, unknown>) };
   if ('jsonSchema' in obj) {
     const { jsonSchema, ...rest } = obj;
     return { ...rest, schema: jsonSchema };
@@ -137,9 +137,7 @@ export function createFormMappingRoutes(deps: FormMappingRouteDeps): Router {
       // Translate embedded version docs (defaultVersion, latestDraft) at the boundary.
       const rows = data.map((r) => ({
         ...r,
-        defaultVersion: r.defaultVersion
-          ? renameJsonSchemaToSchema(r.defaultVersion)
-          : null,
+        defaultVersion: r.defaultVersion ? renameJsonSchemaToSchema(r.defaultVersion) : null,
         latestDraft: r.latestDraft ? renameJsonSchemaToSchema(r.latestDraft) : null,
       }));
       res.status(200).json({ status: 200, data: rows });
@@ -216,20 +214,15 @@ export function createFormMappingRoutes(deps: FormMappingRouteDeps): Router {
     ...validate(updateDraftValidation()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const body = renameSchemaToJsonSchema(
-        req.body as Record<string, unknown>,
-      ) as Parameters<typeof service.updateDraft>[2];
+      const body = renameSchemaToJsonSchema(req.body as Record<string, unknown>) as Parameters<
+        typeof service.updateDraft
+      >[2];
       const v = await service.updateDraft(
         req.params.mappingId as string,
         Number(req.params.version),
         body,
       );
-      writeAudit(
-        authReq,
-        'update',
-        v._id.toString(),
-        `Updated draft v${v.version}`,
-      );
+      writeAudit(authReq, 'update', v._id.toString(), `Updated draft v${v.version}`);
       res.status(200).json({ status: 200, data: renameJsonSchemaToSchema(v) });
     }),
   );
@@ -324,12 +317,7 @@ export function createFormMappingRoutes(deps: FormMappingRouteDeps): Router {
         req.params.mappingId as string,
         Number(req.params.version),
       );
-      writeAudit(
-        authReq,
-        'config_change',
-        v._id.toString(),
-        `Set v${v.version} as default`,
-      );
+      writeAudit(authReq, 'config_change', v._id.toString(), `Set v${v.version} as default`);
       res.status(200).json({ status: 200, data: renameJsonSchemaToSchema(v) });
     }),
   );

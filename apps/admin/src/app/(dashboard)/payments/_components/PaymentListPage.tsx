@@ -28,9 +28,7 @@ export function PaymentListPage(): React.ReactNode {
       title: 'Order',
       dataIndex: 'orderId',
       width: 140,
-      render: (val: string) => (
-        <a onClick={() => router.push(`/orders/${val}`)}>{val}</a>
-      ),
+      render: (val: string) => <a onClick={() => router.push(`/orders/${val}`)}>{val}</a>,
     },
     {
       title: 'Gateway',
@@ -57,9 +55,7 @@ export function PaymentListPage(): React.ReactNode {
       title: 'Xero Synced',
       dataIndex: 'xeroSynced',
       width: 110,
-      render: (val: boolean) => (
-        <Tag color={val ? 'green' : 'default'}>{val ? 'Yes' : 'No'}</Tag>
-      ),
+      render: (val: boolean) => <Tag color={val ? 'green' : 'default'}>{val ? 'Yes' : 'No'}</Tag>,
     },
     {
       title: 'Created',

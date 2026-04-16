@@ -53,16 +53,10 @@ export function createApp(): express.Express {
   );
 
   // Zoho Sign webhook raw body parser (same pattern as Stripe)
-  app.use(
-    `/api/${config.API_VERSION}/webhooks/zoho`,
-    express.raw({ type: 'application/json' }),
-  );
+  app.use(`/api/${config.API_VERSION}/webhooks/zoho`, express.raw({ type: 'application/json' }));
 
   // Xero webhook raw body parser — HMAC-SHA256 signature requires raw body
-  app.use(
-    `/api/${config.API_VERSION}/xero/webhooks`,
-    express.raw({ type: 'application/json' }),
-  );
+  app.use(`/api/${config.API_VERSION}/xero/webhooks`, express.raw({ type: 'application/json' }));
 
   // --- Parsing ---
   app.use(express.json({ limit: '10mb' }));
@@ -86,36 +80,40 @@ export function createApp(): express.Express {
   if (config.CSRF_SECRET) {
     const webhookPaths = ['/payments/webhooks/', '/webhooks/zoho', '/xero/webhooks'];
     const authPaths = ['/auth/signin', '/auth/refresh', '/auth/logout', '/auth/otp', '/auth/mfa'];
-    app.use(`/api/${config.API_VERSION}`, (req: Request, res: Response, next: express.NextFunction): void => {
-      // Skip CSRF for webhooks and safe HTTP methods
-      if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    app.use(
+      `/api/${config.API_VERSION}`,
+      (req: Request, res: Response, next: express.NextFunction): void => {
+        // Skip CSRF for webhooks and safe HTTP methods
+        if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+          next();
+          return;
+        }
+        // Skip CSRF for webhook paths
+        if (webhookPaths.some((p) => req.path.includes(p))) {
+          next();
+          return;
+        }
+        // Skip CSRF for auth endpoints (they use bearer tokens, not session cookies)
+        if (authPaths.some((p) => req.path.endsWith(p))) {
+          next();
+          return;
+        }
+        // Validate CSRF token from header or body
+        const csrfToken =
+          (req.headers['x-csrf-token'] as string | undefined) ??
+          ((req.body as Record<string, unknown> | undefined)?._csrf as string | undefined);
+        if (!csrfToken || csrfToken !== (req.cookies as Record<string, string>)?._csrf) {
+          res.status(403).json({
+            status: 403,
+            code: 'CSRF_INVALID',
+            message: 'Invalid or missing CSRF token',
+            ...(req.requestId ? { requestId: req.requestId } : {}),
+          });
+          return;
+        }
         next();
-        return;
-      }
-      // Skip CSRF for webhook paths
-      if (webhookPaths.some((p) => req.path.includes(p))) {
-        next();
-        return;
-      }
-      // Skip CSRF for auth endpoints (they use bearer tokens, not session cookies)
-      if (authPaths.some((p) => req.path.endsWith(p))) {
-        next();
-        return;
-      }
-      // Validate CSRF token from header or body
-      const csrfToken = (req.headers['x-csrf-token'] as string | undefined)
-        ?? (req.body as Record<string, unknown> | undefined)?._csrf as string | undefined;
-      if (!csrfToken || csrfToken !== (req.cookies as Record<string, string>)?._csrf) {
-        res.status(403).json({
-          status: 403,
-          code: 'CSRF_INVALID',
-          message: 'Invalid or missing CSRF token',
-          ...(req.requestId ? { requestId: req.requestId } : {}),
-        });
-        return;
-      }
-      next();
-    });
+      },
+    );
   }
 
   // CSRF token generation endpoint

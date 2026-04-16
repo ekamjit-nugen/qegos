@@ -19,7 +19,10 @@ export default function OrderDetailLoading(): React.ReactNode {
             <Divider />
             {/* Line items */}
             {[1, 2, 3].map((i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div
+                key={i}
+                style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}
+              >
                 <Skeleton.Input active size="small" style={{ width: '50%' }} />
                 <Skeleton.Input active size="small" style={{ width: '15%' }} />
               </div>

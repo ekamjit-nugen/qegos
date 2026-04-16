@@ -2,11 +2,28 @@
 
 import React, { useState } from 'react';
 import {
-  Table, Button, Tag, Space, Input, Card, Modal, Form,
-  Select, InputNumber, DatePicker, message, Popconfirm, Typography,
+  Table,
+  Button,
+  Tag,
+  Space,
+  Input,
+  Card,
+  Modal,
+  Form,
+  Select,
+  InputNumber,
+  DatePicker,
+  message,
+  Popconfirm,
+  Typography,
 } from 'antd';
 import { PlusOutlined, SearchOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { usePromoCodeList, useCreatePromoCode, useUpdatePromoCode, useDeactivatePromoCode } from '@/hooks/usePromoCodes';
+import {
+  usePromoCodeList,
+  useCreatePromoCode,
+  useUpdatePromoCode,
+  useDeactivatePromoCode,
+} from '@/hooks/usePromoCodes';
 import type { PromoCode, CreatePromoCodeInput, PromoCodeListQuery } from '@/types/promoCode';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -40,7 +57,8 @@ export default function PromoCodeListPage(): React.ReactNode {
       ...promo,
       validFrom: dayjs(promo.validFrom),
       validUntil: dayjs(promo.validUntil),
-      discountValue: promo.discountType === 'percent' ? promo.discountValue : promo.discountValue / 100,
+      discountValue:
+        promo.discountType === 'percent' ? promo.discountValue : promo.discountValue / 100,
       minOrderAmount: (promo.minOrderAmount ?? 0) / 100,
       maxDiscountAmount: promo.maxDiscountAmount ? promo.maxDiscountAmount / 100 : undefined,
     });
@@ -54,9 +72,14 @@ export default function PromoCodeListPage(): React.ReactNode {
         code: values.code,
         description: values.description,
         discountType: values.discountType,
-        discountValue: values.discountType === 'percent' ? values.discountValue : Math.round(values.discountValue * 100),
+        discountValue:
+          values.discountType === 'percent'
+            ? values.discountValue
+            : Math.round(values.discountValue * 100),
         minOrderAmount: values.minOrderAmount ? Math.round(values.minOrderAmount * 100) : 0,
-        maxDiscountAmount: values.maxDiscountAmount ? Math.round(values.maxDiscountAmount * 100) : undefined,
+        maxDiscountAmount: values.maxDiscountAmount
+          ? Math.round(values.maxDiscountAmount * 100)
+          : undefined,
         maxUsageTotal: values.maxUsageTotal,
         maxUsagePerUser: values.maxUsagePerUser,
         validFrom: values.validFrom.toISOString(),
@@ -87,7 +110,9 @@ export default function PromoCodeListPage(): React.ReactNode {
       dataIndex: 'code',
       key: 'code',
       render: (code: string, record: PromoCode) => (
-        <Link href={`/promo-codes/${record._id}`}><strong>{code}</strong></Link>
+        <Link href={`/promo-codes/${record._id}`}>
+          <strong>{code}</strong>
+        </Link>
       ),
     },
     {
@@ -115,7 +140,8 @@ export default function PromoCodeListPage(): React.ReactNode {
       key: 'validity',
       render: (_: unknown, record: PromoCode) => (
         <span>
-          {dayjs(record.validFrom).format('DD/MM/YY')} - {dayjs(record.validUntil).format('DD/MM/YY')}
+          {dayjs(record.validFrom).format('DD/MM/YY')} -{' '}
+          {dayjs(record.validUntil).format('DD/MM/YY')}
         </span>
       ),
     },
@@ -135,9 +161,16 @@ export default function PromoCodeListPage(): React.ReactNode {
       key: 'actions',
       render: (_: unknown, record: PromoCode) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>Edit</Button>
-          <Popconfirm title="Deactivate this promo code?" onConfirm={() => handleDeactivate(record._id)}>
-            <Button size="small" danger icon={<DeleteOutlined />}>Deactivate</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+            Edit
+          </Button>
+          <Popconfirm
+            title="Deactivate this promo code?"
+            onConfirm={() => handleDeactivate(record._id)}
+          >
+            <Button size="small" danger icon={<DeleteOutlined />}>
+              Deactivate
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -146,8 +179,17 @@ export default function PromoCodeListPage(): React.ReactNode {
 
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Promo Codes</Title>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+        }}
+      >
+        <Title level={3} style={{ margin: 0 }}>
+          Promo Codes
+        </Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           Create Promo Code
         </Button>
@@ -189,14 +231,27 @@ export default function PromoCodeListPage(): React.ReactNode {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="code" label="Code" rules={[{ required: !editingPromo, min: 3, max: 30 }]}>
-            <Input placeholder="e.g. SAVE20" disabled={!!editingPromo} style={{ textTransform: 'uppercase' }} />
+          <Form.Item
+            name="code"
+            label="Code"
+            rules={[{ required: !editingPromo, min: 3, max: 30 }]}
+          >
+            <Input
+              placeholder="e.g. SAVE20"
+              disabled={!!editingPromo}
+              style={{ textTransform: 'uppercase' }}
+            />
           </Form.Item>
           <Form.Item name="description" label="Description" rules={[{ required: true }]}>
             <Input placeholder="e.g. 20% off your first tax return" />
           </Form.Item>
           <Space style={{ width: '100%' }} size="large">
-            <Form.Item name="discountType" label="Discount Type" rules={[{ required: true }]} initialValue="percent">
+            <Form.Item
+              name="discountType"
+              label="Discount Type"
+              rules={[{ required: true }]}
+              initialValue="percent"
+            >
               <Select style={{ width: 150 }}>
                 <Select.Option value="percent">Percentage</Select.Option>
                 <Select.Option value="flat">Flat Amount</Select.Option>

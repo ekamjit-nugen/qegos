@@ -88,10 +88,7 @@ export function usePauseCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<Campaign> => {
-      const res = await api.patch<ApiResponse<Campaign>>(
-        `/broadcasts/campaigns/${id}/pause`,
-        {},
-      );
+      const res = await api.patch<ApiResponse<Campaign>>(`/broadcasts/campaigns/${id}/pause`, {});
       return res.data.data;
     },
     onSuccess: (_data, id) => {
@@ -105,10 +102,7 @@ export function useResumeCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<Campaign> => {
-      const res = await api.patch<ApiResponse<Campaign>>(
-        `/broadcasts/campaigns/${id}/resume`,
-        {},
-      );
+      const res = await api.patch<ApiResponse<Campaign>>(`/broadcasts/campaigns/${id}/resume`, {});
       return res.data.data;
     },
     onSuccess: (_data, id) => {
@@ -153,10 +147,7 @@ export function usePreviewMessage() {
     mutationFn: async (input: PreviewInput): Promise<PreviewResult> => {
       // The engine's standalone preview endpoint accepts the body
       // inline so we can render before a campaign exists.
-      const res = await api.post<ApiResponse<PreviewResult>>(
-        '/broadcasts/preview',
-        input,
-      );
+      const res = await api.post<ApiResponse<PreviewResult>>('/broadcasts/preview', input);
       return res.data.data;
     },
   });
@@ -186,10 +177,7 @@ export function useCreateTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateTemplateInput): Promise<BroadcastTemplate> => {
-      const res = await api.post<ApiResponse<BroadcastTemplate>>(
-        '/broadcasts/templates',
-        input,
-      );
+      const res = await api.post<ApiResponse<BroadcastTemplate>>('/broadcasts/templates', input);
       return res.data.data;
     },
     onSuccess: () => {

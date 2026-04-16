@@ -26,44 +26,31 @@ export function initStorageQuotaService(
  * Check if user has enough quota BEFORE upload.
  * Returns true if upload is allowed, false if quota exceeded.
  */
-export async function checkQuota(
-  userId: Types.ObjectId,
-  fileSize: number,
-): Promise<boolean> {
+export async function checkQuota(userId: Types.ObjectId, fileSize: number): Promise<boolean> {
   const user = await UserModel.findById(userId).select('storageUsed storageQuota').lean();
-  if (!user) return false;
+  if (!user) {
+    return false;
+  }
 
   const obj = user as unknown as { storageUsed?: number; storageQuota?: number };
   const used = obj.storageUsed ?? 0;
   const quota = obj.storageQuota ?? defaultQuota;
 
-  return (used + fileSize) <= quota;
+  return used + fileSize <= quota;
 }
 
 /**
  * Atomically increment storage usage after successful upload (STR-INV-01).
  */
-export async function incrementUsage(
-  userId: Types.ObjectId,
-  fileSize: number,
-): Promise<void> {
-  await UserModel.updateOne(
-    { _id: userId },
-    { $inc: { storageUsed: fileSize } },
-  );
+export async function incrementUsage(userId: Types.ObjectId, fileSize: number): Promise<void> {
+  await UserModel.updateOne({ _id: userId }, { $inc: { storageUsed: fileSize } });
 }
 
 /**
  * Atomically decrement storage usage after confirmed S3 deletion (STR-INV-04).
  */
-export async function decrementUsage(
-  userId: Types.ObjectId,
-  fileSize: number,
-): Promise<void> {
-  await UserModel.updateOne(
-    { _id: userId },
-    { $inc: { storageUsed: -fileSize } },
-  );
+export async function decrementUsage(userId: Types.ObjectId, fileSize: number): Promise<void> {
+  await UserModel.updateOne({ _id: userId }, { $inc: { storageUsed: -fileSize } });
 }
 
 // ─── Storage Usage ──────────────────────────────────────────────────────────
@@ -114,10 +101,7 @@ export async function reconcileStorageUsage(): Promise<number> {
     const drift = Math.abs(recorded - entry.actualSize);
 
     if (drift > DRIFT_THRESHOLD) {
-      await UserModel.updateOne(
-        { _id: entry._id },
-        { $set: { storageUsed: entry.actualSize } },
-      );
+      await UserModel.updateOne({ _id: entry._id }, { $set: { storageUsed: entry.actualSize } });
       corrected++;
     }
   }

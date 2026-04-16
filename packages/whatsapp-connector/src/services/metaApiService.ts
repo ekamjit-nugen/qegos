@@ -36,30 +36,33 @@ export async function sendTemplateMessage(
     template: {
       name: templateName,
       language: { code: languageCode },
-      components: params.length > 0
-        ? [{
-            type: 'body',
-            parameters: params.map((p) => ({ type: 'text', text: p })),
-          }]
-        : [],
+      components:
+        params.length > 0
+          ? [
+              {
+                type: 'body',
+                parameters: params.map((p) => ({ type: 'text', text: p })),
+              },
+            ]
+          : [],
     },
   };
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const error = await response.json() as { error?: { message?: string } };
+    const error = (await response.json()) as { error?: { message?: string } };
     throw new Error(`WhatsApp API error: ${error?.error?.message ?? response.statusText}`);
   }
 
-  const data = await response.json() as { messages: Array<{ id: string }> };
+  const data = (await response.json()) as { messages: Array<{ id: string }> };
   return { waMessageId: data.messages[0].id };
 }
 
@@ -81,18 +84,18 @@ export async function sendFreeformMessage(
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const error = await response.json() as { error?: { message?: string } };
+    const error = (await response.json()) as { error?: { message?: string } };
     throw new Error(`WhatsApp API error: ${error?.error?.message ?? response.statusText}`);
   }
 
-  const data = await response.json() as { messages: Array<{ id: string }> };
+  const data = (await response.json()) as { messages: Array<{ id: string }> };
   return { waMessageId: data.messages[0].id };
 }
 
@@ -104,18 +107,18 @@ export async function downloadMedia(
   // Step 1: Get media URL from Meta
   const metaUrl = `${apiBaseUrl}/${mediaId}`;
   const metaResponse = await fetch(metaUrl, {
-    headers: { 'Authorization': `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!metaResponse.ok) {
     throw new Error(`Failed to get media URL: ${metaResponse.statusText}`);
   }
 
-  const metaData = await metaResponse.json() as { url: string; mime_type: string };
+  const metaData = (await metaResponse.json()) as { url: string; mime_type: string };
 
   // Step 2: Download the actual file
   const fileResponse = await fetch(metaData.url, {
-    headers: { 'Authorization': `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!fileResponse.ok) {
@@ -150,14 +153,16 @@ export async function listTemplates(
   const url = `${apiBaseUrl}/${businessAccountId}/message_templates`;
 
   const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!response.ok) {
     throw new Error(`Failed to list templates: ${response.statusText}`);
   }
 
-  const data = await response.json() as { data: Array<{ name: string; status: string; language: string }> };
+  const data = (await response.json()) as {
+    data: Array<{ name: string; status: string; language: string }>;
+  };
 
   if (cache) {
     try {
@@ -183,7 +188,7 @@ export async function getConnectionStatus(): Promise<{
   try {
     const url = `${apiBaseUrl}/${phoneNumberId}`;
     const response = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     return { connected: response.ok };
   } catch {

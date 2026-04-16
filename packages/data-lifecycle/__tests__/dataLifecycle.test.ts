@@ -5,10 +5,7 @@
  * Unit/structural tests — no database required.
  */
 
-import {
-  ERASURE_REQUEST_STATUSES,
-  DATA_EXPORT_STATUSES,
-} from '../src/types';
+import { ERASURE_REQUEST_STATUSES, DATA_EXPORT_STATUSES } from '../src/types';
 
 import type {
   ErasureRequestStatus,
@@ -25,7 +22,6 @@ import type {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('@nugen/data-lifecycle', () => {
-
   // ─── Erasure Request Statuses ──────────────────────────────────────────────
 
   describe('Erasure Request Statuses', () => {
@@ -35,7 +31,12 @@ describe('@nugen/data-lifecycle', () => {
 
     it('includes all required statuses', () => {
       expect(ERASURE_REQUEST_STATUSES).toEqual([
-        'pending', 'approved', 'in_progress', 'completed', 'failed', 'rejected',
+        'pending',
+        'approved',
+        'in_progress',
+        'completed',
+        'failed',
+        'rejected',
       ]);
     });
 
@@ -58,9 +59,7 @@ describe('@nugen/data-lifecycle', () => {
     });
 
     it('includes all required statuses', () => {
-      expect(DATA_EXPORT_STATUSES).toEqual([
-        'pending', 'processing', 'ready', 'expired', 'failed',
-      ]);
+      expect(DATA_EXPORT_STATUSES).toEqual(['pending', 'processing', 'ready', 'expired', 'failed']);
     });
 
     it('starts with pending (default)', () => {

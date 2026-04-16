@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import {
-  Text,
-  Card,
-  Chip,
-  ProgressBar,
-  Button,
-  useTheme,
-} from 'react-native-paper';
+import { Text, Card, Chip, ProgressBar, Button, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useMyOrders } from '@/hooks/useOrders';
 import type { Order } from '@/types/order';
@@ -28,20 +21,13 @@ export default function OrdersScreen(): React.ReactNode {
     const statusColor = ORDER_STATUS_COLORS[item.status] ?? 'grey';
 
     return (
-      <Card
-        style={styles.card}
-        onPress={() => router.push(`/orders/${item._id}`)}
-      >
+      <Card style={styles.card} onPress={() => router.push(`/orders/${item._id}`)}>
         <Card.Content>
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={styles.orderNumber}>
               {item.orderNumber}
             </Text>
-            <Chip
-              compact
-              textStyle={styles.chipText}
-              style={{ backgroundColor: statusColor }}
-            >
+            <Chip compact textStyle={styles.chipText} style={{ backgroundColor: statusColor }}>
               {statusLabel}
             </Chip>
           </View>
@@ -80,7 +66,9 @@ export default function OrdersScreen(): React.ReactNode {
   if (isError) {
     return (
       <View style={styles.center}>
-        <Text variant="titleMedium" style={{ marginBottom: 8 }}>Failed to load orders</Text>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+          Failed to load orders
+        </Text>
         <Text variant="bodyMedium" style={{ opacity: 0.6, marginBottom: 16, textAlign: 'center' }}>
           Please check your connection and try again.
         </Text>

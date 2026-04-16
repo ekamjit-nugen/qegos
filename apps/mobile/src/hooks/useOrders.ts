@@ -18,9 +18,7 @@ export function useMyOrders(
   });
 }
 
-export function useOrder(
-  id: string | undefined,
-): ReturnType<typeof useQuery<ApiResponse<Order>>> {
+export function useOrder(id: string | undefined): ReturnType<typeof useQuery<ApiResponse<Order>>> {
   return useQuery<ApiResponse<Order>>({
     queryKey: ['order', id],
     queryFn: async (): Promise<ApiResponse<Order>> => {

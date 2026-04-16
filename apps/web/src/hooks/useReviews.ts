@@ -24,10 +24,7 @@ interface ReviewResponse {
 export function useSubmitReview() {
   return useMutation<ReviewResponse, Error, SubmitReviewPayload>({
     mutationFn: async (payload: SubmitReviewPayload): Promise<ReviewResponse> => {
-      const response = await api.post<{ data: ReviewResponse }>(
-        '/reputation/submit',
-        payload
-      );
+      const response = await api.post<{ data: ReviewResponse }>('/reputation/submit', payload);
       return response.data.data;
     },
   });

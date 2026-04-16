@@ -1,4 +1,8 @@
-import type { INotificationChannelProvider, NotificationChannelContent, NotificationSendResult } from '../../types';
+import type {
+  INotificationChannelProvider,
+  NotificationChannelContent,
+  NotificationSendResult,
+} from '../../types';
 
 let webhookUrl: string | null = null;
 

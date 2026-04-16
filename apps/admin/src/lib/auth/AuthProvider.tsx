@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
 import {
@@ -60,11 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
       }
       try {
         // Use raw axios to avoid the interceptor adding a stale/null Bearer token
-        const res = await axios.post<{ status: number; data: { accessToken: string; refreshToken: string } }>(
-          `${api.defaults.baseURL}/auth/refresh`,
-          { refreshToken: rt },
-          { withCredentials: true },
-        );
+        const res = await axios.post<{
+          status: number;
+          data: { accessToken: string; refreshToken: string };
+        }>(`${api.defaults.baseURL}/auth/refresh`, { refreshToken: rt }, { withCredentials: true });
         setAccessToken(res.data.data.accessToken);
         setRefreshToken(res.data.data.refreshToken);
         await fetchUser();
@@ -79,10 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
 
   const login = useCallback(
     async (email: string, password: string): Promise<LoginResponse> => {
-      const res = await api.post<{ status: number; data: LoginResponse }>(
-        '/auth/signin',
-        { email, password },
-      );
+      const res = await api.post<{ status: number; data: LoginResponse }>('/auth/signin', {
+        email,
+        password,
+      });
       const data = res.data.data;
 
       if (data.mfaRequired) {

@@ -22,7 +22,9 @@ const STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
 };
 
 function getButtonType(status: AppointmentStatus): 'primary' | 'default' | 'dashed' {
-  if (status === 'confirmed' || status === 'completed') { return 'primary'; }
+  if (status === 'confirmed' || status === 'completed') {
+    return 'primary';
+  }
   return 'default';
 }
 
@@ -35,8 +37,12 @@ export function AppointmentDetailPage({ id }: { id: string }): React.ReactNode {
   const transitionStatus = useTransitionAppointmentStatus();
   const { message } = App.useApp();
 
-  if (isLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!appointment) { return <Empty description="Appointment not found" />; }
+  if (isLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!appointment) {
+    return <Empty description="Appointment not found" />;
+  }
 
   const validTransitions = STATUS_TRANSITIONS[appointment.status] ?? [];
 
@@ -118,8 +124,12 @@ export function AppointmentDetailPage({ id }: { id: string }): React.ReactNode {
 
           <Card title="Timeline" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created">{formatDateTime(appointment.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Updated">{formatDateTime(appointment.updatedAt)}</Descriptions.Item>
+              <Descriptions.Item label="Created">
+                {formatDateTime(appointment.createdAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Updated">
+                {formatDateTime(appointment.updatedAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

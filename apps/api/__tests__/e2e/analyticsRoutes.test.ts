@@ -40,32 +40,90 @@ function createAnalyticsApp(): express.Express {
   ];
 
   const pipelineData = [
-    { stage: 1, stageName: 'New', count: 45, totalValueCents: 3000000, conversionRate: 0.78, avgDaysInStage: 3, isBottleneck: true },
-    { stage: 2, stageName: 'Contacted', count: 35, totalValueCents: 2500000, conversionRate: 0.71, avgDaysInStage: 5, isBottleneck: false },
-    { stage: 3, stageName: 'Qualified', count: 25, totalValueCents: 1800000, conversionRate: 0.60, avgDaysInStage: 7, isBottleneck: false },
-    { stage: 6, stageName: 'Won', count: 15, totalValueCents: 1200000, conversionRate: 1.0, avgDaysInStage: 0, isBottleneck: false },
+    {
+      stage: 1,
+      stageName: 'New',
+      count: 45,
+      totalValueCents: 3000000,
+      conversionRate: 0.78,
+      avgDaysInStage: 3,
+      isBottleneck: true,
+    },
+    {
+      stage: 2,
+      stageName: 'Contacted',
+      count: 35,
+      totalValueCents: 2500000,
+      conversionRate: 0.71,
+      avgDaysInStage: 5,
+      isBottleneck: false,
+    },
+    {
+      stage: 3,
+      stageName: 'Qualified',
+      count: 25,
+      totalValueCents: 1800000,
+      conversionRate: 0.6,
+      avgDaysInStage: 7,
+      isBottleneck: false,
+    },
+    {
+      stage: 6,
+      stageName: 'Won',
+      count: 15,
+      totalValueCents: 1200000,
+      conversionRate: 1.0,
+      avgDaysInStage: 0,
+      isBottleneck: false,
+    },
   ];
 
   const clvData = [
-    { userId: 'u-1', displayName: 'Alice Smith', totalSpentCents: 1200000, paymentCount: 12, segment: 'premium' },
+    {
+      userId: 'u-1',
+      displayName: 'Alice Smith',
+      totalSpentCents: 1200000,
+      paymentCount: 12,
+      segment: 'premium',
+    },
     { userId: 'u-2', displayName: 'Bob Jones', totalSpentCents: 850000, paymentCount: 8 },
     { userId: 'u-3', displayName: 'Carol White', totalSpentCents: 500000, paymentCount: 5 },
   ];
 
   const staffData = [
-    { staffId: 's-1', displayName: 'Jane Doe', ordersCompleted: 25, leadsContacted: 80, avgReviewMinutes: 35, ticketsResolved: 12 },
-    { staffId: 's-2', displayName: 'John Smith', ordersCompleted: 18, leadsContacted: 60, avgReviewMinutes: 42, ticketsResolved: 8 },
+    {
+      staffId: 's-1',
+      displayName: 'Jane Doe',
+      ordersCompleted: 25,
+      leadsContacted: 80,
+      avgReviewMinutes: 35,
+      ticketsResolved: 12,
+    },
+    {
+      staffId: 's-2',
+      displayName: 'John Smith',
+      ordersCompleted: 18,
+      leadsContacted: 60,
+      avgReviewMinutes: 42,
+      ticketsResolved: 8,
+    },
   ];
 
   // Auth middleware
   const auth: RequestHandler = (req: Request, _res: Response, next: NextFunction): void => {
     const token = req.headers.authorization;
     if (!token || !token.startsWith('Bearer ')) {
-      _res.status(401).json({ status: 401, code: 'UNAUTHORIZED', message: 'Missing token' } as AnalyticsResponse);
+      _res
+        .status(401)
+        .json({ status: 401, code: 'UNAUTHORIZED', message: 'Missing token' } as AnalyticsResponse);
       return;
     }
     if (token === 'Bearer denied-token') {
-      _res.status(403).json({ status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' } as AnalyticsResponse);
+      _res.status(403).json({
+        status: 403,
+        code: 'FORBIDDEN',
+        message: 'Insufficient permissions',
+      } as AnalyticsResponse);
       return;
     }
     (req as unknown as Record<string, unknown>).user = { userId: 'staff-001', userType: 1 };
@@ -73,21 +131,40 @@ function createAnalyticsApp(): express.Express {
   };
 
   // Validation helpers
-  const validateDateRange: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
-    const { dateFrom, dateTo } = (req.method === 'GET' ? req.query : req.body) as { dateFrom?: string; dateTo?: string };
+  const validateDateRange: RequestHandler = (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void => {
+    const { dateFrom, dateTo } = (req.method === 'GET' ? req.query : req.body) as {
+      dateFrom?: string;
+      dateTo?: string;
+    };
     if (!dateFrom || !dateTo) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'dateFrom and dateTo required' } as AnalyticsResponse);
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'dateFrom and dateTo required',
+      } as AnalyticsResponse);
       return;
     }
     const from = new Date(dateFrom as string);
     const to = new Date(dateTo as string);
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'Invalid date format' } as AnalyticsResponse);
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid date format',
+      } as AnalyticsResponse);
       return;
     }
     const days = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
     if (days > 366) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'Date range exceeds 366 days (ANA-INV-05)' } as AnalyticsResponse);
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'Date range exceeds 366 days (ANA-INV-05)',
+      } as AnalyticsResponse);
       return;
     }
     next();
@@ -126,24 +203,41 @@ function createAnalyticsApp(): express.Express {
   });
 
   // ── 2. Revenue Forecast ──────────────────────────────────────────────
-  app.get('/api/v1/analytics/revenue-forecast', auth, validateDateRange, (req: Request, res: Response): void => {
-    const data = withCache('revenue-forecast', 300, {
-      historical: revenueData,
-      forecast: [
-        { quarter: '2025-Q2', predictedCents: 3200000, lowerBoundCents: 2800000, upperBoundCents: 3600000 },
-        { quarter: '2025-Q3', predictedCents: 3500000, lowerBoundCents: 2900000, upperBoundCents: 4100000 },
-      ],
-      isEstimated: false,
-      dataMonths: 3,
-    });
-    res.status(200).json({ status: 200, data });
-  });
+  app.get(
+    '/api/v1/analytics/revenue-forecast',
+    auth,
+    validateDateRange,
+    (req: Request, res: Response): void => {
+      const data = withCache('revenue-forecast', 300, {
+        historical: revenueData,
+        forecast: [
+          {
+            quarter: '2025-Q2',
+            predictedCents: 3200000,
+            lowerBoundCents: 2800000,
+            upperBoundCents: 3600000,
+          },
+          {
+            quarter: '2025-Q3',
+            predictedCents: 3500000,
+            lowerBoundCents: 2900000,
+            upperBoundCents: 4100000,
+          },
+        ],
+        isEstimated: false,
+        dataMonths: 3,
+      });
+      res.status(200).json({ status: 200, data });
+    },
+  );
 
   // ── 3. CLV (POST) ───────────────────────────────────────────────────
   app.post('/api/v1/analytics/clv', auth, (req: Request, res: Response): void => {
     const { topN } = req.body as { topN?: number };
     if (topN !== undefined && (topN < 1 || topN > 100)) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'topN must be 1-100' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'topN must be 1-100' });
       return;
     }
     const limit = topN ?? 50;
@@ -152,98 +246,189 @@ function createAnalyticsApp(): express.Express {
   });
 
   // ── 4. Staff Benchmark ──────────────────────────────────────────────
-  app.get('/api/v1/analytics/staff-benchmark', auth, validateDateRange, (_req: Request, res: Response): void => {
-    res.status(200).json({ status: 200, data: staffData });
-  });
+  app.get(
+    '/api/v1/analytics/staff-benchmark',
+    auth,
+    validateDateRange,
+    (_req: Request, res: Response): void => {
+      res.status(200).json({ status: 200, data: staffData });
+    },
+  );
 
   // ── 5. Channel ROI (POST) ──────────────────────────────────────────
   app.post('/api/v1/analytics/channel-roi', auth, (req: Request, res: Response): void => {
     const { dateFrom, dateTo } = req.body as { dateFrom?: string; dateTo?: string };
     if (!dateFrom || !dateTo) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'dateFrom and dateTo required' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'dateFrom and dateTo required' });
       return;
     }
 
     res.status(200).json({
       status: 200,
       data: [
-        { channel: 'google_ads', campaignCount: 5, leadsGenerated: 100, conversions: 30, revenueCents: 500000, costCents: 100000, roi: 4.0 },
-        { channel: 'referral', campaignCount: 2, leadsGenerated: 50, conversions: 20, revenueCents: 300000, costCents: 20000, roi: 14.0 },
+        {
+          channel: 'google_ads',
+          campaignCount: 5,
+          leadsGenerated: 100,
+          conversions: 30,
+          revenueCents: 500000,
+          costCents: 100000,
+          roi: 4.0,
+        },
+        {
+          channel: 'referral',
+          campaignCount: 2,
+          leadsGenerated: 50,
+          conversions: 20,
+          revenueCents: 300000,
+          costCents: 20000,
+          roi: 14.0,
+        },
       ],
     });
   });
 
   // ── 6. Seasonal Trends ──────────────────────────────────────────────
-  app.get('/api/v1/analytics/seasonal-trends', auth, validateDateRange, (req: Request, res: Response): void => {
-    const granularity = req.query.granularity as string ?? 'month';
-    if (granularity !== 'week' && granularity !== 'month') {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'granularity must be week or month' });
-      return;
-    }
-    res.status(200).json({
-      status: 200,
-      data: [
-        { period: '2025-01', orderCount: 15, revenueCents: 850000, previousYearOrderCount: 12, previousYearRevenueCents: 700000 },
-        { period: '2025-02', orderCount: 18, revenueCents: 920000, previousYearOrderCount: 14, previousYearRevenueCents: 780000 },
-      ],
-    });
-  });
+  app.get(
+    '/api/v1/analytics/seasonal-trends',
+    auth,
+    validateDateRange,
+    (req: Request, res: Response): void => {
+      const granularity = (req.query.granularity as string) ?? 'month';
+      if (granularity !== 'week' && granularity !== 'month') {
+        res.status(400).json({
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'granularity must be week or month',
+        });
+        return;
+      }
+      res.status(200).json({
+        status: 200,
+        data: [
+          {
+            period: '2025-01',
+            orderCount: 15,
+            revenueCents: 850000,
+            previousYearOrderCount: 12,
+            previousYearRevenueCents: 700000,
+          },
+          {
+            period: '2025-02',
+            orderCount: 18,
+            revenueCents: 920000,
+            previousYearOrderCount: 14,
+            previousYearRevenueCents: 780000,
+          },
+        ],
+      });
+    },
+  );
 
   // ── 7. Churn Risk ──────────────────────────────────────────────────
   app.get('/api/v1/analytics/churn-risk', auth, (req: Request, res: Response): void => {
     const fy = req.query.financialYear as string;
     if (!fy || !/^\d{4}-\d{4}$/.test(fy)) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'financialYear must be YYYY-YYYY' });
+      res.status(400).json({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'financialYear must be YYYY-YYYY',
+      });
       return;
     }
     res.status(200).json({
       status: 200,
       data: [
-        { userId: 'u-5', displayName: 'Lapsed Client', lastFinancialYear: '2024-2025', totalPaidCents: 250000, daysSinceLastOrder: 180 },
+        {
+          userId: 'u-5',
+          displayName: 'Lapsed Client',
+          lastFinancialYear: '2024-2025',
+          totalPaidCents: 250000,
+          daysSinceLastOrder: 180,
+        },
       ],
     });
   });
 
   // ── 8. Service Mix ─────────────────────────────────────────────────
-  app.get('/api/v1/analytics/service-mix', auth, validateDateRange, (_req: Request, res: Response): void => {
-    res.status(200).json({
-      status: 200,
-      data: [
-        { serviceTitle: 'Individual Tax Return', orderCount: 50, quantity: 50, revenueCents: 2500000, percentOfTotal: 62.5 },
-        { serviceTitle: 'BAS Preparation', orderCount: 20, quantity: 25, revenueCents: 1000000, percentOfTotal: 25.0 },
-        { serviceTitle: 'SMSF Audit', orderCount: 5, quantity: 5, revenueCents: 500000, percentOfTotal: 12.5 },
-      ],
-    });
-  });
+  app.get(
+    '/api/v1/analytics/service-mix',
+    auth,
+    validateDateRange,
+    (_req: Request, res: Response): void => {
+      res.status(200).json({
+        status: 200,
+        data: [
+          {
+            serviceTitle: 'Individual Tax Return',
+            orderCount: 50,
+            quantity: 50,
+            revenueCents: 2500000,
+            percentOfTotal: 62.5,
+          },
+          {
+            serviceTitle: 'BAS Preparation',
+            orderCount: 20,
+            quantity: 25,
+            revenueCents: 1000000,
+            percentOfTotal: 25.0,
+          },
+          {
+            serviceTitle: 'SMSF Audit',
+            orderCount: 5,
+            quantity: 5,
+            revenueCents: 500000,
+            percentOfTotal: 12.5,
+          },
+        ],
+      });
+    },
+  );
 
   // ── 9. Collection Rate ──────────────────────────────────────────────
-  app.get('/api/v1/analytics/collection-rate', auth, validateDateRange, (_req: Request, res: Response): void => {
-    res.status(200).json({
-      status: 200,
-      data: {
-        onTimeRate: 0.92,
-        avgDaysToPayment: 14,
-        outstandingReceivablesCents: 150000,
-        totalInvoicedCents: 5000000,
-        totalCollectedCents: 4600000,
-      },
-    });
-  });
+  app.get(
+    '/api/v1/analytics/collection-rate',
+    auth,
+    validateDateRange,
+    (_req: Request, res: Response): void => {
+      res.status(200).json({
+        status: 200,
+        data: {
+          onTimeRate: 0.92,
+          avgDaysToPayment: 14,
+          outstandingReceivablesCents: 150000,
+          totalInvoicedCents: 5000000,
+          totalCollectedCents: 4600000,
+        },
+      });
+    },
+  );
 
   // ── 10. Pipeline Health ─────────────────────────────────────────────
-  app.get('/api/v1/analytics/pipeline-health', auth, validateDateRange, (_req: Request, res: Response): void => {
-    res.status(200).json({ status: 200, data: pipelineData });
-  });
+  app.get(
+    '/api/v1/analytics/pipeline-health',
+    auth,
+    validateDateRange,
+    (_req: Request, res: Response): void => {
+      res.status(200).json({ status: 200, data: pipelineData });
+    },
+  );
 
   // ── 11. Export (POST, async) ────────────────────────────────────────
   app.post('/api/v1/analytics/export', auth, (req: Request, res: Response): void => {
     const { format, widgets } = req.body as { format?: string; widgets?: string[] };
     if (!format || !['pdf', 'xlsx'].includes(format)) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'format must be pdf or xlsx' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'format must be pdf or xlsx' });
       return;
     }
     if (!widgets || !Array.isArray(widgets) || widgets.length === 0) {
-      res.status(400).json({ status: 400, code: 'VALIDATION_ERROR', message: 'widgets array required' });
+      res
+        .status(400)
+        .json({ status: 400, code: 'VALIDATION_ERROR', message: 'widgets array required' });
       return;
     }
 
@@ -593,7 +778,8 @@ describe('E2E: Analytics Dashboard', () => {
         .set('Authorization', validToken);
 
       const total = res.body.data.reduce(
-        (sum: number, s: { percentOfTotal: number }) => sum + s.percentOfTotal, 0,
+        (sum: number, s: { percentOfTotal: number }) => sum + s.percentOfTotal,
+        0,
       );
       expect(total).toBeCloseTo(100, 0);
     });

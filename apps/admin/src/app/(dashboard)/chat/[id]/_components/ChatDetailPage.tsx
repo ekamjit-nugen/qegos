@@ -30,12 +30,18 @@ export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
   useChatSocket(id, {
     onTyping: useCallback((payload) => {
       setTypingUser(payload.userId);
-      setTimeout(() => { setTypingUser(null); }, 3000);
+      setTimeout(() => {
+        setTypingUser(null);
+      }, 3000);
     }, []),
   });
 
-  if (convLoading || msgLoading) { return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />; }
-  if (!conversation) { return <Empty description="Conversation not found" />; }
+  if (convLoading || msgLoading) {
+    return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
+  }
+  if (!conversation) {
+    return <Empty description="Conversation not found" />;
+  }
 
   const messageList = (messages ?? []) as ChatMessage[];
 
@@ -45,7 +51,8 @@ export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
         <h2 style={{ margin: 0 }}>
           Conversation{conversation.subject ? ` - ${conversation.subject}` : ''}{' '}
           <Tag color={CONVERSATION_STATUS_COLORS[conversation.status as ConversationStatus]}>
-            {CONVERSATION_STATUS_LABELS[conversation.status as ConversationStatus] ?? conversation.status}
+            {CONVERSATION_STATUS_LABELS[conversation.status as ConversationStatus] ??
+              conversation.status}
           </Tag>
         </h2>
       </div>
@@ -62,7 +69,12 @@ export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
                   <List.Item
                     key={msg._id}
                     style={{
-                      background: msg.senderType === 'client' ? '#f0f5ff' : msg.senderType === 'system' ? '#f5f5f5' : '#fff',
+                      background:
+                        msg.senderType === 'client'
+                          ? '#f0f5ff'
+                          : msg.senderType === 'system'
+                            ? '#f5f5f5'
+                            : '#fff',
                       padding: '12px 16px',
                       marginBottom: 4,
                       borderRadius: 6,
@@ -86,7 +98,9 @@ export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
               />
             )}
             {typingUser && (
-              <div style={{ padding: '8px 16px', fontSize: 12, color: '#8c8c8c', fontStyle: 'italic' }}>
+              <div
+                style={{ padding: '8px 16px', fontSize: 12, color: '#8c8c8c', fontStyle: 'italic' }}
+              >
                 Client is typing...
               </div>
             )}
@@ -103,11 +117,16 @@ export function ChatDetailPage({ id }: { id: string }): React.ReactNode {
               )}
               <Descriptions.Item label="Status">
                 <Tag color={CONVERSATION_STATUS_COLORS[conversation.status as ConversationStatus]}>
-                  {CONVERSATION_STATUS_LABELS[conversation.status as ConversationStatus] ?? conversation.status}
+                  {CONVERSATION_STATUS_LABELS[conversation.status as ConversationStatus] ??
+                    conversation.status}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Unread (Staff)">{conversation.unreadCountStaff}</Descriptions.Item>
-              <Descriptions.Item label="Last Message">{formatDateTime(conversation.lastMessageAt)}</Descriptions.Item>
+              <Descriptions.Item label="Unread (Staff)">
+                {conversation.unreadCountStaff}
+              </Descriptions.Item>
+              <Descriptions.Item label="Last Message">
+                {formatDateTime(conversation.lastMessageAt)}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

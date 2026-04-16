@@ -15,7 +15,12 @@ export function CollectionRateWidget(): React.ReactNode {
 
   return (
     <WidgetCard
-      title={<span><BankOutlined /><span style={{ marginLeft: 8 }}>Collection Rate</span></span>}
+      title={
+        <span>
+          <BankOutlined />
+          <span style={{ marginLeft: 8 }}>Collection Rate</span>
+        </span>
+      }
       loading={isLoading}
       error={error as Error | null}
       onRetry={() => void refetch()}
@@ -24,7 +29,15 @@ export function CollectionRateWidget(): React.ReactNode {
       minHeight={370}
     >
       {data && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '8px 0' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 24,
+            padding: '8px 0',
+          }}
+        >
           <Progress
             type="dashboard"
             percent={ratePercent}
@@ -51,7 +64,11 @@ export function CollectionRateWidget(): React.ReactNode {
               <Statistic
                 title="Outstanding"
                 value={formatCurrency(data.outstandingReceivablesCents)}
-                prefix={<ExclamationCircleOutlined style={{ color: data.outstandingReceivablesCents > 0 ? '#ff4d4f' : '#8c8c8c' }} />}
+                prefix={
+                  <ExclamationCircleOutlined
+                    style={{ color: data.outstandingReceivablesCents > 0 ? '#ff4d4f' : '#8c8c8c' }}
+                  />
+                }
                 valueStyle={{
                   fontSize: 20,
                   color: data.outstandingReceivablesCents > 0 ? '#ff4d4f' : undefined,

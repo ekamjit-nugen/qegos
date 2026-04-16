@@ -1,20 +1,22 @@
 'use client';
 
 import { PieChartOutlined } from '@ant-design/icons';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { useServiceMix } from '@/hooks/useAnalytics';
 import { formatCurrency } from '@/lib/utils/format';
 import { WidgetCard } from '../WidgetCard';
 import { useAnalyticsContext } from '../AnalyticsContext';
 
-const COLORS = ['#1677ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1', '#13c2c2', '#eb2f96', '#fa541c'];
+const COLORS = [
+  '#1677ff',
+  '#52c41a',
+  '#faad14',
+  '#ff4d4f',
+  '#722ed1',
+  '#13c2c2',
+  '#eb2f96',
+  '#fa541c',
+];
 
 export function ServiceMixWidget(): React.ReactNode {
   const { filters } = useAnalyticsContext();
@@ -30,7 +32,12 @@ export function ServiceMixWidget(): React.ReactNode {
 
   return (
     <WidgetCard
-      title={<span><PieChartOutlined /><span style={{ marginLeft: 8 }}>Service Mix</span></span>}
+      title={
+        <span>
+          <PieChartOutlined />
+          <span style={{ marginLeft: 8 }}>Service Mix</span>
+        </span>
+      }
       loading={isLoading}
       error={error as Error | null}
       onRetry={() => void refetch()}
@@ -58,9 +65,7 @@ export function ServiceMixWidget(): React.ReactNode {
               <Cell key={index} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip
-            formatter={(v: number, name: string) => [formatCurrency(v * 100), name]}
-          />
+          <Tooltip formatter={(v: number, name: string) => [formatCurrency(v * 100), name]} />
           <Legend
             layout="vertical"
             align="right"

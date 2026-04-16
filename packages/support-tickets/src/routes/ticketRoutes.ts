@@ -53,9 +53,10 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
   setCounterModel(deps.CounterModel as never);
 
   // deps.authenticate may be a factory (() => RequestHandler) or a direct RequestHandler
-  const authMiddleware = typeof deps.authenticate === 'function' && deps.authenticate.length === 0
-    ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
-    : deps.authenticate;
+  const authMiddleware =
+    typeof deps.authenticate === 'function' && deps.authenticate.length === 0
+      ? (deps.authenticate as unknown as () => import('express').RequestHandler)()
+      : deps.authenticate;
   router.use(authMiddleware);
 
   // ── POST /tickets ─────────────────────────────────────────────────────
@@ -64,7 +65,9 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     '/',
     ...createTicketValidation,
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const ticket = await createTicket({
@@ -79,7 +82,11 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
         resource: 'SupportTicket',
         resourceId: ticket._id,
         severity: 'info',
-        metadata: { ticketNumber: ticket.ticketNumber, category: ticket.category, priority: ticket.priority },
+        metadata: {
+          ticketNumber: ticket.ticketNumber,
+          category: ticket.category,
+          priority: ticket.priority,
+        },
       });
 
       res.status(201).json({ status: 201, data: { ticket } });
@@ -88,58 +95,65 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
 
   // ── GET /tickets ──────────────────────────────────────────────────────
 
-  router.get(
-    '/',
-    ...listTicketsValidation,
-    async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
-      const user = (req as AuthRequest).user!;
-      const q = req.query as Record<string, string>;
+  router.get('/', ...listTicketsValidation, async (req: Request, res: Response): Promise<void> => {
+    if (!handleValidation(req, res)) {
+      return;
+    }
+    const user = (req as AuthRequest).user!;
+    const q = req.query as Record<string, string>;
 
-      const params: Record<string, unknown> = {};
-      if (q.status) params.status = q.status;
-      if (q.category) params.category = q.category;
-      if (q.priority) params.priority = q.priority;
-      if (q.assignedTo) params.assignedTo = q.assignedTo;
-      if (q.slaBreached !== undefined) params.slaBreached = q.slaBreached === 'true';
-      if (q.page) params.page = parseInt(q.page, 10);
-      if (q.limit) params.limit = parseInt(q.limit, 10);
+    const params: Record<string, unknown> = {};
+    if (q.status) {
+      params.status = q.status;
+    }
+    if (q.category) {
+      params.category = q.category;
+    }
+    if (q.priority) {
+      params.priority = q.priority;
+    }
+    if (q.assignedTo) {
+      params.assignedTo = q.assignedTo;
+    }
+    if (q.slaBreached !== undefined) {
+      params.slaBreached = q.slaBreached === 'true';
+    }
+    if (q.page) {
+      params.page = parseInt(q.page, 10);
+    }
+    if (q.limit) {
+      params.limit = parseInt(q.limit, 10);
+    }
 
-      // Clients only see own tickets; clients must not see internal notes
-      if (user.userType >= 5) {
-        params.userId = user.userId;
-        params.filterInternal = true;
-      }
+    // Clients only see own tickets; clients must not see internal notes
+    if (user.userType >= 5) {
+      params.userId = user.userId;
+      params.filterInternal = true;
+    }
 
-      const result = await listTickets(params as never);
-      res.status(200).json({ status: 200, data: result });
-    },
-  );
+    const result = await listTickets(params as never);
+    res.status(200).json({ status: 200, data: result });
+  });
 
   // ── GET /tickets/:id ──────────────────────────────────────────────────
 
-  router.get(
-    '/:id',
-    ...getTicketValidation,
-    async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
-      const user = (req as AuthRequest).user!;
+  router.get('/:id', ...getTicketValidation, async (req: Request, res: Response): Promise<void> => {
+    if (!handleValidation(req, res)) {
+      return;
+    }
+    const user = (req as AuthRequest).user!;
 
-      // TKT-INV-03: Filter internal messages for clients
-      const filterInternal = user.userType >= 5;
-      const ticket = await getTicket(
-        req.params.id as unknown as Types.ObjectId,
-        { filterInternal },
-      );
+    // TKT-INV-03: Filter internal messages for clients
+    const filterInternal = user.userType >= 5;
+    const ticket = await getTicket(req.params.id as unknown as Types.ObjectId, { filterInternal });
 
-      if (!ticket) {
-        res.status(404).json({ status: 404, code: 'NOT_FOUND' });
-        return;
-      }
+    if (!ticket) {
+      res.status(404).json({ status: 404, code: 'NOT_FOUND' });
+      return;
+    }
 
-      res.status(200).json({ status: 200, data: { ticket } });
-    },
-  );
+    res.status(200).json({ status: 200, data: { ticket } });
+  });
 
   // ── PATCH /tickets/:id/status ─────────────────────────────────────────
 
@@ -148,7 +162,9 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     deps.checkPermission('tickets', 'manage') as import('express').RequestHandler,
     ...updateStatusValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       try {
@@ -191,7 +207,9 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     deps.checkPermission('tickets', 'manage') as import('express').RequestHandler,
     ...assignTicketValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       try {
@@ -232,19 +250,18 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     '/:id/message',
     ...addMessageValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
-      const ticket = await addMessage(
-        req.params.id as unknown as Types.ObjectId,
-        {
-          senderId: new mongoose.Types.ObjectId(user.userId),
-          senderType: user.userType >= 5 ? 'client' : 'staff',
-          content: req.body.content,
-          attachments: req.body.attachments,
-          isInternal: user.userType < 5 ? req.body.isInternal : false,
-        },
-      );
+      const ticket = await addMessage(req.params.id as unknown as Types.ObjectId, {
+        senderId: new mongoose.Types.ObjectId(user.userId),
+        senderType: user.userType >= 5 ? 'client' : 'staff',
+        content: req.body.content,
+        attachments: req.body.attachments,
+        isInternal: user.userType < 5 ? req.body.isInternal : false,
+      });
 
       if (!ticket) {
         res.status(404).json({ status: 404, code: 'NOT_FOUND' });
@@ -262,7 +279,9 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     deps.checkPermission('tickets', 'manage') as import('express').RequestHandler,
     ...escalateValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       const ticket = await escalateTicket(
@@ -297,7 +316,9 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     deps.checkPermission('tickets', 'manage') as import('express').RequestHandler,
     ...resolveValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
       const user = (req as AuthRequest).user!;
 
       try {
@@ -318,7 +339,10 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
           resource: 'SupportTicket',
           resourceId: ticket._id,
           severity: 'info',
-          metadata: { resolution: req.body.resolution, resolutionCategory: req.body.resolutionCategory },
+          metadata: {
+            resolution: req.body.resolution,
+            resolutionCategory: req.body.resolutionCategory,
+          },
         });
 
         res.status(200).json({ status: 200, data: { ticket } });
@@ -339,12 +363,12 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     '/:id/reopen',
     ...reopenValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       try {
-        const ticket = await reopenTicket(
-          req.params.id as unknown as Types.ObjectId,
-        );
+        const ticket = await reopenTicket(req.params.id as unknown as Types.ObjectId);
 
         if (!ticket) {
           res.status(404).json({ status: 404, code: 'NOT_FOUND' });
@@ -369,7 +393,9 @@ export function createTicketRoutes(deps: SupportTicketsRouteDeps): Router {
     '/:id/satisfaction',
     ...satisfactionValidation,
     async (req: Request, res: Response): Promise<void> => {
-      if (!handleValidation(req, res)) return;
+      if (!handleValidation(req, res)) {
+        return;
+      }
 
       const ticket = await rateSatisfaction(
         req.params.id as unknown as Types.ObjectId,

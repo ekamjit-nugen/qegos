@@ -142,23 +142,14 @@ export function updateConfigValidation(): ValidationChain[] {
       .isInt({ min: 0 })
       .withMessage('Amount threshold must be a non-negative integer (cents)')
       .toInt(),
-    body('stripeEnabled')
-      .optional()
-      .isBoolean()
-      .withMessage('stripeEnabled must be a boolean'),
-    body('payzooEnabled')
-      .optional()
-      .isBoolean()
-      .withMessage('payzooEnabled must be a boolean'),
+    body('stripeEnabled').optional().isBoolean().withMessage('stripeEnabled must be a boolean'),
+    body('payzooEnabled').optional().isBoolean().withMessage('payzooEnabled must be a boolean'),
     body('fallbackTimeoutMs')
       .optional()
       .isInt({ min: 1000, max: 60000 })
       .withMessage('Fallback timeout must be between 1000 and 60000 ms')
       .toInt(),
-    body('maintenanceMode')
-      .optional()
-      .isBoolean()
-      .withMessage('maintenanceMode must be a boolean'),
+    body('maintenanceMode').optional().isBoolean().withMessage('maintenanceMode must be a boolean'),
     body('maintenanceMessage')
       .optional()
       .trim()
@@ -189,19 +180,21 @@ export function getPaymentLogsValidation(): ValidationChain[] {
     query('status')
       .optional()
       .isIn([
-        'pending', 'requires_capture', 'authorised', 'captured',
-        'succeeded', 'failed', 'cancelled', 'refund_pending',
-        'refunded', 'partially_refunded', 'disputed',
+        'pending',
+        'requires_capture',
+        'authorised',
+        'captured',
+        'succeeded',
+        'failed',
+        'cancelled',
+        'refund_pending',
+        'refunded',
+        'partially_refunded',
+        'disputed',
       ])
       .withMessage('Invalid status'),
-    query('dateFrom')
-      .optional()
-      .isISO8601()
-      .withMessage('dateFrom must be a valid ISO 8601 date'),
-    query('dateTo')
-      .optional()
-      .isISO8601()
-      .withMessage('dateTo must be a valid ISO 8601 date'),
+    query('dateFrom').optional().isISO8601().withMessage('dateFrom must be a valid ISO 8601 date'),
+    query('dateTo').optional().isISO8601().withMessage('dateTo must be a valid ISO 8601 date'),
     query('amountMin')
       .optional()
       .isInt({ min: 0 })

@@ -1,8 +1,12 @@
 import type { Model } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
-import type { IReferralDocument, IReferralConfigDocument, ReferralRewardType } from './referral.types';
-import { DEFAULT_REFERRAL_CONFIG } from './referral.types';
 import type { CreditServiceResult } from '../credit/credit.service';
+import type {
+  IReferralDocument,
+  IReferralConfigDocument,
+  ReferralRewardType,
+} from './referral.types';
+import { DEFAULT_REFERRAL_CONFIG } from './referral.types';
 
 // ─── Module State ───────────────────────────────────────────────────────────
 
@@ -67,9 +71,13 @@ export async function updateReferralConfig(
 
 export async function getOrGenerateCode(userId: string): Promise<string> {
   const user = await UserModel.findById(userId);
-  if (!user) throw AppError.notFound('User');
+  if (!user) {
+    throw AppError.notFound('User');
+  }
 
-  if (user.referralCode) return user.referralCode as string;
+  if (user.referralCode) {
+    return user.referralCode as string;
+  }
 
   // Generate QGS-REF-XXXX via CounterModel
   const counter = await CounterModel.findOneAndUpdate(
@@ -91,7 +99,9 @@ export async function validateCode(
   code: string,
 ): Promise<{ valid: boolean; referrerFirstName?: string }> {
   const referral = await UserModel.findOne({ referralCode: code.toUpperCase() });
-  if (!referral) return { valid: false };
+  if (!referral) {
+    return { valid: false };
+  }
   return { valid: true, referrerFirstName: referral.firstName as string };
 }
 
@@ -111,11 +121,15 @@ export async function applyReferral(
 
   // Look up referrer by code
   const referrer = await UserModel.findOne({ referralCode: code });
-  if (!referrer) throw AppError.notFound('Referral code');
+  if (!referrer) {
+    throw AppError.notFound('Referral code');
+  }
 
   // REF-INV-02: Self-referral check (both mobile AND email)
   const referee = await UserModel.findById(refereeUserId);
-  if (!referee) throw AppError.notFound('Referee user');
+  if (!referee) {
+    throw AppError.notFound('Referee user');
+  }
 
   if (
     referrer._id.toString() === refereeUserId ||
@@ -173,23 +187,33 @@ export async function applyReferral(
 
 export async function processReward(refereeOrderId: string): Promise<IReferralDocument | null> {
   const order = await OrderModel.findById(refereeOrderId);
-  if (!order) throw AppError.notFound('Order');
+  if (!order) {
+    throw AppError.notFound('Order');
+  }
 
   // REF-INV-01: order completed (status >= 6) + payment succeeded
-  if (order.status < 6) return null;
-  if (order.paymentStatus !== 'succeeded') return null;
+  if (order.status < 6) {
+    return null;
+  }
+  if (order.paymentStatus !== 'succeeded') {
+    return null;
+  }
 
   const config = await getConfig();
 
   // Check minimum order value
-  if (order.finalAmount < config.minimumOrderValueForReward) return null;
+  if (order.finalAmount < config.minimumOrderValueForReward) {
+    return null;
+  }
 
   // Find the referral for this referee
   const referral = await ReferralModel.findOne({
     refereeId: order.userId,
     status: { $in: ['pending', 'signed_up', 'order_created', 'completed'] },
   });
-  if (!referral) return null;
+  if (!referral) {
+    return null;
+  }
 
   // REF-INV-07: Count referrer's rewarded referrals this year
   const yearStart = new Date();
@@ -202,7 +226,9 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
     createdAt: { $gte: yearStart },
   });
 
-  if (rewardedCount >= config.maxReferralsPerClient) return null;
+  if (rewardedCount >= config.maxReferralsPerClient) {
+    return null;
+  }
 
   // ─── Atomically claim the referral BEFORE issuing credits (REF-INV idempotency).
   // Filter on `referrerRewarded: false` so concurrent callers race on a single
@@ -220,7 +246,9 @@ export async function processReward(refereeOrderId: string): Promise<IReferralDo
     },
     { new: true },
   );
-  if (!claimed) return null; // another caller already processed
+  if (!claimed) {
+    return null;
+  } // another caller already processed
 
   // ─── Issue Rewards Based on Config ────────────────────────────────────────
   const referrerId = String(claimed.referrerId);
@@ -319,9 +347,7 @@ export async function getDashboard(): Promise<{
 }> {
   const [total, byStatusAgg, rewardedCount, rewardCostAgg, topReferrers] = await Promise.all([
     ReferralModel.countDocuments(),
-    ReferralModel.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
+    ReferralModel.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     ReferralModel.countDocuments({ status: 'rewarded' }),
     ReferralModel.aggregate([
       { $match: { referrerRewarded: true } },

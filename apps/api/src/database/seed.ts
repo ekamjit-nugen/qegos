@@ -6,10 +6,12 @@
  * Idempotent: checks for existing records before inserting.
  * Only runs in development/test environments.
  */
-import { loadConfig } from '../config/env';
-import { connectDatabase, getConnection, disconnectDatabase } from './connection';
-import { createUserModel } from '../modules/user/user.model';
-import { createCounterModel, getNextSequence } from './counter.model';
+import * as rbac from '@nugen/rbac';
+import * as auth from '@nugen/auth';
+import * as chatEngine from '@nugen/chat-engine';
+import * as supportTickets from '@nugen/support-tickets';
+import * as notificationEngine from '@nugen/notification-engine';
+import type { Types } from 'mongoose';
 import { createLeadModel } from '../modules/lead-management/lead.model';
 import { createLeadActivityModel } from '../modules/lead-management/leadActivity.model';
 import { createOrderModel } from '../modules/order-management/order.model';
@@ -17,12 +19,10 @@ import { createSalesModel, seedSalesCatalogue } from '../modules/order-managemen
 import { createFormMappingModel } from '../modules/form-mapping/formMapping.model';
 import { createFormMappingVersionModel } from '../modules/form-mapping/formMappingVersion.model';
 import { seedFormMappings } from '../modules/form-mapping/formMapping.seed';
-import * as rbac from '@nugen/rbac';
-import * as auth from '@nugen/auth';
-import * as chatEngine from '@nugen/chat-engine';
-import * as supportTickets from '@nugen/support-tickets';
-import * as notificationEngine from '@nugen/notification-engine';
-import type { Types } from 'mongoose';
+import { createUserModel } from '../modules/user/user.model';
+import { loadConfig } from '../config/env';
+import { createCounterModel, getNextSequence } from './counter.model';
+import { connectDatabase, getConnection, disconnectDatabase } from './connection';
 
 const BCRYPT_ROUNDS = 12;
 const DEFAULT_PASSWORD = 'Password1!';
@@ -62,19 +62,29 @@ async function seed(): Promise<void> {
   const FormMappingVersionModel = createFormMappingVersionModel(connection);
 
   // Auth init for password hashing
-  auth.init({
-    jwtAccessSecret: config.JWT_ACCESS_SECRET,
-    jwtRefreshSecret: config.JWT_REFRESH_SECRET,
-    jwtAccessExpiry: config.JWT_ACCESS_EXPIRY,
-    jwtRefreshExpiry: config.JWT_REFRESH_EXPIRY,
-    maxSessions: 5,
-    otpExpiry: 300,
-    otpLength: 6,
-    bcryptRounds: BCRYPT_ROUNDS,
-    passwordPolicy: { minLength: 8, requireUppercase: true, requireLowercase: true, requireNumber: true, requireSpecial: false },
-    phoneRegex: /^\+61\d{9}$/,
-    mfaIssuer: config.MFA_ISSUER,
-  }, connection, UserModel as never);
+  auth.init(
+    {
+      jwtAccessSecret: config.JWT_ACCESS_SECRET,
+      jwtRefreshSecret: config.JWT_REFRESH_SECRET,
+      jwtAccessExpiry: config.JWT_ACCESS_EXPIRY,
+      jwtRefreshExpiry: config.JWT_REFRESH_EXPIRY,
+      maxSessions: 5,
+      otpExpiry: 300,
+      otpLength: 6,
+      bcryptRounds: BCRYPT_ROUNDS,
+      passwordPolicy: {
+        minLength: 8,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumber: true,
+        requireSpecial: false,
+      },
+      phoneRegex: /^\+61\d{9}$/,
+      mfaIssuer: config.MFA_ISSUER,
+    },
+    connection,
+    UserModel as never,
+  );
 
   // Chat engine models
   const { ConversationModel, MessageModel } = chatEngine.init(connection, {
@@ -87,9 +97,9 @@ async function seed(): Promise<void> {
   // Notification engine models — pass minimal config for seed
   const { NotificationModel } = notificationEngine.init(
     connection,
-    null as never,  // Redis not needed for seeding
-    {} as never,    // Config not needed for seeding
-    { UserModel: null as never },  // UserModel not needed for seeding
+    null as never, // Redis not needed for seeding
+    {} as never, // Config not needed for seeding
+    { UserModel: null as never }, // UserModel not needed for seeding
   );
 
   // ─── Step 1: Seed roles ────────────────────────────────────────────────────
@@ -121,7 +131,13 @@ async function seed(): Promise<void> {
       lastName: 'Admin',
       userType: 0,
       roleId: roleMap.get('super_admin'),
-      address: { street: '1 George Street', suburb: 'Sydney', state: 'NSW' as const, postcode: '2000', country: 'Australia' },
+      address: {
+        street: '1 George Street',
+        suburb: 'Sydney',
+        state: 'NSW' as const,
+        postcode: '2000',
+        country: 'Australia',
+      },
     },
     // Admin
     {
@@ -131,7 +147,13 @@ async function seed(): Promise<void> {
       lastName: 'Admin',
       userType: 1,
       roleId: roleMap.get('admin'),
-      address: { street: '10 Collins Street', suburb: 'Melbourne', state: 'VIC' as const, postcode: '3000', country: 'Australia' },
+      address: {
+        street: '10 Collins Street',
+        suburb: 'Melbourne',
+        state: 'VIC' as const,
+        postcode: '3000',
+        country: 'Australia',
+      },
     },
     // Office Manager
     {
@@ -141,7 +163,13 @@ async function seed(): Promise<void> {
       lastName: 'Manager',
       userType: 2,
       roleId: roleMap.get('office_manager'),
-      address: { street: '5 King Street', suburb: 'Brisbane', state: 'QLD' as const, postcode: '4000', country: 'Australia' },
+      address: {
+        street: '5 King Street',
+        suburb: 'Brisbane',
+        state: 'QLD' as const,
+        postcode: '4000',
+        country: 'Australia',
+      },
     },
     // Senior Staff
     {
@@ -151,7 +179,13 @@ async function seed(): Promise<void> {
       lastName: 'Senior',
       userType: 3,
       roleId: roleMap.get('senior_staff'),
-      address: { street: '20 Rundle Mall', suburb: 'Adelaide', state: 'SA' as const, postcode: '5000', country: 'Australia' },
+      address: {
+        street: '20 Rundle Mall',
+        suburb: 'Adelaide',
+        state: 'SA' as const,
+        postcode: '5000',
+        country: 'Australia',
+      },
     },
     // Staff members
     {
@@ -161,7 +195,13 @@ async function seed(): Promise<void> {
       lastName: 'Staff',
       userType: 4,
       roleId: roleMap.get('staff'),
-      address: { street: '8 Hay Street', suburb: 'Perth', state: 'WA' as const, postcode: '6000', country: 'Australia' },
+      address: {
+        street: '8 Hay Street',
+        suburb: 'Perth',
+        state: 'WA' as const,
+        postcode: '6000',
+        country: 'Australia',
+      },
     },
     {
       email: 'staff2@qegos.com.au',
@@ -170,7 +210,13 @@ async function seed(): Promise<void> {
       lastName: 'Preparer',
       userType: 4,
       roleId: roleMap.get('staff'),
-      address: { street: '15 Liverpool Street', suburb: 'Hobart', state: 'TAS' as const, postcode: '7000', country: 'Australia' },
+      address: {
+        street: '15 Liverpool Street',
+        suburb: 'Hobart',
+        state: 'TAS' as const,
+        postcode: '7000',
+        country: 'Australia',
+      },
     },
     // Client users
     {
@@ -180,7 +226,13 @@ async function seed(): Promise<void> {
       lastName: 'Doe',
       userType: 5,
       roleId: roleMap.get('client'),
-      address: { street: '42 Bondi Road', suburb: 'Bondi', state: 'NSW' as const, postcode: '2026', country: 'Australia' },
+      address: {
+        street: '42 Bondi Road',
+        suburb: 'Bondi',
+        state: 'NSW' as const,
+        postcode: '2026',
+        country: 'Australia',
+      },
       dateOfBirth: new Date('1985-03-15'),
       gender: 'male' as const,
       maritalStatus: 'married' as const,
@@ -193,7 +245,13 @@ async function seed(): Promise<void> {
       lastName: 'Smith',
       userType: 5,
       roleId: roleMap.get('client'),
-      address: { street: '7 Chapel Street', suburb: 'Prahran', state: 'VIC' as const, postcode: '3181', country: 'Australia' },
+      address: {
+        street: '7 Chapel Street',
+        suburb: 'Prahran',
+        state: 'VIC' as const,
+        postcode: '3181',
+        country: 'Australia',
+      },
       dateOfBirth: new Date('1990-07-22'),
       gender: 'female' as const,
       maritalStatus: 'single' as const,
@@ -206,7 +264,13 @@ async function seed(): Promise<void> {
       lastName: 'Chen',
       userType: 5,
       roleId: roleMap.get('client'),
-      address: { street: '33 James Street', suburb: 'Fortitude Valley', state: 'QLD' as const, postcode: '4006', country: 'Australia' },
+      address: {
+        street: '33 James Street',
+        suburb: 'Fortitude Valley',
+        state: 'QLD' as const,
+        postcode: '4006',
+        country: 'Australia',
+      },
       dateOfBirth: new Date('1978-11-08'),
       gender: 'male' as const,
       maritalStatus: 'married' as const,
@@ -221,7 +285,13 @@ async function seed(): Promise<void> {
       lastName: 'Student',
       userType: 6,
       roleId: roleMap.get('student'),
-      address: { street: '1 University Ave', suburb: 'Camperdown', state: 'NSW' as const, postcode: '2050', country: 'Australia' },
+      address: {
+        street: '1 University Ave',
+        suburb: 'Camperdown',
+        state: 'NSW' as const,
+        postcode: '2050',
+        country: 'Australia',
+      },
       dateOfBirth: new Date('2002-01-10'),
       college: 'University of Sydney',
       discount: 20,
@@ -391,11 +461,52 @@ async function seed(): Promise<void> {
   const activityCount = await LeadActivityModel.countDocuments();
   if (activityCount === 0) {
     const activities = [
-      { leadId: leadIds[0], type: 'phone_call_inbound' as const, subject: 'Initial enquiry call', description: 'Client called about individual tax return. Has PAYG summary and deductions.', outcome: 'interested' as const, sentiment: 'positive' as const, callDuration: 12, callDirection: 'inbound' as const, performedBy: staffId },
-      { leadId: leadIds[0], type: 'sms_sent' as const, subject: 'Follow-up SMS', description: 'Sent pricing info and booking link.', outcome: 'interested' as const, performedBy: staffId },
-      { leadId: leadIds[1], type: 'email_sent' as const, subject: 'Web enquiry follow-up', description: 'Responded to website contact form about business tax returns.', outcome: 'no_answer' as const, performedBy: seniorId },
-      { leadId: leadIds[2], type: 'phone_call_outbound' as const, subject: 'Referral introduction', description: 'Referred by John Doe. Needs help with rental property deductions.', outcome: 'interested' as const, sentiment: 'positive' as const, callDuration: 18, callDirection: 'outbound' as const, performedBy: staffId },
-      { leadId: leadIds[3], type: 'whatsapp_sent' as const, subject: 'WhatsApp follow-up', description: 'Sent message in Hindi about student tax return services.', outcome: 'no_answer' as const, performedBy: staffId },
+      {
+        leadId: leadIds[0],
+        type: 'phone_call_inbound' as const,
+        subject: 'Initial enquiry call',
+        description: 'Client called about individual tax return. Has PAYG summary and deductions.',
+        outcome: 'interested' as const,
+        sentiment: 'positive' as const,
+        callDuration: 12,
+        callDirection: 'inbound' as const,
+        performedBy: staffId,
+      },
+      {
+        leadId: leadIds[0],
+        type: 'sms_sent' as const,
+        subject: 'Follow-up SMS',
+        description: 'Sent pricing info and booking link.',
+        outcome: 'interested' as const,
+        performedBy: staffId,
+      },
+      {
+        leadId: leadIds[1],
+        type: 'email_sent' as const,
+        subject: 'Web enquiry follow-up',
+        description: 'Responded to website contact form about business tax returns.',
+        outcome: 'no_answer' as const,
+        performedBy: seniorId,
+      },
+      {
+        leadId: leadIds[2],
+        type: 'phone_call_outbound' as const,
+        subject: 'Referral introduction',
+        description: 'Referred by John Doe. Needs help with rental property deductions.',
+        outcome: 'interested' as const,
+        sentiment: 'positive' as const,
+        callDuration: 18,
+        callDirection: 'outbound' as const,
+        performedBy: staffId,
+      },
+      {
+        leadId: leadIds[3],
+        type: 'whatsapp_sent' as const,
+        subject: 'WhatsApp follow-up',
+        description: 'Sent message in Hindi about student tax return services.',
+        outcome: 'no_answer' as const,
+        performedBy: staffId,
+      },
     ];
 
     for (const act of activities) {
@@ -426,7 +537,12 @@ async function seed(): Promise<void> {
         completionStatus: 'completed',
         completedAt: daysAgo(30),
       })),
-      personalDetails: { firstName: 'John', lastName: 'Doe', mobile: '+61412345678', email: 'john.doe@example.com' },
+      personalDetails: {
+        firstName: 'John',
+        lastName: 'Doe',
+        mobile: '+61412345678',
+        email: 'john.doe@example.com',
+      },
       processingBy: staffId,
       eFileStatus: 'assessed',
       noaReceived: true,
@@ -444,7 +560,12 @@ async function seed(): Promise<void> {
         priceAtCreation: s.price,
         completionStatus: 'in_progress',
       })),
-      personalDetails: { firstName: 'Jane', lastName: 'Smith', mobile: '+61423456789', email: 'jane.smith@example.com' },
+      personalDetails: {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        mobile: '+61423456789',
+        email: 'jane.smith@example.com',
+      },
       processingBy: seniorId,
     },
     {
@@ -459,7 +580,12 @@ async function seed(): Promise<void> {
         priceAtCreation: s.price,
         completionStatus: 'not_started',
       })),
-      personalDetails: { firstName: 'Mike', lastName: 'Chen', mobile: '+61434567890', email: 'mike.chen@example.com' },
+      personalDetails: {
+        firstName: 'Mike',
+        lastName: 'Chen',
+        mobile: '+61434567890',
+        email: 'mike.chen@example.com',
+      },
     },
     {
       userId: clientAlex,
@@ -473,7 +599,12 @@ async function seed(): Promise<void> {
         priceAtCreation: Math.round(s.price * 0.8),
         completionStatus: 'not_started',
       })),
-      personalDetails: { firstName: 'Alex', lastName: 'Student', mobile: '+61445678901', email: 'student@example.com' },
+      personalDetails: {
+        firstName: 'Alex',
+        lastName: 'Student',
+        mobile: '+61445678901',
+        email: 'student@example.com',
+      },
       discountPercent: 20,
     },
   ];
@@ -481,7 +612,10 @@ async function seed(): Promise<void> {
   const orderIds: Types.ObjectId[] = [];
 
   for (const orderData of ordersToSeed) {
-    const existing = await OrderModel.findOne({ userId: orderData.userId, financialYear: orderData.financialYear });
+    const existing = await OrderModel.findOne({
+      userId: orderData.userId,
+      financialYear: orderData.financialYear,
+    });
     if (existing) {
       orderIds.push(existing._id);
       continue;
@@ -510,9 +644,36 @@ async function seed(): Promise<void> {
     });
 
     await MessageModel.create([
-      { conversationId: convo1._id, senderId: clientJohn, senderType: 'client', type: 'text', content: 'Hi, can I claim work-from-home expenses for this financial year?', isRead: true, readAt: daysAgo(2), createdAt: daysAgo(2) },
-      { conversationId: convo1._id, senderId: staffId, senderType: 'staff', type: 'text', content: 'Yes! Under the revised fixed-rate method, you can claim 67 cents per hour for WFH expenses. You\'ll need a record of hours worked from home.', isRead: true, readAt: daysAgo(1), createdAt: daysAgo(2) },
-      { conversationId: convo1._id, senderId: clientJohn, senderType: 'client', type: 'text', content: 'Thanks for the info!', isRead: false, createdAt: daysAgo(1) },
+      {
+        conversationId: convo1._id,
+        senderId: clientJohn,
+        senderType: 'client',
+        type: 'text',
+        content: 'Hi, can I claim work-from-home expenses for this financial year?',
+        isRead: true,
+        readAt: daysAgo(2),
+        createdAt: daysAgo(2),
+      },
+      {
+        conversationId: convo1._id,
+        senderId: staffId,
+        senderType: 'staff',
+        type: 'text',
+        content:
+          "Yes! Under the revised fixed-rate method, you can claim 67 cents per hour for WFH expenses. You'll need a record of hours worked from home.",
+        isRead: true,
+        readAt: daysAgo(1),
+        createdAt: daysAgo(2),
+      },
+      {
+        conversationId: convo1._id,
+        senderId: clientJohn,
+        senderType: 'client',
+        type: 'text',
+        content: 'Thanks for the info!',
+        isRead: false,
+        createdAt: daysAgo(1),
+      },
     ]);
 
     const convo2 = await ConversationModel.create({
@@ -521,15 +682,42 @@ async function seed(): Promise<void> {
       status: 'active',
       subject: 'Document upload help',
       lastMessageAt: daysAgo(0),
-      lastMessagePreview: 'I\'ll upload the PAYG summary now',
+      lastMessagePreview: "I'll upload the PAYG summary now",
       unreadCountUser: 1,
       unreadCountStaff: 0,
     });
 
     await MessageModel.create([
-      { conversationId: convo2._id, senderId: clientJane, senderType: 'client', type: 'text', content: 'I\'m having trouble uploading my PAYG summary. What format should it be?', isRead: true, readAt: daysAgo(0), createdAt: daysAgo(1) },
-      { conversationId: convo2._id, senderId: seniorId, senderType: 'staff', type: 'text', content: 'We accept PDF, JPG, and PNG. The file must be under 10MB. Could you try again?', isRead: true, readAt: daysAgo(0), createdAt: daysAgo(0) },
-      { conversationId: convo2._id, senderId: clientJane, senderType: 'client', type: 'text', content: 'I\'ll upload the PAYG summary now', isRead: true, readAt: daysAgo(0), createdAt: daysAgo(0) },
+      {
+        conversationId: convo2._id,
+        senderId: clientJane,
+        senderType: 'client',
+        type: 'text',
+        content: "I'm having trouble uploading my PAYG summary. What format should it be?",
+        isRead: true,
+        readAt: daysAgo(0),
+        createdAt: daysAgo(1),
+      },
+      {
+        conversationId: convo2._id,
+        senderId: seniorId,
+        senderType: 'staff',
+        type: 'text',
+        content: 'We accept PDF, JPG, and PNG. The file must be under 10MB. Could you try again?',
+        isRead: true,
+        readAt: daysAgo(0),
+        createdAt: daysAgo(0),
+      },
+      {
+        conversationId: convo2._id,
+        senderId: clientJane,
+        senderType: 'client',
+        type: 'text',
+        content: "I'll upload the PAYG summary now",
+        isRead: true,
+        readAt: daysAgo(0),
+        createdAt: daysAgo(0),
+      },
     ]);
 
     log('  2 conversations with messages created.');
@@ -550,10 +738,21 @@ async function seed(): Promise<void> {
         status: 'open',
         source: 'chat',
         subject: 'Invoice discrepancy',
-        description: 'The invoice amount doesn\'t match the quoted price. I was quoted $495 but invoiced $550.',
+        description:
+          "The invoice amount doesn't match the quoted price. I was quoted $495 but invoiced $550.",
         ticketMessages: [
-          { senderId: clientJohn, senderType: 'client', content: 'Hi, my invoice doesn\'t match the quote I received.', createdAt: daysAgo(3) },
-          { senderId: staffId, senderType: 'staff', content: 'I\'ll review this and get back to you within 24 hours.', createdAt: daysAgo(2) },
+          {
+            senderId: clientJohn,
+            senderType: 'client',
+            content: "Hi, my invoice doesn't match the quote I received.",
+            createdAt: daysAgo(3),
+          },
+          {
+            senderId: staffId,
+            senderType: 'staff',
+            content: "I'll review this and get back to you within 24 hours.",
+            createdAt: daysAgo(2),
+          },
         ],
         assignedTo: staffId,
         slaDeadline: daysAgo(-1), // 1 day from now
@@ -568,8 +767,19 @@ async function seed(): Promise<void> {
         subject: 'How to change preferred language',
         description: 'I want to receive notifications in Chinese.',
         ticketMessages: [
-          { senderId: clientMike, senderType: 'client', content: '我想用中文接收通知', createdAt: daysAgo(7) },
-          { senderId: staffId, senderType: 'staff', content: 'I\'ve updated your language preference to Chinese. You should now receive notifications in Chinese.', createdAt: daysAgo(6) },
+          {
+            senderId: clientMike,
+            senderType: 'client',
+            content: '我想用中文接收通知',
+            createdAt: daysAgo(7),
+          },
+          {
+            senderId: staffId,
+            senderType: 'staff',
+            content:
+              "I've updated your language preference to Chinese. You should now receive notifications in Chinese.",
+            createdAt: daysAgo(6),
+          },
         ],
         assignedTo: staffId,
         slaDeadline: daysAgo(5), // was due 5 days ago
@@ -586,10 +796,48 @@ async function seed(): Promise<void> {
   const notifCount = await NotificationModel.countDocuments();
   if (notifCount === 0) {
     await NotificationModel.create([
-      { recipientId: clientJohn, recipientType: 'client', type: 'order_status', title: 'Tax Return Assessed', body: 'Your FY2024-25 tax return has been assessed by the ATO. Your refund of $2,847 is on its way!', channels: ['push', 'email'], isRead: true, readAt: daysAgo(10), relatedResource: 'Order', relatedResourceId: orderIds[0] },
-      { recipientId: clientJane, recipientType: 'client', type: 'follow_up_due', title: 'Documents Required', body: 'Please upload your PAYG summary and private health insurance statement for FY2025-26.', channels: ['push', 'sms'], isRead: false, relatedResource: 'Order', relatedResourceId: orderIds[1] },
-      { recipientId: clientMike, recipientType: 'client', type: 'deadline_reminder', title: 'Appointment Tomorrow', body: 'Reminder: You have a phone consultation scheduled for tomorrow at 2:00 PM AEST.', channels: ['push'], isRead: false },
-      { recipientId: clientAlex, recipientType: 'client', type: 'payment_received', title: 'Payment Confirmed', body: 'We\'ve received your payment of $396.00 for the Student Tax Return package.', channels: ['email'], isRead: true, readAt: daysAgo(5) },
+      {
+        recipientId: clientJohn,
+        recipientType: 'client',
+        type: 'order_status',
+        title: 'Tax Return Assessed',
+        body: 'Your FY2024-25 tax return has been assessed by the ATO. Your refund of $2,847 is on its way!',
+        channels: ['push', 'email'],
+        isRead: true,
+        readAt: daysAgo(10),
+        relatedResource: 'Order',
+        relatedResourceId: orderIds[0],
+      },
+      {
+        recipientId: clientJane,
+        recipientType: 'client',
+        type: 'follow_up_due',
+        title: 'Documents Required',
+        body: 'Please upload your PAYG summary and private health insurance statement for FY2025-26.',
+        channels: ['push', 'sms'],
+        isRead: false,
+        relatedResource: 'Order',
+        relatedResourceId: orderIds[1],
+      },
+      {
+        recipientId: clientMike,
+        recipientType: 'client',
+        type: 'deadline_reminder',
+        title: 'Appointment Tomorrow',
+        body: 'Reminder: You have a phone consultation scheduled for tomorrow at 2:00 PM AEST.',
+        channels: ['push'],
+        isRead: false,
+      },
+      {
+        recipientId: clientAlex,
+        recipientType: 'client',
+        type: 'payment_received',
+        title: 'Payment Confirmed',
+        body: "We've received your payment of $396.00 for the Student Tax Return package.",
+        channels: ['email'],
+        isRead: true,
+        readAt: daysAgo(5),
+      },
     ]);
     log('  4 notifications created.');
   }

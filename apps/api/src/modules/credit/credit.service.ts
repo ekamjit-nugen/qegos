@@ -1,7 +1,7 @@
 import type { Model } from 'mongoose';
 import * as _auditLog from '@nugen/audit-log';
-import { getRequestId } from '../../lib/requestContext';
 import { AppError } from '@nugen/error-handler';
+import { getRequestId } from '../../lib/requestContext';
 import type { ICreditTransactionDocument, CreditType } from './credit.types';
 
 const auditLog = {
@@ -18,9 +18,24 @@ export interface CreditServiceDeps {
 
 export interface CreditServiceResult {
   getBalance: (userId: string) => Promise<number>;
-  addCredit: (userId: string, amount: number, type: CreditType, description: string, referenceId?: string, expiresAt?: Date) => Promise<ICreditTransactionDocument>;
-  useCredit: (userId: string, amount: number, orderId: string) => Promise<ICreditTransactionDocument>;
-  getTransactions: (userId: string, page?: number, limit?: number) => Promise<{ transactions: ICreditTransactionDocument[]; total: number }>;
+  addCredit: (
+    userId: string,
+    amount: number,
+    type: CreditType,
+    description: string,
+    referenceId?: string,
+    expiresAt?: Date,
+  ) => Promise<ICreditTransactionDocument>;
+  useCredit: (
+    userId: string,
+    amount: number,
+    orderId: string,
+  ) => Promise<ICreditTransactionDocument>;
+  getTransactions: (
+    userId: string,
+    page?: number,
+    limit?: number,
+  ) => Promise<{ transactions: ICreditTransactionDocument[]; total: number }>;
   expireCredits: () => Promise<number>;
 }
 
@@ -29,9 +44,7 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
 
   async function getBalance(userId: string): Promise<number> {
     // Get latest transaction for this user to read the running balance
-    const latest = await CreditTransactionModel.findOne({ userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    const latest = await CreditTransactionModel.findOne({ userId }).sort({ createdAt: -1 }).lean();
     return latest?.balance ?? 0;
   }
 
@@ -148,19 +161,18 @@ export function createCreditService(deps: CreditServiceDeps): CreditServiceResul
 
     for (const credit of expirableCredits) {
       const userId = String(credit.userId);
-      if (processedUsers.has(userId)) continue;
+      if (processedUsers.has(userId)) {
+        continue;
+      }
       processedUsers.add(userId);
 
       // Get total expired amount for this user
-      const userExpirableCredits = expirableCredits.filter(
-        (c) => String(c.userId) === userId,
-      );
-      const totalExpired = userExpirableCredits.reduce(
-        (sum, c) => sum + c.amount,
-        0,
-      );
+      const userExpirableCredits = expirableCredits.filter((c) => String(c.userId) === userId);
+      const totalExpired = userExpirableCredits.reduce((sum, c) => sum + c.amount, 0);
 
-      if (totalExpired <= 0) continue;
+      if (totalExpired <= 0) {
+        continue;
+      }
 
       const currentBalance = await getBalance(userId);
       const expiryAmount = Math.min(totalExpired, currentBalance);

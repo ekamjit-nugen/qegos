@@ -17,12 +17,7 @@ import {
   message,
 } from 'antd';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import {
   useCollectPricing,
   useCollectPayment,
@@ -104,9 +99,7 @@ function CardForm({ intent, onSuccess }: CardFormProps): React.ReactNode {
         style={{ marginBottom: 12 }}
       />
       <PaymentElement options={{ layout: 'tabs' }} />
-      {error ? (
-        <Alert type="error" message={error} style={{ marginTop: 12 }} showIcon />
-      ) : null}
+      {error ? <Alert type="error" message={error} style={{ marginTop: 12 }} showIcon /> : null}
       <Button
         type="primary"
         block
@@ -244,9 +237,7 @@ export function CollectPaymentModal({
                 label={
                   <span>
                     Promo{' '}
-                    {breakdown.promoCode ? (
-                      <Tag color="purple">{breakdown.promoCode}</Tag>
-                    ) : null}
+                    {breakdown.promoCode ? <Tag color="purple">{breakdown.promoCode}</Tag> : null}
                   </span>
                 }
               >
@@ -277,8 +268,7 @@ export function CollectPaymentModal({
               {breakdown && breakdown.creditBalance > 0 && (
                 <Form.Item name="useCredits" valuePropName="checked">
                   <Checkbox>
-                    Use client credit balance (
-                    {formatCurrency(breakdown.creditBalance)} available)
+                    Use client credit balance ({formatCurrency(breakdown.creditBalance)} available)
                   </Checkbox>
                 </Form.Item>
               )}

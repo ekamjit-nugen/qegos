@@ -1,4 +1,8 @@
-import type { INotificationChannelProvider, NotificationChannelContent, NotificationSendResult } from '../../types';
+import type {
+  INotificationChannelProvider,
+  NotificationChannelContent,
+  NotificationSendResult,
+} from '../../types';
 
 interface SESConfig {
   region: string;

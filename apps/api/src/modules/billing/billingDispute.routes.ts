@@ -49,8 +49,12 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     ...validate(validateCreateDispute()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const body = req.body as {
-        orderId: string; paymentId: string; disputeType: string;
-        disputedAmount: number; clientStatement: string; ticketId?: string;
+        orderId: string;
+        paymentId: string;
+        disputeType: string;
+        disputedAmount: number;
+        clientStatement: string;
+        ticketId?: string;
       };
 
       const dispute = await createDispute(body);
@@ -75,14 +79,24 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     ...validate(validateListDisputes()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
-      const { page = 1, limit = 20, status, disputeType } = req.query as {
-        page?: number; limit?: number; status?: string; disputeType?: string;
+      const {
+        page = 1,
+        limit = 20,
+        status,
+        disputeType,
+      } = req.query as {
+        page?: number;
+        limit?: number;
+        status?: string;
+        disputeType?: string;
       };
 
       const { disputes, total } = await listDisputes({
-        status, disputeType,
+        status,
+        disputeType,
         scopeFilter: authReq.scopeFilter,
-        page: Number(page), limit: Number(limit),
+        page: Number(page),
+        limit: Number(limit),
       });
 
       const pageNum = Number(page);
@@ -92,7 +106,9 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
         status: 200,
         data: disputes,
         pagination: {
-          page: pageNum, limit: limitNum, total,
+          page: pageNum,
+          limit: limitNum,
+          total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,
@@ -123,12 +139,17 @@ export function createBillingDisputeRoutes(deps: BillingDisputeRouteDeps): Route
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const updates = req.body as {
-        status?: DisputeStatus; staffAssessment?: string;
-        resolution?: string; resolvedAmount?: number;
+        status?: DisputeStatus;
+        staffAssessment?: string;
+        resolution?: string;
+        resolvedAmount?: number;
       };
 
       const { dispute, changes } = await updateDispute(
-        req.params.id, updates, authReq.user.userId, authReq.scopeFilter,
+        req.params.id,
+        updates,
+        authReq.user.userId,
+        authReq.scopeFilter,
       );
 
       await auditLog.logFromRequest(req, {

@@ -1,5 +1,7 @@
 import type { Model, FilterQuery, Connection } from 'mongoose';
 import { AppError } from '@nugen/error-handler';
+import type { ICounterDocument } from '../../database/counter.model';
+import { getNextSequence } from '../../database/counter.model';
 import type {
   ILeadDocument,
   ILeadActivityDocument,
@@ -12,8 +14,6 @@ import type {
 } from './lead.types';
 import { LeadStatus, LEAD_STATUS_TRANSITIONS, LOST_REASONS } from './lead.types';
 import { generateLeadNumber } from './lead.model';
-import type { ICounterDocument } from '../../database/counter.model';
-import { getNextSequence } from '../../database/counter.model';
 
 export interface LeadServiceDeps {
   LeadModel: Model<ILeadDocument>;
@@ -26,17 +26,55 @@ export interface LeadServiceDeps {
 }
 
 export interface LeadServiceResult {
-  createLead: (data: Partial<ILeadDocument>, performedBy: string) => Promise<{ lead: ILeadDocument; isDuplicate: boolean; duplicateMatches: DuplicateMatch[] }>;
-  updateLead: (id: string, data: Partial<ILeadDocument>, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
+  createLead: (
+    data: Partial<ILeadDocument>,
+    performedBy: string,
+  ) => Promise<{ lead: ILeadDocument; isDuplicate: boolean; duplicateMatches: DuplicateMatch[] }>;
+  updateLead: (
+    id: string,
+    data: Partial<ILeadDocument>,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ILeadDocument>;
   getLead: (id: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
   listLeads: (query: LeadListQuery) => Promise<LeadListResult>;
-  transitionStatus: (id: string, newStatus: number, data: { lostReason?: string; lostReasonNote?: string; note?: string }, performedBy: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
-  assignLead: (id: string, staffId: string, performedBy: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument>;
-  bulkAssign: (leadIds: string[], staffId: string, performedBy: string) => Promise<{ updated: number }>;
-  bulkStatusChange: (leadIds: string[], status: number, data: { lostReason?: string; lostReasonNote?: string }, performedBy: string) => Promise<{ updated: number; errors: Array<{ leadId: string; error: string }> }>;
-  convertLead: (leadId: string, performedBy: string) => Promise<{ lead: ILeadDocument; orderId: string; userId: string }>;
-  convertToExistingUser: (leadId: string, userId: string, performedBy: string) => Promise<{ lead: ILeadDocument; orderId: string }>;
-  mergeLead: (primaryId: string, secondaryId: string, fieldSelections: Record<string, 'primary' | 'secondary'>) => Promise<ILeadDocument>;
+  transitionStatus: (
+    id: string,
+    newStatus: number,
+    data: { lostReason?: string; lostReasonNote?: string; note?: string },
+    performedBy: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ILeadDocument>;
+  assignLead: (
+    id: string,
+    staffId: string,
+    performedBy: string,
+    scopeFilter?: Record<string, unknown>,
+  ) => Promise<ILeadDocument>;
+  bulkAssign: (
+    leadIds: string[],
+    staffId: string,
+    performedBy: string,
+  ) => Promise<{ updated: number }>;
+  bulkStatusChange: (
+    leadIds: string[],
+    status: number,
+    data: { lostReason?: string; lostReasonNote?: string },
+    performedBy: string,
+  ) => Promise<{ updated: number; errors: Array<{ leadId: string; error: string }> }>;
+  convertLead: (
+    leadId: string,
+    performedBy: string,
+  ) => Promise<{ lead: ILeadDocument; orderId: string; userId: string }>;
+  convertToExistingUser: (
+    leadId: string,
+    userId: string,
+    performedBy: string,
+  ) => Promise<{ lead: ILeadDocument; orderId: string }>;
+  mergeLead: (
+    primaryId: string,
+    secondaryId: string,
+    fieldSelections: Record<string, 'primary' | 'secondary'>,
+  ) => Promise<ILeadDocument>;
   checkDuplicate: (mobile?: string, email?: string) => Promise<DuplicateMatch[]>;
   searchLeads: (query: string, scopeFilter?: Record<string, unknown>) => Promise<ILeadDocument[]>;
   calculateScore: (leadId: string) => Promise<{ score: number; priority: LeadPriority }>;
@@ -48,7 +86,31 @@ export interface LeadServiceResult {
   getAgingStats: () => Promise<Record<string, unknown>>;
   // Phase 4 — Lead Advanced
   bulkScore: () => Promise<{ processed: number; errors: number }>;
-  importLeads: (rows: Array<{ firstName: string; lastName?: string; mobile: string; email?: string; source?: string; state?: string; postcode?: string; suburb?: string; financialYear?: string; preferredLanguage?: string; preferredContact?: string; maritalStatus?: string; employmentType?: string; hasRentalProperty?: string; hasSharePortfolio?: string; hasForeignIncome?: string }>, performedBy: string) => Promise<{ imported: number; leads: ILeadDocument[]; validationErrors?: Array<{ row: number; errors: string[] }> }>;
+  importLeads: (
+    rows: Array<{
+      firstName: string;
+      lastName?: string;
+      mobile: string;
+      email?: string;
+      source?: string;
+      state?: string;
+      postcode?: string;
+      suburb?: string;
+      financialYear?: string;
+      preferredLanguage?: string;
+      preferredContact?: string;
+      maritalStatus?: string;
+      employmentType?: string;
+      hasRentalProperty?: string;
+      hasSharePortfolio?: string;
+      hasForeignIncome?: string;
+    }>,
+    performedBy: string,
+  ) => Promise<{
+    imported: number;
+    leads: ILeadDocument[];
+    validationErrors?: Array<{ row: number; errors: string[] }>;
+  }>;
   exportLeads: (query: LeadListQuery) => Promise<Array<Record<string, unknown>>>;
 }
 
@@ -58,7 +120,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
   // ─── Duplicate Check (LM-INV-01) ───────────────────────────────────────
 
   async function checkDuplicate(mobile?: string, email?: string): Promise<DuplicateMatch[]> {
-    if (!mobile && !email) return [];
+    if (!mobile && !email) {
+      return [];
+    }
 
     const orConditions: FilterQuery<ILeadDocument>[] = [];
     if (mobile) {
@@ -75,7 +139,11 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
     const matches = await LeadModel.find({ $or: orConditions })
       .select('leadNumber firstName lastName mobile email')
-      .lean<Array<Pick<ILeadDocument, '_id' | 'leadNumber' | 'firstName' | 'lastName' | 'mobile' | 'email'>>>();
+      .lean<
+        Array<
+          Pick<ILeadDocument, '_id' | 'leadNumber' | 'firstName' | 'lastName' | 'mobile' | 'email'>
+        >
+      >();
 
     return matches.map((m) => {
       const matchedOn: ('mobile' | 'email')[] = [];
@@ -84,9 +152,13 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         if (/^04\d{8}$/.test(normalizedMobile)) {
           normalizedMobile = `+61${normalizedMobile.substring(1)}`;
         }
-        if (m.mobile === normalizedMobile) matchedOn.push('mobile');
+        if (m.mobile === normalizedMobile) {
+          matchedOn.push('mobile');
+        }
       }
-      if (email && m.email === email.toLowerCase().trim()) matchedOn.push('email');
+      if (email && m.email === email.toLowerCase().trim()) {
+        matchedOn.push('email');
+      }
 
       return {
         leadId: m._id,
@@ -96,33 +168,66 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         mobile: m.mobile,
         email: m.email,
         matchedOn,
-        confidence: matchedOn.length > 1 ? 'high' as const : 'medium' as const,
+        confidence: matchedOn.length > 1 ? ('high' as const) : ('medium' as const),
       };
     });
   }
 
   // ─── Score Calculation (LM-INV-11) ────────────────────────────────────
 
-  async function calculateScore(leadId: string): Promise<{ score: number; priority: LeadPriority }> {
+  async function calculateScore(
+    leadId: string,
+  ): Promise<{ score: number; priority: LeadPriority }> {
     const lead = await LeadModel.findById(leadId).lean<ILeadDocument>();
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     let score = 0;
 
     // Positive factors
-    if (lead.email) score += 5;
+    if (lead.email) {
+      score += 5;
+    }
     // Complete profile: check tax profile fields
-    const profileFields = [lead.maritalStatus, lead.employmentType, lead.hasRentalProperty, lead.hasSharePortfolio, lead.hasForeignIncome, lead.numberOfDependants];
-    if (profileFields.every((f) => f !== undefined && f !== null)) score += 10;
-    if (lead.hasRentalProperty) score += 15;
-    if (lead.hasSharePortfolio) score += 10;
-    if (lead.employmentType === 'self_employed' || lead.employmentType === 'contractor') score += 15;
-    if (lead.serviceInterest && lead.serviceInterest.length >= 2) score += 10;
-    if (lead.hasSpouse) score += 10;
-    if (lead.numberOfDependants && lead.numberOfDependants > 0) score += 5;
-    if (lead.source === 'referral') score += 10;
-    if (lead.source === 'repeat_client') score += 15;
-    if (lead.hasForeignIncome) score += 10;
+    const profileFields = [
+      lead.maritalStatus,
+      lead.employmentType,
+      lead.hasRentalProperty,
+      lead.hasSharePortfolio,
+      lead.hasForeignIncome,
+      lead.numberOfDependants,
+    ];
+    if (profileFields.every((f) => f !== undefined && f !== null)) {
+      score += 10;
+    }
+    if (lead.hasRentalProperty) {
+      score += 15;
+    }
+    if (lead.hasSharePortfolio) {
+      score += 10;
+    }
+    if (lead.employmentType === 'self_employed' || lead.employmentType === 'contractor') {
+      score += 15;
+    }
+    if (lead.serviceInterest && lead.serviceInterest.length >= 2) {
+      score += 10;
+    }
+    if (lead.hasSpouse) {
+      score += 10;
+    }
+    if (lead.numberOfDependants && lead.numberOfDependants > 0) {
+      score += 5;
+    }
+    if (lead.source === 'referral') {
+      score += 10;
+    }
+    if (lead.source === 'repeat_client') {
+      score += 15;
+    }
+    if (lead.hasForeignIncome) {
+      score += 10;
+    }
 
     // Activity-based factors
     const activities = await LeadActivityModel.find({ leadId })
@@ -130,16 +235,22 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       .lean<Array<{ outcome?: string; createdAt: Date }>>();
 
     const hasPositiveOutcome = activities.some((a) => a.outcome === 'interested');
-    if (hasPositiveOutcome) score += 15;
+    if (hasPositiveOutcome) {
+      score += 15;
+    }
 
     const hasQuoteRequested = activities.some((a) => a.outcome === 'quote_requested');
-    if (hasQuoteRequested) score += 10;
+    if (hasQuoteRequested) {
+      score += 10;
+    }
 
     // Recent contact (within 3 days)
     if (lead.lastContactedAt) {
       const threeDaysAgo = new Date();
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      if (new Date(lead.lastContactedAt) >= threeDaysAgo) score += 5;
+      if (new Date(lead.lastContactedAt) >= threeDaysAgo) {
+        score += 5;
+      }
     }
 
     // Negative factors
@@ -148,10 +259,14 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       isOverdue: true,
       isCompleted: false,
     });
-    if (overdueReminders > 0) score -= 10;
+    if (overdueReminders > 0) {
+      score -= 10;
+    }
 
     const noAnswerCount = activities.filter((a) => a.outcome === 'no_answer').length;
-    if (noAnswerCount >= 3) score -= 10;
+    if (noAnswerCount >= 3) {
+      score -= 10;
+    }
 
     // Gone cold (no activity in 7 days)
     if (activities.length > 0) {
@@ -160,7 +275,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       );
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      if (new Date(latestActivity.createdAt) < sevenDaysAgo) score -= 5;
+      if (new Date(latestActivity.createdAt) < sevenDaysAgo) {
+        score -= 5;
+      }
     }
 
     // Clamp to 0-100
@@ -231,7 +348,10 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
   // ─── Get Lead ─────────────────────────────────────────────────────────
 
-  async function getLead(id: string, scopeFilter?: Record<string, unknown>): Promise<ILeadDocument> {
+  async function getLead(
+    id: string,
+    scopeFilter?: Record<string, unknown>,
+  ): Promise<ILeadDocument> {
     const filter: FilterQuery<ILeadDocument> = { _id: id };
     if (scopeFilter && Object.keys(scopeFilter).length > 0) {
       Object.assign(filter, scopeFilter);
@@ -240,7 +360,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       .populate('serviceInterest', 'title price category')
       .populate('assignedTo', 'firstName lastName email')
       .lean<ILeadDocument>();
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
     return lead;
   }
 
@@ -259,12 +381,24 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       Object.assign(filter, query.scopeFilter);
     }
 
-    if (query.status !== undefined) filter.status = query.status;
-    if (query.priority) filter.priority = query.priority;
-    if (query.source) filter.source = query.source;
-    if (query.assignedTo) filter.assignedTo = query.assignedTo;
-    if (query.state) filter.state = query.state;
-    if (query.tags) filter.tags = { $in: query.tags.split(',') };
+    if (query.status !== undefined) {
+      filter.status = query.status;
+    }
+    if (query.priority) {
+      filter.priority = query.priority;
+    }
+    if (query.source) {
+      filter.source = query.source;
+    }
+    if (query.assignedTo) {
+      filter.assignedTo = query.assignedTo;
+    }
+    if (query.state) {
+      filter.state = query.state;
+    }
+    if (query.tags) {
+      filter.tags = { $in: query.tags.split(',') };
+    }
 
     if (query.dateFrom || query.dateTo) {
       filter.createdAt = {};
@@ -327,7 +461,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       new: true,
       runValidators: true,
     });
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     // Trigger score recalculation
     await calculateScore(lead._id.toString());
@@ -350,17 +486,18 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     }
 
     const lead = await LeadModel.findOne(filter);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     const currentStatus = lead.status as LeadStatusType;
     const allowed = LEAD_STATUS_TRANSITIONS[currentStatus] ?? [];
 
     // LM-INV-02: Validate against adjacency map
     if (!allowed.includes(newStatus as LeadStatusType)) {
-      throw AppError.badRequest(
-        `Invalid status transition from ${currentStatus} to ${newStatus}`,
-        [{ field: 'status', message: `Allowed transitions: [${allowed.join(', ')}]` }],
-      );
+      throw AppError.badRequest(`Invalid status transition from ${currentStatus} to ${newStatus}`, [
+        { field: 'status', message: `Allowed transitions: [${allowed.join(', ')}]` },
+      ]);
     }
 
     // LM-INV-03: Lost requires lostReason
@@ -372,7 +509,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         throw AppError.badRequest(`Invalid lost reason: ${data.lostReason}`);
       }
       lead.lostReason = data.lostReason as (typeof LOST_REASONS)[number];
-      if (data.lostReasonNote) lead.lostReasonNote = data.lostReasonNote;
+      if (data.lostReasonNote) {
+        lead.lostReasonNote = data.lostReasonNote;
+      }
     }
 
     lead.status = newStatus;
@@ -409,7 +548,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       Object.assign(filter, scopeFilter);
     }
     const lead = await LeadModel.findOne(filter);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
 
     const previousAssignee = lead.assignedTo?.toString();
     lead.assignedTo = staffId as unknown as ILeadDocument['assignedTo'];
@@ -452,10 +593,7 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       }
     }
 
-    const result = await LeadModel.updateMany(
-      { _id: { $in: leadIds } },
-      { assignedTo: staffId },
-    );
+    const result = await LeadModel.updateMany({ _id: { $in: leadIds } }, { assignedTo: staffId });
 
     // Log activities for each
     const activities = leadIds.map((leadId) => ({
@@ -509,7 +647,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
     try {
       const lead = await LeadModel.findById(leadId).session(session);
-      if (!lead) throw AppError.notFound('Lead');
+      if (!lead) {
+        throw AppError.notFound('Lead');
+      }
 
       // LM-INV-05: Cannot convert twice
       if (lead.isConverted) {
@@ -517,7 +657,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       }
 
       // Fix for T-3.11: Use injected UserModel instead of connection.model()
-      const InjectedUserModel = (deps.UserModel ?? connection.model('User')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
+      const InjectedUserModel = (deps.UserModel ?? connection.model('User')) as unknown as Model<{
+        _id: import('mongoose').Types.ObjectId;
+      }>;
       const user = await InjectedUserModel.create(
         [
           {
@@ -531,7 +673,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
             preferredContact: lead.preferredContact ?? 'sms',
             timezone: 'Australia/Sydney',
             isDeleted: false,
-            ...(lead.state ? { address: { state: lead.state, suburb: lead.suburb, postcode: lead.postcode } } : {}),
+            ...(lead.state
+              ? { address: { state: lead.state, suburb: lead.suburb, postcode: lead.postcode } }
+              : {}),
           },
         ],
         { session },
@@ -540,7 +684,8 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       const userId = user[0]._id.toString();
 
       // Fix for T-3.11, B-3.13: Use injected OrderModel and atomic counter
-      const InjectedOrderModel = (deps.OrderModel ?? connection.model('Order')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
+      const InjectedOrderModel = (deps.OrderModel ??
+        connection.model('Order')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
       if (!CounterModel) {
         throw new Error('CounterModel is required for atomic order number generation');
       }
@@ -628,19 +773,26 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
     try {
       const lead = await LeadModel.findById(leadId).session(session);
-      if (!lead) throw AppError.notFound('Lead');
+      if (!lead) {
+        throw AppError.notFound('Lead');
+      }
 
       if (lead.isConverted) {
         throw AppError.conflict('Lead has already been converted');
       }
 
       // Fix for T-3.11: Use injected UserModel
-      const InjectedUserModel = (deps.UserModel ?? connection.model('User')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
+      const InjectedUserModel = (deps.UserModel ?? connection.model('User')) as unknown as Model<{
+        _id: import('mongoose').Types.ObjectId;
+      }>;
       const user = await InjectedUserModel.findById(userId).session(session);
-      if (!user) throw AppError.notFound('User');
+      if (!user) {
+        throw AppError.notFound('User');
+      }
 
       // Fix for T-3.11, B-3.13: Use injected OrderModel and atomic counter
-      const InjectedOrderModel = (deps.OrderModel ?? connection.model('Order')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
+      const InjectedOrderModel = (deps.OrderModel ??
+        connection.model('Order')) as unknown as Model<{ _id: import('mongoose').Types.ObjectId }>;
       if (!CounterModel) {
         throw new Error('CounterModel is required for atomic order number generation');
       }
@@ -723,11 +875,25 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
   ): Promise<ILeadDocument> {
     // Fix for S-3.2, B-3.3: Allowlist of mergeable fields to prevent arbitrary field injection
     const MERGEABLE_FIELDS: ReadonlySet<string> = new Set([
-      'firstName', 'lastName', 'email', 'mobile', 'preferredLanguage',
-      'preferredContact', 'suburb', 'state', 'postcode', 'financialYear',
-      'maritalStatus', 'hasSpouse', 'numberOfDependants', 'employmentType',
-      'hasRentalProperty', 'hasSharePortfolio', 'hasForeignIncome',
-      'tags', 'notes',
+      'firstName',
+      'lastName',
+      'email',
+      'mobile',
+      'preferredLanguage',
+      'preferredContact',
+      'suburb',
+      'state',
+      'postcode',
+      'financialYear',
+      'maritalStatus',
+      'hasSpouse',
+      'numberOfDependants',
+      'employmentType',
+      'hasRentalProperty',
+      'hasSharePortfolio',
+      'hasForeignIncome',
+      'tags',
+      'notes',
     ]);
 
     // Reject any fieldSelections key not in the allowlist
@@ -747,8 +913,12 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         LeadModel.findById(primaryId).session(session),
         LeadModel.findById(secondaryId).session(session),
       ]);
-      if (!primary) throw AppError.notFound('Primary lead');
-      if (!secondary) throw AppError.notFound('Secondary lead');
+      if (!primary) {
+        throw AppError.notFound('Primary lead');
+      }
+      if (!secondary) {
+        throw AppError.notFound('Secondary lead');
+      }
 
       // Apply field selections from secondary to primary
       for (const [field, selection] of Object.entries(fieldSelections)) {
@@ -761,16 +931,14 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       await primary.save({ session });
 
       // Transfer all activities from secondary to primary
-      await LeadActivityModel.updateMany(
-        { leadId: secondaryId },
-        { leadId: primaryId },
-      ).session(session);
+      await LeadActivityModel.updateMany({ leadId: secondaryId }, { leadId: primaryId }).session(
+        session,
+      );
 
       // Transfer all reminders from secondary to primary
-      await LeadReminderModel.updateMany(
-        { leadId: secondaryId },
-        { leadId: primaryId },
-      ).session(session);
+      await LeadReminderModel.updateMany({ leadId: secondaryId }, { leadId: primaryId }).session(
+        session,
+      );
 
       // Soft-delete secondary
       secondary.isDeleted = true;
@@ -819,7 +987,9 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       Object.assign(filter, scopeFilter);
     }
     const lead = await LeadModel.findOne(filter);
-    if (!lead) throw AppError.notFound('Lead');
+    if (!lead) {
+      throw AppError.notFound('Lead');
+    }
     lead.isDeleted = true;
     lead.deletedAt = new Date();
     await lead.save();
@@ -867,9 +1037,10 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
         ? {
             total: conversionRate[0].total,
             converted: conversionRate[0].converted,
-            rate: conversionRate[0].total > 0
-              ? Math.round((conversionRate[0].converted / conversionRate[0].total) * 100)
-              : 0,
+            rate:
+              conversionRate[0].total > 0
+                ? Math.round((conversionRate[0].converted / conversionRate[0].total) * 100)
+                : 0,
           }
         : { total: 0, converted: 0, rate: 0 },
       pipelineValue,
@@ -932,7 +1103,11 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       {
         $addFields: {
           conversionRate: {
-            $cond: [{ $gt: ['$total', 0] }, { $multiply: [{ $divide: ['$converted', '$total'] }, 100] }, 0],
+            $cond: [
+              { $gt: ['$total', 0] },
+              { $multiply: [{ $divide: ['$converted', '$total'] }, 100] },
+              0,
+            ],
           },
         },
       },
@@ -971,8 +1146,18 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
   async function bulkScore(): Promise<{ processed: number; errors: number }> {
     const cursor = LeadModel.find({
       isDeleted: { $ne: true },
-      status: { $in: [LeadStatus.New, LeadStatus.Contacted, LeadStatus.Qualified, LeadStatus.QuoteSent, LeadStatus.Negotiation] },
-    }).select('_id').lean<Array<{ _id: string }>>();
+      status: {
+        $in: [
+          LeadStatus.New,
+          LeadStatus.Contacted,
+          LeadStatus.Qualified,
+          LeadStatus.QuoteSent,
+          LeadStatus.Negotiation,
+        ],
+      },
+    })
+      .select('_id')
+      .lean<Array<{ _id: string }>>();
 
     let processed = 0;
     let errors = 0;
@@ -1022,9 +1207,20 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     const validationErrors: Array<{ row: number; errors: string[] }> = [];
 
     const validSources = new Set([
-      'phone_inbound', 'phone_outbound', 'walk_in', 'web_form', 'referral',
-      'sms_inquiry', 'whatsapp', 'social_media', 'marketing_campaign',
-      'repeat_client', 'partner', 'google_ads', 'facebook_ads', 'other',
+      'phone_inbound',
+      'phone_outbound',
+      'walk_in',
+      'web_form',
+      'referral',
+      'sms_inquiry',
+      'whatsapp',
+      'social_media',
+      'marketing_campaign',
+      'repeat_client',
+      'partner',
+      'google_ads',
+      'facebook_ads',
+      'other',
     ]);
     const validStates = new Set(['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT']);
 
@@ -1032,7 +1228,11 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
       const row = rows[i];
       const rowErrors: string[] = [];
 
-      if (!row.firstName || typeof row.firstName !== 'string' || row.firstName.trim().length === 0) {
+      if (
+        !row.firstName ||
+        typeof row.firstName !== 'string' ||
+        row.firstName.trim().length === 0
+      ) {
         rowErrors.push('firstName is required');
       }
       if (!row.mobile || typeof row.mobile !== 'string' || !/^\+61\d{9}$/.test(row.mobile)) {
@@ -1065,15 +1265,15 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
     const leads: ILeadDocument[] = [];
 
     for (const row of rows) {
-      const seq = CounterModel
-        ? await getNextSequence(CounterModel, 'lead')
-        : 0;
+      const seq = CounterModel ? await getNextSequence(CounterModel, 'lead') : 0;
       const leadNumber = seq
         ? `QGS-L-${String(seq).padStart(4, '0')}`
         : await generateLeadNumber(LeadModel);
 
       const parseBool = (val: string | undefined): boolean | undefined => {
-        if (val === undefined || val === '') return undefined;
+        if (val === undefined || val === '') {
+          return undefined;
+        }
         return val === 'true' || val === '1' || val === 'yes';
       };
 
@@ -1124,25 +1324,37 @@ export function createLeadService(deps: LeadServiceDeps): LeadServiceResult {
 
   // ─── Export Leads — Streaming CSV (Phase 4 — C2) ──────────────────────
 
-  async function exportLeads(
-    query: LeadListQuery,
-  ): Promise<Array<Record<string, unknown>>> {
+  async function exportLeads(query: LeadListQuery): Promise<Array<Record<string, unknown>>> {
     const filter: FilterQuery<ILeadDocument> = { isDeleted: { $ne: true } };
-    if (query.scopeFilter) Object.assign(filter, query.scopeFilter);
-    if (query.status) filter.status = query.status;
-    if (query.priority) filter.priority = query.priority;
-    if (query.source) filter.source = query.source;
-    if (query.assignedTo) filter.assignedTo = query.assignedTo;
-    if (query.state) filter.state = query.state;
+    if (query.scopeFilter) {
+      Object.assign(filter, query.scopeFilter);
+    }
+    if (query.status) {
+      filter.status = query.status;
+    }
+    if (query.priority) {
+      filter.priority = query.priority;
+    }
+    if (query.source) {
+      filter.source = query.source;
+    }
+    if (query.assignedTo) {
+      filter.assignedTo = query.assignedTo;
+    }
+    if (query.state) {
+      filter.state = query.state;
+    }
     if (query.dateFrom || query.dateTo) {
       filter.createdAt = {};
-      if (query.dateFrom) filter.createdAt.$gte = new Date(query.dateFrom);
-      if (query.dateTo) filter.createdAt.$lte = new Date(query.dateTo);
+      if (query.dateFrom) {
+        filter.createdAt.$gte = new Date(query.dateFrom);
+      }
+      if (query.dateTo) {
+        filter.createdAt.$lte = new Date(query.dateTo);
+      }
     }
 
-    const leads = await LeadModel.find(filter)
-      .sort({ createdAt: -1 })
-      .lean<ILeadDocument[]>();
+    const leads = await LeadModel.find(filter).sort({ createdAt: -1 }).lean<ILeadDocument[]>();
 
     return leads.map((l) => ({
       leadNumber: l.leadNumber,

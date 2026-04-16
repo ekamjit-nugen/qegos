@@ -69,8 +69,11 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
       const authReq = req as AuthenticatedRequest;
       const { orderId, rating, npsScore, comment, tags } = req.body as {
-        orderId: string; rating: number; npsScore?: number;
-        comment?: string; tags?: string[];
+        orderId: string;
+        rating: number;
+        npsScore?: number;
+        comment?: string;
+        tags?: string[];
       };
 
       const { review, googlePrompt } = await submitReview({
@@ -101,24 +104,38 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
     checkPermission('reviews', 'read') as RequestHandler,
     ...validate(validateListReviews()),
     asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const { page = 1, limit = 20, status, rating, staffId } = req.query as {
-        page?: number; limit?: number; status?: string;
-        rating?: number; staffId?: string;
+      const {
+        page = 1,
+        limit = 20,
+        status,
+        rating,
+        staffId,
+      } = req.query as {
+        page?: number;
+        limit?: number;
+        status?: string;
+        rating?: number;
+        staffId?: string;
       };
 
       const pageNum = Number(page);
       const limitNum = Number(limit);
 
       const { reviews, total } = await listReviews({
-        status, rating: rating ? Number(rating) : undefined,
-        staffId, page: pageNum, limit: limitNum,
+        status,
+        rating: rating ? Number(rating) : undefined,
+        staffId,
+        page: pageNum,
+        limit: limitNum,
       });
 
       res.status(200).json({
         status: 200,
         data: reviews,
         pagination: {
-          page: pageNum, limit: limitNum, total,
+          page: pageNum,
+          limit: limitNum,
+          total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,
@@ -137,11 +154,7 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
       const authReq = req as AuthenticatedRequest;
       const { response } = req.body as { response: string };
 
-      const review = await respondToReview(
-        req.params.id,
-        authReq.user.userId,
-        response,
-      );
+      const review = await respondToReview(req.params.id, authReq.user.userId, response);
 
       await auditLog.logFromRequest(req, {
         action: 'update',
@@ -193,7 +206,9 @@ export function createReviewRoutes(deps: ReviewRouteDeps): Router {
         status: 200,
         data: reviews,
         pagination: {
-          page: pageNum, limit: limitNum, total,
+          page: pageNum,
+          limit: limitNum,
+          total,
           totalPages: Math.ceil(total / limitNum),
           hasNext: pageNum * limitNum < total,
           hasPrev: pageNum > 1,
