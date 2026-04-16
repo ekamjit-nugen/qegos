@@ -10,7 +10,6 @@ import { VALID_DISPUTE_TRANSITIONS } from '../src/modules/billing/billingDispute
 import type {
   DisputeType,
   DisputeResolution,
-  DisputeStatus,
   IBillingDispute,
 } from '../src/modules/billing/billingDispute.types';
 

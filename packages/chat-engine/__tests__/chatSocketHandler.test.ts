@@ -7,12 +7,7 @@
 
 import { CONVERSATION_STATUSES, MESSAGE_TYPES, CANNED_RESPONSE_CATEGORIES } from '../src/types';
 
-import type {
-  ServerToClientEvents,
-  ClientToServerEvents,
-  ChatSocketConfig,
-  ChatSocketServer,
-} from '../src';
+import type { ServerToClientEvents, ClientToServerEvents, ChatSocketConfig } from '../src';
 
 import {
   emitNewMessage,
@@ -114,7 +109,7 @@ describe('Chat Socket Handler', () => {
     it('requires corsOrigins and verifyToken', () => {
       const config: ChatSocketConfig = {
         corsOrigins: ['http://localhost:3000'],
-        verifyToken: async (token: string) => ({ userId: '1', userType: 'client' }),
+        verifyToken: async (_token: string) => ({ userId: '1', userType: 'client' }),
       };
       expect(config.corsOrigins).toEqual(['http://localhost:3000']);
       expect(typeof config.verifyToken).toBe('function');

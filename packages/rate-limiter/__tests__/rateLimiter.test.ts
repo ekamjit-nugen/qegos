@@ -63,7 +63,7 @@ describe('@nugen/rate-limiter', () => {
     });
 
     it('accepts keyGenerator', () => {
-      const keyGen = (req: unknown): string => 'custom-key';
+      const keyGen = (_req: unknown): string => 'custom-key';
       const limiter = createLimiter({
         windowMs: 60_000,
         max: 5,

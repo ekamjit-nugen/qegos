@@ -14,7 +14,6 @@ import {
   Tooltip,
   Space,
   Statistic,
-  Badge,
 } from 'antd';
 import {
   SearchOutlined,

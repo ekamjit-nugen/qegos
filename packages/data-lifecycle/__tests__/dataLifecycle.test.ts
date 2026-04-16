@@ -8,8 +8,6 @@
 import { ERASURE_REQUEST_STATUSES, DATA_EXPORT_STATUSES } from '../src/types';
 
 import type {
-  ErasureRequestStatus,
-  DataExportStatus,
   DataExportFormat,
   RetentionAction,
   RetentionPolicyConfig,

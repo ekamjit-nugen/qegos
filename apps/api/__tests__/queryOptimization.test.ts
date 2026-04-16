@@ -296,7 +296,7 @@ describe('Query Optimization', () => {
       );
 
       // Check each model's pipeline has $project before $group
-      const checkProjectBeforeGroup = (model: MockModel, name: string): void => {
+      const checkProjectBeforeGroup = (model: MockModel, _name: string): void => {
         const pipeline = getPipeline(model, 0);
         const projectIdx = getStageIndex(pipeline, '$project');
         const groupIdx = getStageIndex(pipeline, '$group');

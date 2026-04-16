@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useTaxSummaries } from '@/hooks/useTaxSummary';
 import type { TaxSummary } from '@/types/taxSummary';
 
-const ATO_STATUS_COLORS: Record<string, string> = {
+const _ATO_STATUS_COLORS: Record<string, string> = {
   not_lodged: '#FF9800',
   lodged: '#2196F3',
   processing: '#9C27B0',
@@ -16,7 +16,7 @@ const ATO_STATUS_COLORS: Record<string, string> = {
 export default function TaxSummaryScreen(): React.ReactNode {
   const theme = useTheme();
   const router = useRouter();
-  const { data, isLoading, isError } = useTaxSummaries();
+  const { data, isLoading } = useTaxSummaries();
 
   const summaries = data?.data ?? [];
   // Sort by financial year DESC so [0] is current

@@ -2,15 +2,10 @@ import {
   DEFAULT_WEIGHTS,
   DEFAULT_CAPACITY,
   DEFAULT_ELIGIBLE_USER_TYPES,
-  type WorkloadWeights,
-  type WorkloadCapacity,
-  type StaffWorkloadSnapshot,
-  type AssignmentRequest,
-  type AssignmentResult,
   type AssignmentContext,
 } from '../workload.types';
 
-import { createWorkloadService, type WorkloadServiceResult } from '../workload.service';
+import { createWorkloadService } from '../workload.service';
 import { createWorkloadRoutes, getWorkloadService } from '../workload.routes';
 
 // ─── Type Constants ─────────────────────────────────────────────────────────

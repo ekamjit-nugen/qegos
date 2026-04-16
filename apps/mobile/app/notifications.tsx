@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Text, Card, Button, ActivityIndicator, Appbar, useTheme } from 'react-native-paper';
+import { Text, Card, ActivityIndicator, Appbar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import {
   useNotifications,

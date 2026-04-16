@@ -25,7 +25,13 @@ export function useDocumentList(filters: DocumentListQuery) {
 export function useUploadOrderDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ orderId, formData }: { orderId: string; formData: FormData }) => {
+    mutationFn: async ({
+      orderId: _orderId,
+      formData,
+    }: {
+      orderId: string;
+      formData: FormData;
+    }) => {
       const res = await api.post<ApiResponse<{ document: Document }>>(
         `/documents/upload`,
         formData,

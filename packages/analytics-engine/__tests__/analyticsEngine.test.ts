@@ -23,20 +23,9 @@ import {
 } from '../src';
 
 import type {
-  AnalyticsEngineConfig,
-  AnalyticsRouteDeps,
-  AnalyticsView,
-  DateRangeParams,
-  Granularity,
-  RevenueBucket,
   RevenueForecastResponse,
   ForecastQuarter,
-  ClvEntry,
-  StaffBenchmarkEntry,
   ChannelRoiEntry,
-  SeasonalTrendEntry,
-  ChurnRiskEntry,
-  ServiceMixEntry,
   CollectionRateResponse,
   PipelineStageEntry,
   ExecutiveSummaryResponse,

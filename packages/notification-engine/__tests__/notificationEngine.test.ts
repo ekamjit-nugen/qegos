@@ -24,17 +24,6 @@ import {
   MERGE_TAG_FALLBACKS,
 } from '../src/types';
 
-import type {
-  NotificationType,
-  NotificationChannel,
-  RecipientType,
-  NotificationEngineConfig,
-  INotification,
-  INotificationPreference,
-  ChannelResult,
-  SendNotificationParams,
-} from '../src/types';
-
 import { renderMergeTags } from '../src/services/templateService';
 import { calculateQuietHoursDelay, buildDedupKey } from '../src/services/notificationService';
 

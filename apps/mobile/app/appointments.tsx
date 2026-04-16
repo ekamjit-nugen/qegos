@@ -22,7 +22,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AppointmentsScreen(): React.ReactNode {
   const theme = useTheme();
   const router = useRouter();
-  const { data, isLoading, isError } = useUpcomingAppointments();
+  const { data, isLoading } = useUpcomingAppointments();
 
   const appointments = data?.data ?? [];
 

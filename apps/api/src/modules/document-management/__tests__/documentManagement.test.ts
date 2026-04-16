@@ -6,7 +6,6 @@ import {
   MAX_FILE_SIZE,
   MAX_DOCUMENTS_PER_ORDER,
   PRESIGNED_URL_EXPIRY,
-  type DocumentStatus,
   type ZohoSignConfig,
 } from '../document.types';
 

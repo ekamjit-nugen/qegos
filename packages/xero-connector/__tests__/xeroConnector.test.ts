@@ -24,14 +24,6 @@ import {
   calculateGst,
 } from '../src/types';
 
-import type {
-  XeroConnectorConfig,
-  IXeroConfig,
-  IXeroSyncLog,
-  XeroSyncEntityType,
-  XeroSyncStatus,
-} from '../src/types';
-
 import { encryptToken, decryptToken } from '../src/services/tokenService';
 
 // Initialize tokenService with a test key before encrypt/decrypt tests

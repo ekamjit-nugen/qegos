@@ -17,11 +17,7 @@ import {
   DEFAULT_REFERRAL_CONFIG,
 } from '../src/modules/referral-engine/referral.types';
 
-import type {
-  ReferralStatus,
-  IReferral,
-  IReferralConfig,
-} from '../src/modules/referral-engine/referral.types';
+import type { ReferralStatus } from '../src/modules/referral-engine/referral.types';
 
 import {
   validateShare,
@@ -38,14 +34,6 @@ import {
   APPLICABLE_TO_VALUES,
   FEDERAL_HOLIDAYS_FIXED,
   AUSTRALIAN_STATES,
-} from '../src/modules/tax-calendar/taxCalendar.types';
-
-import type {
-  DeadlineType,
-  ApplicableTo,
-  ITaxDeadline,
-  IDeadlineReminder,
-  AustralianState,
 } from '../src/modules/tax-calendar/taxCalendar.types';
 
 import {
@@ -67,8 +55,6 @@ import {
   REVIEW_TAGS,
   getNpsCategory,
 } from '../src/modules/reputation-mgmt/review.types';
-
-import type { ReviewStatus, ReviewTag, IReview } from '../src/modules/reputation-mgmt/review.types';
 
 import {
   validateSubmitReview,

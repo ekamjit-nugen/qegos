@@ -5,7 +5,7 @@
  * of critical query patterns. No database required.
  */
 
-import { PERFORMANCE_INDEXES, type IndexDefinition } from '../src/database/ensureIndexes';
+import { PERFORMANCE_INDEXES } from '../src/database/ensureIndexes';
 
 describe('Performance Indexes', () => {
   // ─── Structure ──────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ describe('Performance Indexes', () => {
     it('all key values are valid MongoDB index types', () => {
       const validTypes = [1, -1, 'text'];
       for (const def of PERFORMANCE_INDEXES) {
-        for (const [key, value] of Object.entries(def.keys)) {
+        for (const [_key, value] of Object.entries(def.keys)) {
           expect(validTypes).toContain(value);
         }
       }

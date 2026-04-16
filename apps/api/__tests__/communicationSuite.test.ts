@@ -11,7 +11,6 @@ import {
   CONVERSATION_STATUSES,
   MESSAGE_TYPES,
   CANNED_RESPONSE_CATEGORIES,
-  TFN_PATTERN,
   TFN_REPLACEMENT,
   containsTfn,
   redactTfn,
@@ -22,11 +21,7 @@ import {
 } from '../../../packages/chat-engine/src';
 
 import type {
-  ConversationStatus,
-  MessageType,
-  SenderType,
   IChatConversation,
-  IChatMessage,
   ServerToClientEvents,
   ClientToServerEvents,
 } from '../../../packages/chat-engine/src/types';
@@ -51,11 +46,7 @@ import {
   calculateSlaDeadline,
 } from '../../../packages/support-tickets/src';
 
-import type {
-  TicketStatus,
-  TicketPriority,
-  ISupportTicket,
-} from '../../../packages/support-tickets/src/types';
+import type { ISupportTicket } from '../../../packages/support-tickets/src/types';
 
 // ─── WhatsApp Connector ─────────────────────────────────────────────────────
 
@@ -67,7 +58,6 @@ import {
 } from '../../../packages/whatsapp-connector/src';
 
 import type {
-  WhatsAppMessageType,
   WhatsAppMessageStatus,
   IWhatsAppMessage,
 } from '../../../packages/whatsapp-connector/src/types';
