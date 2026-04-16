@@ -21,6 +21,7 @@ import { connectDatabase, getConnection, disconnectDatabase } from './database/c
 import { ensurePerformanceIndexes } from './database/ensureIndexes';
 import { createRedisClient, disconnectRedis } from './database/redis';
 import { createApp, finalizeApp } from './app';
+import { setupCronWorker } from './bootstrap/cronWorker';
 import { logger } from './lib/logger';
 import { createUserModel } from './modules/user/user.model';
 import { createUserRoutes } from './modules/user/user.routes';
@@ -1233,35 +1234,19 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  const automationQueue = new Queue('lead-automation', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
+  const cronInfra = { redisConnectionOpts, defaultJobOptions, jobLogger, moveToDeadLetter };
 
-  // Register repeatable jobs
-  const repeatableJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'autoAssign', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'staleLeadAlert', pattern: '0 * * * *' }, // every hour
-    { name: 'autoDormant', pattern: '0 2 * * *' }, // daily at 2am
-    { name: 'followUpEscalation', pattern: '*/30 * * * *' }, // every 30 minutes
-    { name: 'overdueMarker', pattern: '*/15 * * * *' }, // every 15 minutes
-    { name: 'reEngagementFlag', pattern: '0 3 * * *' }, // daily at 3am
-  ];
-
-  for (const job of repeatableJobs) {
-    await automationQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  // Worker to process automation jobs
-  const automationWorker = new Worker(
-    'lead-automation',
-    async (job: Job): Promise<void> => {
+  const { queue: automationQueue, worker: automationWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'lead-automation',
+    cronJobs: [
+      { name: 'autoAssign', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'staleLeadAlert', pattern: '0 * * * *' }, // every hour
+      { name: 'autoDormant', pattern: '0 2 * * *' }, // daily at 2am
+      { name: 'followUpEscalation', pattern: '*/30 * * * *' }, // every 30 minutes
+      { name: 'overdueMarker', pattern: '*/15 * * * *' }, // every 15 minutes
+      { name: 'reEngagementFlag', pattern: '0 3 * * *' }, // daily at 3am
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'autoAssign':
           await automationHandlers.autoAssignNewLead();
@@ -1288,49 +1273,19 @@ async function bootstrap(): Promise<void> {
           }
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  automationWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'lead-automation', jobName: job.name });
-  });
-  automationWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'lead-automation',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('lead-automation', job, err);
   });
 
   // Phase 5: Broadcast queue jobs
-  const broadcastQueue = new Queue('broadcast-engine', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const broadcastJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'triggerScheduled', pattern: '*/1 * * * *' }, // every 1 minute
-    { name: 'processSmsQueue', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'processEmailQueue', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'processWhatsappQueue', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'checkCompletion', pattern: '*/10 * * * *' }, // every 10 minutes
-  ];
-
-  for (const job of broadcastJobs) {
-    await broadcastQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const broadcastWorker = new Worker(
-    'broadcast-engine',
-    async (job: Job): Promise<void> => {
+  const { queue: broadcastQueue, worker: broadcastWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'broadcast-engine',
+    cronJobs: [
+      { name: 'triggerScheduled', pattern: '*/1 * * * *' }, // every 1 minute
+      { name: 'processSmsQueue', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'processEmailQueue', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'processWhatsappQueue', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'checkCompletion', pattern: '*/10 * * * *' }, // every 10 minutes
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'triggerScheduled':
           await broadcastEngine.triggerScheduledCampaigns();
@@ -1361,46 +1316,16 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  broadcastWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'broadcast-engine', jobName: job.name });
-  });
-  broadcastWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'broadcast-engine',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('broadcast-engine', job, err);
   });
 
   // Phase 6: Vault maintenance cron jobs
-  const vaultQueue = new Queue('vault-maintenance', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const vaultJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'hardDeleteExpired', pattern: '0 4 * * *' }, // daily at 4am
-    { name: 'reconcileStorage', pattern: '0 5 1 * *' }, // 1st of month at 5am
-  ];
-
-  for (const job of vaultJobs) {
-    await vaultQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const vaultWorker = new Worker(
-    'vault-maintenance',
-    async (job: Job): Promise<void> => {
+  const { queue: vaultQueue, worker: vaultWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'vault-maintenance',
+    cronJobs: [
+      { name: 'hardDeleteExpired', pattern: '0 4 * * *' }, // daily at 4am
+      { name: 'reconcileStorage', pattern: '0 5 1 * *' }, // 1st of month at 5am
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'hardDeleteExpired':
           await hardDeleteExpiredDocuments();
@@ -1410,48 +1335,18 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  vaultWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'vault-maintenance', jobName: job.name });
-  });
-  vaultWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'vault-maintenance',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('vault-maintenance', job, err);
   });
 
   // Phase 7: Support ticket SLA cron jobs (TKT-INV-04: every 5 min)
-  const ticketQueue = new Queue('support-tickets', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const ticketJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'checkSlaBreaches', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'autoCloseStale', pattern: '0 */6 * * *' }, // every 6 hours
-    { name: 'autoCloseResolved', pattern: '0 6 * * *' }, // daily at 6am
-    { name: 'archiveOldChats', pattern: '0 3 1 * *' }, // 1st of month at 3am
-  ];
-
-  for (const job of ticketJobs) {
-    await ticketQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const ticketWorker = new Worker(
-    'support-tickets',
-    async (job: Job): Promise<void> => {
+  const { queue: ticketQueue, worker: ticketWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'support-tickets',
+    cronJobs: [
+      { name: 'checkSlaBreaches', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'autoCloseStale', pattern: '0 */6 * * *' }, // every 6 hours
+      { name: 'autoCloseResolved', pattern: '0 6 * * *' }, // daily at 6am
+      { name: 'archiveOldChats', pattern: '0 3 1 * *' }, // 1st of month at 3am
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'checkSlaBreaches':
           await supportTickets.checkSlaBreaches();
@@ -1467,25 +1362,13 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  ticketWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'support-tickets', jobName: job.name });
-  });
-  ticketWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'support-tickets',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('support-tickets', job, err);
   });
 
-  // WhatsApp media download worker. Handles the queue fed by the inbound
-  // webhook's onInboundMedia hook above. Retries 5x with exponential
-  // backoff; exhausted jobs move to the DLQ.
+  // WhatsApp media download worker. Handles the queue (`whatsappMediaQueue`)
+  // fed by the inbound webhook's onInboundMedia hook above. The queue itself
+  // was created earlier so the route factory could capture it, so here we
+  // only attach a worker — `setupCronWorker` would re-create the queue, so
+  // we wire the worker manually with the same observability shape.
   const whatsappMediaWorker = new Worker(
     'whatsapp-media',
     async (job: Job): Promise<void> => {
@@ -1509,29 +1392,13 @@ async function bootstrap(): Promise<void> {
   });
 
   // Privacy Act: Data lifecycle cron jobs
-  const privacyQueue = new Queue('data-lifecycle', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const privacyJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'enforceRetention', pattern: '0 2 * * 0' }, // weekly Sunday 2am
-    { name: 'cleanupExpiredExports', pattern: '0 3 * * *' }, // daily at 3am
-  ];
-
-  for (const job of privacyJobs) {
-    await privacyQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const privacyWorker = new Worker(
-    'data-lifecycle',
-    async (job: Job): Promise<void> => {
+  const { queue: privacyQueue, worker: privacyWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'data-lifecycle',
+    cronJobs: [
+      { name: 'enforceRetention', pattern: '0 2 * * 0' }, // weekly Sunday 2am
+      { name: 'cleanupExpiredExports', pattern: '0 3 * * *' }, // daily at 3am
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'enforceRetention':
           await enforceRetentionPolicies();
@@ -1541,11 +1408,6 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  privacyWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'data-lifecycle', jobName: job.name });
   });
   privacyWorker.on('failed', (job, err) => {
     jobLogger.warn('Job failed', {
@@ -1558,29 +1420,13 @@ async function bootstrap(): Promise<void> {
   });
 
   // Phase 2: Xero sync cron jobs
-  const xeroQueue = new Queue('xero-sync', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const xeroJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'retryFailedSyncs', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'flushOfflineQueue', pattern: '*/10 * * * *' }, // every 10 minutes
-  ];
-
-  for (const job of xeroJobs) {
-    await xeroQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const xeroWorker = new Worker(
-    'xero-sync',
-    async (job: Job): Promise<void> => {
+  const { queue: xeroQueue, worker: xeroWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'xero-sync',
+    cronJobs: [
+      { name: 'retryFailedSyncs', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'flushOfflineQueue', pattern: '*/10 * * * *' }, // every 10 minutes
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'retryFailedSyncs':
           await xeroConnector.retryFailedSyncs();
@@ -1590,48 +1436,18 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  xeroWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'xero-sync', jobName: job.name });
-  });
-  xeroWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'xero-sync',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('xero-sync', job, err);
   });
 
   // Phase 8: Engagement engine cron jobs
-  const engagementQueue = new Queue('engagement-engine', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const engagementJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'expireReferrals', pattern: '0 2 * * *' }, // daily at 2am
-    { name: 'expireCreditRewards', pattern: '0 2 * * *' }, // daily at 2am
-    { name: 'processDeadlineReminders', pattern: '0 8 * * *' }, // daily at 8am (AEST)
-    { name: 'sendReviewReminders', pattern: '0 10 * * *' }, // daily at 10am
-  ];
-
-  for (const job of engagementJobs) {
-    await engagementQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const engagementWorker = new Worker(
-    'engagement-engine',
-    async (job: Job): Promise<void> => {
+  const { queue: engagementQueue, worker: engagementWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'engagement-engine',
+    cronJobs: [
+      { name: 'expireReferrals', pattern: '0 2 * * *' }, // daily at 2am
+      { name: 'expireCreditRewards', pattern: '0 2 * * *' }, // daily at 2am
+      { name: 'processDeadlineReminders', pattern: '0 8 * * *' }, // daily at 8am (AEST)
+      { name: 'sendReviewReminders', pattern: '0 10 * * *' }, // daily at 10am
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'expireReferrals':
           await expireStaleReferrals();
@@ -1647,94 +1463,37 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  engagementWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'engagement-engine', jobName: job.name });
-  });
-  engagementWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'engagement-engine',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('engagement-engine', job, err);
   });
 
   // Notification Engine: FCM token cleanup cron
-  const notificationQueue = new Queue('notification-engine', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const notificationJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'fcmTokenCleanup', pattern: '0 3 * * *' }, // daily at 3am — remove tokens not used in 30+ days
-  ];
-
-  for (const job of notificationJobs) {
-    await notificationQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const notificationWorker = new Worker(
-    'notification-engine',
-    async (job: Job): Promise<void> => {
-      switch (job.name) {
-        case 'fcmTokenCleanup': {
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-          await UserModel.updateMany({}, {
-            $pull: { fcmTokens: { lastUsed: { $lt: thirtyDaysAgo } } },
-          } as never);
-          break;
+  const { queue: notificationQueue, worker: notificationWorker } = await setupCronWorker(
+    cronInfra,
+    {
+      queueName: 'notification-engine',
+      cronJobs: [
+        { name: 'fcmTokenCleanup', pattern: '0 3 * * *' }, // daily at 3am — remove tokens not used in 30+ days
+      ],
+      handler: async (job) => {
+        switch (job.name) {
+          case 'fcmTokenCleanup': {
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            await UserModel.updateMany({}, {
+              $pull: { fcmTokens: { lastUsed: { $lt: thirtyDaysAgo } } },
+            } as never);
+            break;
+          }
         }
-      }
+      },
     },
-    { connection: redisConnectionOpts },
   );
 
-  notificationWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'notification-engine', jobName: job.name });
-  });
-  notificationWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'notification-engine',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('notification-engine', job, err);
-  });
-
   // Analytics Engine: executive summary pre-computation (ANA-INV-07) + export queue
-  const analyticsQueue = new Queue('analytics-engine', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const analyticsJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'computeExecutiveSummary', pattern: '*/5 * * * *' }, // every 5 minutes
-  ];
-
-  for (const job of analyticsJobs) {
-    await analyticsQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const analyticsWorker = new Worker(
-    'analytics-engine',
-    async (job: Job): Promise<void> => {
+  const { queue: analyticsQueue, worker: analyticsWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'analytics-engine',
+    cronJobs: [
+      { name: 'computeExecutiveSummary', pattern: '*/5 * * * *' }, // every 5 minutes
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'computeExecutiveSummary':
           await analyticsEngine.computeExecutiveSummary({
@@ -1756,46 +1515,16 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  analyticsWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'analytics-engine', jobName: job.name });
-  });
-  analyticsWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'analytics-engine',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('analytics-engine', job, err);
   });
 
   // Appointment Scheduling: reminders (APT-INV-02) + no-show marking (APT-INV-03)
-  const appointmentQueue = new Queue('appointment-scheduling', {
-    connection: redisConnectionOpts,
-    defaultJobOptions,
-  });
-
-  const appointmentJobs: Array<{ name: string; pattern: string }> = [
-    { name: 'processAppointmentReminders', pattern: '*/5 * * * *' }, // every 5 minutes
-    { name: 'markNoShows', pattern: '*/10 * * * *' }, // every 10 minutes
-  ];
-
-  for (const job of appointmentJobs) {
-    await appointmentQueue.add(
-      job.name,
-      {},
-      {
-        repeat: { pattern: job.pattern },
-      },
-    );
-  }
-
-  const appointmentWorker = new Worker(
-    'appointment-scheduling',
-    async (job: Job): Promise<void> => {
+  const { queue: appointmentQueue, worker: appointmentWorker } = await setupCronWorker(cronInfra, {
+    queueName: 'appointment-scheduling',
+    cronJobs: [
+      { name: 'processAppointmentReminders', pattern: '*/5 * * * *' }, // every 5 minutes
+      { name: 'markNoShows', pattern: '*/10 * * * *' }, // every 10 minutes
+    ],
+    handler: async (job) => {
       switch (job.name) {
         case 'processAppointmentReminders':
           await processAppointmentReminders();
@@ -1805,20 +1534,6 @@ async function bootstrap(): Promise<void> {
           break;
       }
     },
-    { connection: redisConnectionOpts },
-  );
-
-  appointmentWorker.on('completed', (job) => {
-    jobLogger.info('Job completed', { queue: 'appointment-scheduling', jobName: job.name });
-  });
-  appointmentWorker.on('failed', (job, err) => {
-    jobLogger.warn('Job failed', {
-      queue: 'appointment-scheduling',
-      jobName: job?.name,
-      attempt: job?.attemptsMade,
-      error: err.message,
-    });
-    void moveToDeadLetter('appointment-scheduling', job, err);
   });
 
   // 8. Create HTTP server + Socket.io for real-time chat
