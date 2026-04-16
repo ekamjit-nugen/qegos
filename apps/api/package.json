@@ -10,7 +10,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "start": "node dist/server.js",
     "test": "jest",
-    "seed": "ts-node-dev --transpile-only src/database/seed.ts"
+    "seed": "ts-node-dev --transpile-only src/database/seed.ts",
+    "migrate:payroo": "ts-node-dev --transpile-only src/scripts/payrooRename.ts"
   },
   "dependencies": {
     "@nugen/analytics-engine": "*",
