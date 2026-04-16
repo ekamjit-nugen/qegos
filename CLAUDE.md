@@ -169,4 +169,4 @@ qegos/
 | MFA enrollment/verification APIs (GAP-C07) | Partial |
 | Global `mongo-sanitize` middleware (GAP-C14) | ✅ |
 | Privacy Act 1988: data erasure + export workflow (GAP-C01/C02) | ✅ via `@nugen/data-lifecycle` + `privacy` module |
-| Saga / compensating transactions for async flows (GAP-C03) | ❌ |
+| Saga / compensating transactions for async flows (GAP-C03) | ✅ via `apps/api/src/lib/saga.ts` (Pay Now full-credit fast path wired; pattern available for other money flows) |

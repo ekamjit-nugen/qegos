@@ -26,6 +26,7 @@ import {
   type PaymentGateway,
 } from '@nugen/payment-gateway';
 import { getRequestId } from '../../lib/requestContext';
+import { runSaga, type SagaStep } from '../../lib/saga';
 import type { IOrderDocument2 } from '../order-management/order.types';
 import type { PromoCodeServiceResult } from '../promo-code/promoCode.service';
 import type { CreditServiceResult } from '../credit/credit.service';
@@ -256,25 +257,80 @@ export function createPayOrderRoutes(deps: PayOrderRouteDeps): Router {
         );
 
         // If full coverage by credits (rare but possible), short-circuit.
+        // No gateway call — but we still mutate three things (credits,
+        // promo usage, order). Wrap in a saga so a partial failure
+        // doesn't leave the user with credits gone but order unpaid.
         if (breakdown.finalAmount === 0) {
-          // Apply credit + promo, mark order paid, no gateway call.
+          // Snapshot the original order state for the order-step compensation.
+          const originalOrderSnapshot = {
+            discountAmount: order.discountAmount,
+            promoCode: order.promoCode,
+            creditApplied: order.creditApplied,
+            finalAmount: order.finalAmount,
+            paymentStatus: order.paymentStatus,
+          };
+
+          const steps: SagaStep<void>[] = [];
+
           if (breakdown.creditApplied > 0 && creditService) {
-            await creditService.useCredit(userId, breakdown.creditApplied, String(order._id));
+            steps.push({
+              name: 'useCredit',
+              forward: async () => {
+                await creditService.useCredit(userId, breakdown.creditApplied, String(order._id));
+              },
+              compensate: async () => {
+                // Refund the deducted credit by adding it back as a
+                // refund_credit transaction tied to the same order.
+                await creditService.addCredit(
+                  userId,
+                  breakdown.creditApplied,
+                  'refund_credit',
+                  `Saga compensation: pay-now full-credit failed for order ${order.orderNumber}`,
+                  String(order._id),
+                );
+              },
+            });
           }
+
           if (breakdown.promoCode && promoCodeService && breakdown.discountAmount > 0) {
-            await promoCodeService.applyPromoCode(
-              breakdown.promoCode,
-              userId,
-              String(order._id),
-              breakdown.totalAmount,
-            );
+            const promoCode = breakdown.promoCode;
+            steps.push({
+              name: 'applyPromoCode',
+              forward: async () => {
+                await promoCodeService.applyPromoCode(
+                  promoCode,
+                  userId,
+                  String(order._id),
+                  breakdown.totalAmount,
+                );
+              },
+              compensate: async () => {
+                await promoCodeService.revokePromoCode(promoCode, userId, String(order._id));
+              },
+            });
           }
-          order.discountAmount = breakdown.discountAmount;
-          order.promoCode = breakdown.promoCode;
-          order.creditApplied = breakdown.creditApplied;
-          order.finalAmount = 0;
-          order.paymentStatus = 'succeeded';
-          await order.save();
+
+          steps.push({
+            name: 'markOrderPaid',
+            forward: async () => {
+              order.discountAmount = breakdown.discountAmount;
+              order.promoCode = breakdown.promoCode;
+              order.creditApplied = breakdown.creditApplied;
+              order.finalAmount = 0;
+              order.paymentStatus = 'succeeded';
+              await order.save();
+            },
+            compensate: async () => {
+              order.discountAmount = originalOrderSnapshot.discountAmount;
+              order.promoCode = originalOrderSnapshot.promoCode;
+              order.creditApplied = originalOrderSnapshot.creditApplied;
+              order.finalAmount = originalOrderSnapshot.finalAmount;
+              order.paymentStatus = originalOrderSnapshot.paymentStatus;
+              await order.save();
+            },
+          });
+
+          await runSaga('payOrder.fullCreditCoverage', steps, undefined);
 
           res.status(200).json({
             status: 200,

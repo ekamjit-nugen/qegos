@@ -27,6 +27,17 @@ export interface PromoCodeServiceResult {
     orderId: string,
     orderAmount: number,
   ) => Promise<{ discountApplied: number }>;
+  /**
+   * Compensating reverse of `applyPromoCode`. Removes the PromoCodeUsage row
+   * and decrements the PromoCode.usageCount counter for the given (code,
+   * user, order) tuple. Used by sagas that fail after `applyPromoCode`
+   * succeeded — without this the user's per-user usage cap and the global
+   * usage cap drift permanently.
+   *
+   * Returns the number of usage rows removed (0 if nothing matched, which
+   * the caller can treat as already-revoked / nothing-to-do).
+   */
+  revokePromoCode: (code: string, userId: string, orderId: string) => Promise<number>;
   listPromoCodes: (
     query: PromoCodeListQuery,
   ) => Promise<{ promoCodes: IPromoCodeDocument[]; total: number; page: number; limit: number }>;
@@ -256,6 +267,30 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
     return { discountApplied };
   }
 
+  // ─── Revoke (compensating reverse of applyPromoCode) ───────────────────
+
+  async function revokePromoCode(code: string, userId: string, orderId: string): Promise<number> {
+    const promo = await PromoCodeModel.findOne({ code: code.toUpperCase().trim() });
+    if (!promo) {
+      // Nothing to revoke — promo no longer exists.
+      return 0;
+    }
+
+    const deleted = await PromoCodeUsageModel.deleteMany({
+      promoCodeId: promo._id,
+      userId,
+      orderId,
+    });
+
+    if (deleted.deletedCount > 0) {
+      await PromoCodeModel.findByIdAndUpdate(promo._id, {
+        $inc: { usageCount: -deleted.deletedCount },
+      });
+    }
+
+    return deleted.deletedCount;
+  }
+
   // ─── List ──────────────────────────────────────────────────────────────
 
   async function listPromoCodes(
@@ -367,6 +402,7 @@ export function createPromoCodeService(deps: PromoCodeServiceDeps): PromoCodeSer
     createPromoCode,
     validatePromoCode,
     applyPromoCode,
+    revokePromoCode,
     listPromoCodes,
     getPromoCode,
     updatePromoCode,
