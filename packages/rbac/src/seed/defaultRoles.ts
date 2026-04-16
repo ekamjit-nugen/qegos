@@ -53,6 +53,10 @@ export const defaultRoles: RoleSeed[] = [
       perm('sales', ['create', 'update'], 'all'),
       perm('notifications', ['create', 'read', 'update', 'delete'], 'all'),
       perm('form_drafts', ['read', 'delete'], 'all'),
+      // Reconciliation queue: tickets surfaced by SagaCompensationError
+      // when a money-path saga's compensations fail. Read = view tickets,
+      // update = mark resolved / wont_fix.
+      perm('reconciliation', ['read', 'update'], 'all'),
     ],
   },
   {
@@ -90,6 +94,7 @@ export const defaultRoles: RoleSeed[] = [
       perm('sales', ['create', 'update'], 'all'),
       perm('notifications', ['create', 'read', 'update', 'delete'], 'all'),
       perm('form_drafts', ['read', 'delete'], 'all'),
+      perm('reconciliation', ['read', 'update'], 'all'),
     ],
   },
   {

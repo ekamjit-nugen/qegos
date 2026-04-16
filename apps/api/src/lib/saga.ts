@@ -60,8 +60,18 @@ export interface SagaStep<TCtx> {
  * Callers should treat this as a manual-reconciliation signal — log,
  * alert, or enqueue a follow-up job that takes ownership of fixing
  * the surviving partial state.
+ *
+ * If a reconciliation reporter has been registered (see
+ * `setReconciliationReporter`), the saga awaits enqueueing before
+ * re-throwing and decorates the instance with `ticketId` /
+ * `ticketNumber` so the route handler can return them to the caller.
  */
 export class SagaCompensationError extends Error {
+  /** Set by runSaga when a reporter is registered. Empty string if enqueue write failed. */
+  public ticketId?: string;
+  /** Set by runSaga when a reporter is registered. Always populated (synthetic on write failure). */
+  public ticketNumber?: string;
+
   constructor(
     public readonly sagaName: string,
     public readonly originalError: Error,
@@ -77,17 +87,55 @@ export class SagaCompensationError extends Error {
 }
 
 /**
+ * Async hook invoked when a SagaCompensationError is about to be
+ * thrown. Implementations persist a durable record (e.g. the
+ * reconciliation queue Mongo collection) and return the ticket
+ * identifiers that the saga will attach to the error before re-throwing.
+ *
+ * The reporter MUST NOT throw — if it can't persist, it should swallow
+ * its own error (after logging/auditing) and return a synthetic ticket
+ * number so the saga error still has SOMETHING to reference. The
+ * user-visible failure is the saga, not the reporter.
+ */
+export type ReconciliationReporter = (
+  error: SagaCompensationError,
+  metadata?: Record<string, unknown>,
+) => Promise<{ ticketId: string; ticketNumber: string }>;
+
+let _reporter: ReconciliationReporter | null = null;
+
+/**
+ * Register a process-wide reconciliation reporter. Called once at
+ * server bootstrap after the reconciliation service is constructed.
+ * Pass `null` to clear (used by tests).
+ */
+export function setReconciliationReporter(reporter: ReconciliationReporter | null): void {
+  _reporter = reporter;
+}
+
+/** For tests / introspection — returns the currently-registered reporter. */
+export function getReconciliationReporter(): ReconciliationReporter | null {
+  return _reporter;
+}
+
+/**
  * Execute a sequence of compensating-transaction steps.
  *
  * If a forward step throws, every previously-completed step's `compensate`
  * runs in REVERSE order. Compensation failures are aggregated and surfaced
  * as a SagaCompensationError. The original forward error is re-thrown if
  * all compensations succeed.
+ *
+ * `metadata` is the saga site's chance to attach breadcrumbs that the
+ * reconciliation reporter persists alongside the error — typically
+ * paymentId, orderId, userId, amounts, idempotencyKey. The saga itself
+ * doesn't interpret it; it just hands it to the reporter on failure.
  */
 export async function runSaga<TCtx>(
   sagaName: string,
   steps: ReadonlyArray<SagaStep<TCtx>>,
   ctx: TCtx,
+  metadata?: Record<string, unknown>,
 ): Promise<void> {
   const completed: Array<SagaStep<TCtx>> = [];
 
@@ -126,7 +174,25 @@ export async function runSaga<TCtx>(
     }
 
     if (compensationFailures.length > 0) {
-      throw new SagaCompensationError(sagaName, err, compensationFailures);
+      const sagaErr = new SagaCompensationError(sagaName, err, compensationFailures);
+      // Reporter is best-effort — wrap in try/catch so a reporter that
+      // misbehaves can never replace the saga error with its own. The
+      // saga error MUST be the user-visible failure; the reporter's
+      // job is to enrich it, not shadow it.
+      if (_reporter) {
+        try {
+          const { ticketId, ticketNumber } = await _reporter(sagaErr, metadata);
+          sagaErr.ticketId = ticketId;
+          sagaErr.ticketNumber = ticketNumber;
+        } catch (reporterErr) {
+          const rErr = reporterErr instanceof Error ? reporterErr : new Error(String(reporterErr));
+          logger.error('Reconciliation reporter threw — saga error rethrown without ticket', {
+            saga: sagaName,
+            error: rErr.message,
+          });
+        }
+      }
+      throw sagaErr;
     }
     throw err;
   }

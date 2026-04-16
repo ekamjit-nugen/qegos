@@ -340,7 +340,21 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
             },
           });
 
-          await runSaga('refund.domainSync', steps, undefined);
+          // metadata: breadcrumbs the reconciliation reporter persists on
+          // SagaCompensationError. Gives the resolver enough to find the
+          // affected payment + order without trawling logs.
+          await runSaga('refund.domainSync', steps, undefined, {
+            paymentId: String(refundResult.payment._id),
+            paymentNumber: refundResult.payment.paymentNumber,
+            orderId: String(order._id),
+            orderNumber: order.orderNumber,
+            userId,
+            refundAmount: refundResult.refundEntry.amount,
+            isFullRefund,
+            actorId,
+            reason,
+            idempotencyKey,
+          });
         }
 
         auditLog.log({
@@ -379,6 +393,8 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
           statusCode?: number;
           code?: string;
           compensationFailures?: unknown[];
+          ticketId?: string;
+          ticketNumber?: string;
         };
 
         // Audit on failure too. The success path logs every refund;
@@ -398,10 +414,27 @@ export function createRefundRoutes(deps: RefundRouteDeps): Router {
           severity: isCompensationFailure ? 'critical' : 'high',
           description: `Full-refund route FAILED on payment ${paymentId}: ${error.message}${
             isCompensationFailure
-              ? ` — saga compensation also failed (${error.compensationFailures!.length} step(s)); MANUAL RECONCILIATION REQUIRED`
+              ? ` — saga compensation also failed (${error.compensationFailures!.length} step(s)); MANUAL RECONCILIATION REQUIRED${
+                  error.ticketNumber ? ` (ticket ${error.ticketNumber})` : ''
+                }`
               : ''
           }. Reason: ${reason}`,
         });
+
+        // SagaCompensationError → 500 with a STABLE code so admin tools
+        // can branch on it, plus the reconciliation ticket number so
+        // support can quote it without grepping logs.
+        if (isCompensationFailure) {
+          res.status(500).json({
+            status: 500,
+            code: 'SAGA_COMPENSATION_FAILED',
+            message: error.message,
+            ticketNumber: error.ticketNumber,
+            ticketId: error.ticketId,
+            manualReconciliationRequired: true,
+          });
+          return;
+        }
 
         res.status(error.statusCode ?? 500).json({
           status: error.statusCode ?? 500,

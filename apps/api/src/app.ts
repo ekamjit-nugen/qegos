@@ -208,6 +208,7 @@ export function finalizeApp(
     // Promo Code & Credits
     promoCodeRouter?: express.Router;
     creditRouter?: express.Router;
+    reconciliationRouter?: express.Router;
   },
   deepHealthCheck: (req: Request, res: Response) => Promise<void>,
 ): void {
@@ -356,6 +357,12 @@ export function finalizeApp(
   }
   if (routes.creditRouter) {
     app.use(`${prefix}/credits`, routes.creditRouter);
+  }
+  if (routes.reconciliationRouter) {
+    // Admin reconciliation queue — surfaces SagaCompensationError tickets
+    // for manual cleanup. Mounted under the API prefix; the router's own
+    // paths begin with /admin so the full URL is /api/v1/admin/reconciliation.
+    app.use(prefix, routes.reconciliationRouter);
   }
 
   // 404 handler

@@ -119,6 +119,10 @@ import { createPromoCodeService } from './modules/promo-code/promoCode.service';
 import { createCreditTransactionModel } from './modules/credit/credit.model';
 import { createCreditRoutes } from './modules/credit/credit.routes';
 import { createCreditService } from './modules/credit/credit.service';
+import { createReconciliationItemModel } from './modules/reconciliation/reconciliation.model';
+import { createReconciliationService } from './modules/reconciliation/reconciliation.service';
+import { createReconciliationRoutes } from './modules/reconciliation/reconciliation.routes';
+import { setReconciliationReporter } from './lib/saga';
 
 // Phase 8: Engagement Modules
 import {
@@ -788,6 +792,23 @@ async function bootstrap(): Promise<void> {
     CreditTransactionModel,
   });
 
+  // Reconciliation queue — durable record of SagaCompensationError
+  // tickets. Wired into runSaga via setReconciliationReporter so any
+  // money-path saga whose compensations fail enqueues a ticket and
+  // attaches the ticket id+number to the SagaCompensationError before
+  // re-throwing. Routes that catch the error can include the ticket
+  // number in their response, giving ops a stable handle.
+  const ReconciliationItemModel = createReconciliationItemModel(connection);
+  const reconciliationService = createReconciliationService({
+    ReconciliationItemModel,
+  });
+  setReconciliationReporter(reconciliationService.enqueue);
+  const reconciliationRouter = createReconciliationRoutes({
+    reconciliationService,
+    authenticate: auth.authenticate,
+    checkPermission: rbac.check,
+  });
+
   // Form Draft model for save-as-you-go form filling
   const FormDraftModel = createFormDraftModel(connection);
 
@@ -1182,6 +1203,7 @@ async function bootstrap(): Promise<void> {
       reputationRouter,
       promoCodeRouter,
       creditRouter,
+      reconciliationRouter,
       notificationRouter,
       analyticsRouter,
       appointmentRouter,
